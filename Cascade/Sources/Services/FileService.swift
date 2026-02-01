@@ -1,6 +1,9 @@
 import Foundation
 
 /// Actor responsible for file I/O operations, ensuring thread-safe file access.
+///
+/// - Note: File operations use synchronous Foundation APIs internally. While the actor
+///   ensures thread-safe access, these operations may block the actor's executor during I/O.
 actor FileService {
     static let shared = FileService()
 
