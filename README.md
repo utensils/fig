@@ -1,16 +1,51 @@
 # Fig
 
-A macOS application built with SwiftUI targeting macOS 14+ (Sonoma).
+A native macOS application for managing [Claude Code](https://github.com/anthropics/claude-code) configuration.
 
-## Overview
+## What is Fig?
 
-Fig is a modern macOS application that follows the MVVM (Model-View-ViewModel) architecture pattern. It leverages Swift 6's strict concurrency features to ensure thread-safe operations throughout the codebase.
+Fig provides a visual interface for managing Claude Code settings, MCP servers, and project configurations. Instead of manually editing JSON files scattered across your system, Fig discovers your projects and lets you manage everything from one place.
+
+## Features
+
+### Project Management
+- **Project Discovery** — Automatically finds Claude Code projects from `~/.claude.json` and common development directories
+- **Project Explorer** — Browse all your projects with quick access to their configuration files
+- **Favorites & Recents** — Pin frequently used projects for fast access
+
+### Configuration Editing
+- **Settings Editor** — Edit permissions, environment variables, and general settings with a friendly UI
+- **MCP Server Management** — Add, edit, and copy MCP servers between projects
+- **Visual Hook Composer** — Configure Claude Code hooks without writing JSON by hand
+- **Merged Config Viewer** — See the effective configuration with source attribution (which file each setting comes from)
+
+### Safety & Convenience
+- **Automatic Backups** — Every save creates a timestamped backup
+- **External Change Detection** — Warns when files are modified outside of Fig
+- **Undo/Redo** — Full undo history for configuration changes
+- **Config Health Checks** — Validates your configuration and highlights potential issues
 
 ## Requirements
 
 - macOS 14.0 (Sonoma) or later
-- Xcode 16.0 or later
+- Xcode 16.0 or later (for building from source)
 - Swift 6.0
+
+## Installation
+
+### From Source
+
+```bash
+git clone https://github.com/doomspork/fig.git
+cd fig/Fig
+swift build
+```
+
+Or open `Fig/Package.swift` in Xcode and press Cmd+R to build and run.
+
+### Pre-built Binary
+
+Coming soon.
 
 ## Project Structure
 
@@ -20,67 +55,42 @@ Fig/
 ├── Fig.entitlements        # Code signing entitlements
 └── Sources/
     ├── App/               # Application entry point
-    │   └── FigApp.swift
     ├── Models/            # Data models (Sendable conformant)
-    │   └── SidebarItem.swift
     ├── ViewModels/        # View models (@MainActor)
-    │   └── AppViewModel.swift
     ├── Views/             # SwiftUI views
-    │   ├── ContentView.swift
-    │   ├── SidebarView.swift
-    │   └── DetailView.swift
     ├── Services/          # Business logic (actors for I/O)
-    │   └── FileService.swift
     └── Utilities/         # Helper utilities
-        └── Logger.swift
 ```
 
 ## Architecture
 
-### MVVM Pattern
+Fig uses the MVVM pattern with Swift 6 strict concurrency:
 
-- **Models**: Pure data structures that conform to `Sendable` for safe concurrent access
-- **ViewModels**: Classes marked with `@MainActor` to ensure UI updates happen on the main thread
-- **Views**: SwiftUI views that observe view models and render the UI
+- **Models** — Pure data structures conforming to `Sendable`
+- **ViewModels** — `@MainActor` classes for UI state management
+- **Views** — SwiftUI views with `NavigationSplitView` layout
+- **Services** — Actor-based services for thread-safe file I/O
 
-### Concurrency
+## Configuration Files
 
-The project uses Swift 6 strict concurrency:
+Fig manages these Claude Code configuration files:
 
-- **Actors**: Used for file I/O operations (`FileService`) to ensure thread-safe access
-- **@MainActor**: Applied to view models to guarantee main thread execution
-- **Sendable**: All models conform to `Sendable` for safe cross-isolation transfers
+| File | Scope | Purpose |
+|------|-------|---------|
+| `~/.claude.json` | Global | User preferences, project history, global MCP servers |
+| `~/.claude/settings.json` | Global | Global settings and permissions |
+| `<project>/.claude/settings.json` | Project | Project-specific settings |
+| `<project>/.claude/settings.local.json` | Project | Local overrides (gitignored) |
+| `<project>/.mcp.json` | Project | Project MCP server configuration |
 
-## Building
+## Contributing
 
-### Using Swift Package Manager
+Contributions are welcome! Please feel free to submit issues and pull requests.
 
-```bash
-cd Fig
-swift build
-```
+## Status
 
-### Using Xcode
-
-1. Open `Fig/Package.swift` in Xcode
-2. Select the "My Mac" destination
-3. Press Cmd+B to build or Cmd+R to run
-
-## Distribution
-
-This application is configured for direct distribution (Developer ID) rather than the Mac App Store. The app should be notarized before distribution.
-
-### Code Signing
-
-The app is configured for Developer ID distribution. Ensure you have a valid Developer ID certificate installed in your keychain.
-
-## Features
-
-- Modern SwiftUI interface with `NavigationSplitView`
-- Light and dark mode support
-- Thread-safe file operations via actors
-- Unified logging using OSLog
+Fig is in early development. See the [GitHub Issues](https://github.com/doomspork/fig/issues) for the roadmap and current progress.
 
 ## License
 
-Copyright © 2024. All rights reserved.
+MIT License - see [LICENSE](LICENSE) for details.
