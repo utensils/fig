@@ -14,7 +14,7 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
-        .navigationTitle("Cascade")
+        .navigationTitle("Fig")
         .frame(minWidth: 200)
     }
 }

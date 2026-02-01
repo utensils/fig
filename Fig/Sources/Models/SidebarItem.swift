@@ -33,7 +33,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     var description: String {
         switch self {
         case .home:
-            return "Welcome to Cascade. This is your home screen where you can see an overview of your activity."
+            return "Welcome to Fig. This is your home screen where you can see an overview of your activity."
         case .projects:
             return "Manage and organize your projects. Create new projects or open existing ones."
         case .settings:
