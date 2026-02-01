@@ -1,10 +1,10 @@
-# Cascade
+# Fig
 
 A macOS application built with SwiftUI targeting macOS 14+ (Sonoma).
 
 ## Overview
 
-Cascade is a modern macOS application that follows the MVVM (Model-View-ViewModel) architecture pattern. It leverages Swift 6's strict concurrency features to ensure thread-safe operations throughout the codebase.
+Fig is a modern macOS application that follows the MVVM (Model-View-ViewModel) architecture pattern. It leverages Swift 6's strict concurrency features to ensure thread-safe operations throughout the codebase.
 
 ## Requirements
 
@@ -15,12 +15,12 @@ Cascade is a modern macOS application that follows the MVVM (Model-View-ViewMode
 ## Project Structure
 
 ```
-Cascade/
+Fig/
 ├── Package.swift           # Swift Package Manager manifest
-├── Cascade.entitlements    # Code signing entitlements
+├── Fig.entitlements        # Code signing entitlements
 └── Sources/
     ├── App/               # Application entry point
-    │   └── CascadeApp.swift
+    │   └── FigApp.swift
     ├── Models/            # Data models (Sendable conformant)
     │   └── SidebarItem.swift
     ├── ViewModels/        # View models (@MainActor)
@@ -56,13 +56,13 @@ The project uses Swift 6 strict concurrency:
 ### Using Swift Package Manager
 
 ```bash
-cd Cascade
+cd Fig
 swift build
 ```
 
 ### Using Xcode
 
-1. Open `Cascade/Package.swift` in Xcode
+1. Open `Fig/Package.swift` in Xcode
 2. Select the "My Mac" destination
 3. Press Cmd+B to build or Cmd+R to run
 

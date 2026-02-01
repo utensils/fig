@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The main entry point for the Cascade application.
+/// The main entry point for the Fig application.
 @main
-struct CascadeApp: App {
+struct FigApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

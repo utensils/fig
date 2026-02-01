@@ -4,27 +4,27 @@
 import PackageDescription
 
 let package = Package(
-    name: "Cascade",
+    name: "Fig",
     platforms: [
         .macOS(.v14)
     ],
     products: [
         .executable(
-            name: "Cascade",
-            targets: ["Cascade"]
+            name: "Fig",
+            targets: ["Fig"]
         )
     ],
     targets: [
         .executableTarget(
-            name: "Cascade",
+            name: "Fig",
             path: "Sources",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")
             ]
         ),
         .testTarget(
-            name: "CascadeTests",
-            dependencies: ["Cascade"],
+            name: "FigTests",
+            dependencies: ["Fig"],
             path: "Tests"
         )
     ]
