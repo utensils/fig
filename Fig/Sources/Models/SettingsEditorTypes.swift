@@ -257,5 +257,4 @@ enum EditingTarget: String, CaseIterable, Identifiable {
 enum ConflictResolution {
     case keepLocal
     case useExternal
-    case viewDiff
 }

@@ -73,9 +73,6 @@ struct PermissionRuleEditorView: View {
                                     }
                                 )
                             }
-                            .onMove { source, destination in
-                                viewModel.movePermissionRules(type: .allow, from: source, to: destination)
-                            }
                         }
                     }
                     .padding(.vertical, 4)
@@ -118,9 +115,6 @@ struct PermissionRuleEditorView: View {
                                         viewModel.isRuleDuplicate(ruleStr, type: type, excluding: rule)
                                     }
                                 )
-                            }
-                            .onMove { source, destination in
-                                viewModel.movePermissionRules(type: .deny, from: source, to: destination)
                             }
                         }
                     }
@@ -171,10 +165,6 @@ struct EditablePermissionRuleRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: "line.3.horizontal")
-                .foregroundStyle(.secondary)
-                .font(.caption)
-
             Image(systemName: rule.type.icon)
                 .foregroundStyle(rule.type == .allow ? .green : .red)
                 .frame(width: 20)

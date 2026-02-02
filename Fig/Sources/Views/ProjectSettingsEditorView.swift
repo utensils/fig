@@ -47,6 +47,7 @@ struct ProjectSettingsEditorView: View {
             }
         }
         .frame(minWidth: 600, minHeight: 500)
+        .interactiveDismissDisabled(viewModel.isDirty)
         .navigationTitle(windowTitle)
         .task {
             await viewModel.loadSettings()

@@ -54,6 +54,31 @@ final class SettingsEditorViewModel {
         }
     }
 
+    /// Whether switching target requires confirmation due to unsaved changes.
+    var pendingTargetSwitch: EditingTarget?
+
+    /// Attempts to switch target, returning true if switch can proceed immediately.
+    func switchTarget(to newTarget: EditingTarget) -> Bool {
+        if isDirty {
+            pendingTargetSwitch = newTarget
+            return false
+        }
+        editingTarget = newTarget
+        return true
+    }
+
+    /// Confirms pending target switch, discarding changes.
+    func confirmTargetSwitch() {
+        guard let newTarget = pendingTargetSwitch else { return }
+        pendingTargetSwitch = nil
+        editingTarget = newTarget
+    }
+
+    /// Cancels pending target switch.
+    func cancelTargetSwitch() {
+        pendingTargetSwitch = nil
+    }
+
     // MARK: - Editable Data
 
     /// Permission rules being edited.
@@ -181,7 +206,14 @@ final class SettingsEditorViewModel {
         markDirty()
 
         registerUndo(actionName: "Add Rule") { [weak self] in
-            self?.removePermissionRuleWithoutUndo(newRule)
+            guard let self else { return }
+            self.permissionRules.removeAll { $0.id == newRule.id }
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Add Rule") { [weak self] in
+                self?.permissionRules.append(newRule)
+                self?.markDirty()
+            }
         }
     }
 
@@ -193,8 +225,15 @@ final class SettingsEditorViewModel {
         markDirty()
 
         registerUndo(actionName: "Remove Rule") { [weak self] in
-            self?.permissionRules.insert(rule, at: min(index, self?.permissionRules.count ?? 0))
-            self?.markDirty()
+            guard let self else { return }
+            let insertIndex = min(index, self.permissionRules.count)
+            self.permissionRules.insert(rule, at: insertIndex)
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Remove Rule") { [weak self] in
+                self?.permissionRules.removeAll { $0.id == rule.id }
+                self?.markDirty()
+            }
         }
     }
 
@@ -210,29 +249,44 @@ final class SettingsEditorViewModel {
         markDirty()
 
         registerUndo(actionName: "Update Rule") { [weak self] in
-            if let idx = self?.permissionRules.firstIndex(where: { $0.id == rule.id }) {
-                self?.permissionRules[idx].rule = oldRule
-                self?.permissionRules[idx].type = oldType
-                self?.markDirty()
+            guard let self, let idx = self.permissionRules.firstIndex(where: { $0.id == rule.id }) else { return }
+            self.permissionRules[idx].rule = oldRule
+            self.permissionRules[idx].type = oldType
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Update Rule") { [weak self] in
+                guard let self, let idx = self.permissionRules.firstIndex(where: { $0.id == rule.id }) else { return }
+                self.permissionRules[idx].rule = newRule
+                self.permissionRules[idx].type = newType
+                self.markDirty()
             }
         }
     }
 
     /// Moves permission rules for reordering.
     func movePermissionRules(type: PermissionType, from source: IndexSet, to destination: Int) {
+        // Capture pre-move state for undo
+        let previousRules = permissionRules
+
         var rules = type == .allow ? allowRules : denyRules
         rules.move(fromOffsets: source, toOffset: destination)
 
         // Rebuild full permission rules list
         let otherRules = permissionRules.filter { $0.type != type }
-        permissionRules = otherRules + rules
+        let newRules = otherRules + rules
+        permissionRules = newRules
         markDirty()
 
-        // Register undo
-        let originalRules = permissionRules
+        // Register undo with pre-move state
         registerUndo(actionName: "Reorder Rules") { [weak self] in
-            self?.permissionRules = originalRules
-            self?.markDirty()
+            guard let self else { return }
+            self.permissionRules = previousRules
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Reorder Rules") { [weak self] in
+                self?.permissionRules = newRules
+                self?.markDirty()
+            }
         }
     }
 
@@ -247,12 +301,19 @@ final class SettingsEditorViewModel {
             }
         }
 
-        if permissionRules != originalRules {
+        let newRules = permissionRules
+        if newRules != originalRules {
             markDirty()
 
             registerUndo(actionName: "Apply Preset") { [weak self] in
-                self?.permissionRules = originalRules
-                self?.markDirty()
+                guard let self else { return }
+                self.permissionRules = originalRules
+                self.markDirty()
+                // Register redo
+                self.registerUndo(actionName: "Apply Preset") { [weak self] in
+                    self?.permissionRules = newRules
+                    self?.markDirty()
+                }
             }
         }
     }
@@ -269,8 +330,14 @@ final class SettingsEditorViewModel {
         markDirty()
 
         registerUndo(actionName: "Add Variable") { [weak self] in
-            self?.environmentVariables.removeAll { $0.id == newVar.id }
-            self?.markDirty()
+            guard let self else { return }
+            self.environmentVariables.removeAll { $0.id == newVar.id }
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Add Variable") { [weak self] in
+                self?.environmentVariables.append(newVar)
+                self?.markDirty()
+            }
         }
     }
 
@@ -282,8 +349,15 @@ final class SettingsEditorViewModel {
         markDirty()
 
         registerUndo(actionName: "Remove Variable") { [weak self] in
-            self?.environmentVariables.insert(envVar, at: min(index, self?.environmentVariables.count ?? 0))
-            self?.markDirty()
+            guard let self else { return }
+            let insertIndex = min(index, self.environmentVariables.count)
+            self.environmentVariables.insert(envVar, at: insertIndex)
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Remove Variable") { [weak self] in
+                self?.environmentVariables.removeAll { $0.id == envVar.id }
+                self?.markDirty()
+            }
         }
     }
 
@@ -304,10 +378,16 @@ final class SettingsEditorViewModel {
         markDirty()
 
         registerUndo(actionName: "Update Variable") { [weak self] in
-            if let idx = self?.environmentVariables.firstIndex(where: { $0.id == envVar.id }) {
-                self?.environmentVariables[idx].key = oldKey
-                self?.environmentVariables[idx].value = oldValue
-                self?.markDirty()
+            guard let self, let idx = self.environmentVariables.firstIndex(where: { $0.id == envVar.id }) else { return }
+            self.environmentVariables[idx].key = oldKey
+            self.environmentVariables[idx].value = oldValue
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Update Variable") { [weak self] in
+                guard let self, let idx = self.environmentVariables.firstIndex(where: { $0.id == envVar.id }) else { return }
+                self.environmentVariables[idx].key = newKey
+                self.environmentVariables[idx].value = newValue
+                self.markDirty()
             }
         }
     }
@@ -324,11 +404,18 @@ final class SettingsEditorViewModel {
             attribution = Attribution(commits: commits, pullRequests: pullRequests)
         }
 
+        let newAttribution = attribution
         markDirty()
 
         registerUndo(actionName: "Update Attribution") { [weak self] in
-            self?.attribution = oldAttribution
-            self?.markDirty()
+            guard let self else { return }
+            self.attribution = oldAttribution
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Update Attribution") { [weak self] in
+                self?.attribution = newAttribution
+                self?.markDirty()
+            }
         }
     }
 
@@ -342,8 +429,14 @@ final class SettingsEditorViewModel {
         markDirty()
 
         registerUndo(actionName: "Add Disallowed Tool") { [weak self] in
-            self?.disallowedTools.removeAll { $0 == tool }
-            self?.markDirty()
+            guard let self else { return }
+            self.disallowedTools.removeAll { $0 == tool }
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Add Disallowed Tool") { [weak self] in
+                self?.disallowedTools.append(tool)
+                self?.markDirty()
+            }
         }
     }
 
@@ -355,8 +448,15 @@ final class SettingsEditorViewModel {
         markDirty()
 
         registerUndo(actionName: "Remove Disallowed Tool") { [weak self] in
-            self?.disallowedTools.insert(tool, at: min(index, self?.disallowedTools.count ?? 0))
-            self?.markDirty()
+            guard let self else { return }
+            let insertIndex = min(index, self.disallowedTools.count)
+            self.disallowedTools.insert(tool, at: insertIndex)
+            self.markDirty()
+            // Register redo
+            self.registerUndo(actionName: "Remove Disallowed Tool") { [weak self] in
+                self?.disallowedTools.removeAll { $0 == tool }
+                self?.markDirty()
+            }
         }
     }
 
@@ -373,10 +473,6 @@ final class SettingsEditorViewModel {
             await reloadSettings()
             hasExternalChanges = false
             externalChangeURL = nil
-
-        case .viewDiff:
-            // The view will handle showing the diff
-            break
         }
     }
 
@@ -397,7 +493,8 @@ final class SettingsEditorViewModel {
 
         // Check for basic pattern format
         // Valid formats: "ToolName" or "ToolName(pattern)"
-        let pattern = #"^[A-Za-z]+(\([^)]*\))?$"#
+        // Tool names can contain letters, digits, underscores, dots, and dashes
+        let pattern = #"^[A-Za-z][A-Za-z0-9_.-]*(?:\([^)]*\))?$"#
         let regex = try? NSRegularExpression(pattern: pattern)
         let range = NSRange(rule.startIndex..., in: rule)
 
@@ -505,11 +602,6 @@ final class SettingsEditorViewModel {
         undoManager?.setActionName(actionName)
     }
 
-    private func removePermissionRuleWithoutUndo(_ rule: EditablePermissionRule) {
-        permissionRules.removeAll { $0.id == rule.id }
-        markDirty()
-    }
-
     private func startFileWatching() {
         Task {
             let settingsURL = await configManager.projectSettingsURL(for: projectURL)
@@ -537,7 +629,7 @@ final class SettingsEditorViewModel {
             Log.general.info("External changes detected with unsaved edits: \(url.lastPathComponent)")
         } else {
             // Auto-reload if no local changes
-            Task {
+            Task { @MainActor in
                 await reloadSettings()
                 NotificationManager.shared.showInfo(
                     "Settings Reloaded",
