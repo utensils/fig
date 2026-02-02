@@ -1,8 +1,8 @@
+@testable import Fig
 import Foundation
 import Testing
-@testable import Fig
 
-// MARK: - Test Fixtures
+// MARK: - TestFixtures
 
 enum TestFixtures {
     static let permissionsJSON = """
@@ -130,7 +130,7 @@ enum TestFixtures {
     """
 }
 
-// MARK: - AnyCodable Tests
+// MARK: - AnyCodableTests
 
 @Suite("AnyCodable Tests")
 struct AnyCodableTests {
@@ -146,7 +146,7 @@ struct AnyCodableTests {
         }
         """
 
-        let decoded = try JSONDecoder().decode([String: AnyCodable].self, from: json.data(using: .utf8)!)
+        let decoded = try JSONDecoder().decode([String: AnyCodable].self, from: #require(json.data(using: .utf8)))
 
         #expect(decoded["string"]?.value as? String == "hello")
         // Note: All JSON numbers decode as Double for round-trip consistency
@@ -170,7 +170,7 @@ struct AnyCodableTests {
         }
         """
 
-        let decoded = try JSONDecoder().decode([String: AnyCodable].self, from: json.data(using: .utf8)!)
+        let decoded = try JSONDecoder().decode([String: AnyCodable].self, from: #require(json.data(using: .utf8)))
 
         if let array = decoded["array"]?.value as? [Any] {
             #expect(array.count == 3)
@@ -202,7 +202,7 @@ struct AnyCodableTests {
     }
 }
 
-// MARK: - Permissions Tests
+// MARK: - PermissionsTests
 
 @Suite("Permissions Tests")
 struct PermissionsTests {
@@ -210,7 +210,7 @@ struct PermissionsTests {
     func decodesPermissions() throws {
         let decoded = try JSONDecoder().decode(
             Permissions.self,
-            from: TestFixtures.permissionsJSON.data(using: .utf8)!
+            from: #require(TestFixtures.permissionsJSON.data(using: .utf8))
         )
 
         #expect(decoded.allow == ["Bash(npm run *)", "Read(src/**)"])
@@ -221,7 +221,7 @@ struct PermissionsTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             Permissions.self,
-            from: TestFixtures.permissionsJSON.data(using: .utf8)!
+            from: #require(TestFixtures.permissionsJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["futureField"]?.value as? String == "preserved")
@@ -231,7 +231,7 @@ struct PermissionsTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             Permissions.self,
-            from: TestFixtures.permissionsJSON.data(using: .utf8)!
+            from: #require(TestFixtures.permissionsJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(Permissions.self, from: encoded)
@@ -240,7 +240,7 @@ struct PermissionsTests {
     }
 }
 
-// MARK: - Attribution Tests
+// MARK: - AttributionTests
 
 @Suite("Attribution Tests")
 struct AttributionTests {
@@ -248,7 +248,7 @@ struct AttributionTests {
     func decodesAttribution() throws {
         let decoded = try JSONDecoder().decode(
             Attribution.self,
-            from: TestFixtures.attributionJSON.data(using: .utf8)!
+            from: #require(TestFixtures.attributionJSON.data(using: .utf8))
         )
 
         #expect(decoded.commits == true)
@@ -259,7 +259,7 @@ struct AttributionTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             Attribution.self,
-            from: TestFixtures.attributionJSON.data(using: .utf8)!
+            from: #require(TestFixtures.attributionJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["unknownField"]?.value as? Double == 123.0)
@@ -269,7 +269,7 @@ struct AttributionTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             Attribution.self,
-            from: TestFixtures.attributionJSON.data(using: .utf8)!
+            from: #require(TestFixtures.attributionJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(Attribution.self, from: encoded)
@@ -278,7 +278,7 @@ struct AttributionTests {
     }
 }
 
-// MARK: - HookDefinition Tests
+// MARK: - HookDefinitionTests
 
 @Suite("HookDefinition Tests")
 struct HookDefinitionTests {
@@ -286,7 +286,7 @@ struct HookDefinitionTests {
     func decodesHookDefinition() throws {
         let decoded = try JSONDecoder().decode(
             HookDefinition.self,
-            from: TestFixtures.hookDefinitionJSON.data(using: .utf8)!
+            from: #require(TestFixtures.hookDefinitionJSON.data(using: .utf8))
         )
 
         #expect(decoded.type == "command")
@@ -297,7 +297,7 @@ struct HookDefinitionTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             HookDefinition.self,
-            from: TestFixtures.hookDefinitionJSON.data(using: .utf8)!
+            from: #require(TestFixtures.hookDefinitionJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["timeout"]?.value as? Double == 30.0)
@@ -307,7 +307,7 @@ struct HookDefinitionTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             HookDefinition.self,
-            from: TestFixtures.hookDefinitionJSON.data(using: .utf8)!
+            from: #require(TestFixtures.hookDefinitionJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(HookDefinition.self, from: encoded)
@@ -316,7 +316,7 @@ struct HookDefinitionTests {
     }
 }
 
-// MARK: - HookGroup Tests
+// MARK: - HookGroupTests
 
 @Suite("HookGroup Tests")
 struct HookGroupTests {
@@ -324,7 +324,7 @@ struct HookGroupTests {
     func decodesHookGroup() throws {
         let decoded = try JSONDecoder().decode(
             HookGroup.self,
-            from: TestFixtures.hookGroupJSON.data(using: .utf8)!
+            from: #require(TestFixtures.hookGroupJSON.data(using: .utf8))
         )
 
         #expect(decoded.matcher == "Bash(*)")
@@ -336,7 +336,7 @@ struct HookGroupTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             HookGroup.self,
-            from: TestFixtures.hookGroupJSON.data(using: .utf8)!
+            from: #require(TestFixtures.hookGroupJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["priority"]?.value as? Double == 1.0)
@@ -346,7 +346,7 @@ struct HookGroupTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             HookGroup.self,
-            from: TestFixtures.hookGroupJSON.data(using: .utf8)!
+            from: #require(TestFixtures.hookGroupJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(HookGroup.self, from: encoded)
@@ -355,7 +355,7 @@ struct HookGroupTests {
     }
 }
 
-// MARK: - MCPServer Tests
+// MARK: - MCPServerTests
 
 @Suite("MCPServer Tests")
 struct MCPServerTests {
@@ -363,7 +363,7 @@ struct MCPServerTests {
     func decodesStdioServer() throws {
         let decoded = try JSONDecoder().decode(
             MCPServer.self,
-            from: TestFixtures.mcpServerStdioJSON.data(using: .utf8)!
+            from: #require(TestFixtures.mcpServerStdioJSON.data(using: .utf8))
         )
 
         #expect(decoded.command == "npx")
@@ -377,7 +377,7 @@ struct MCPServerTests {
     func decodesHTTPServer() throws {
         let decoded = try JSONDecoder().decode(
             MCPServer.self,
-            from: TestFixtures.mcpServerHTTPJSON.data(using: .utf8)!
+            from: #require(TestFixtures.mcpServerHTTPJSON.data(using: .utf8))
         )
 
         #expect(decoded.type == "http")
@@ -391,7 +391,7 @@ struct MCPServerTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             MCPServer.self,
-            from: TestFixtures.mcpServerStdioJSON.data(using: .utf8)!
+            from: #require(TestFixtures.mcpServerStdioJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["customOption"]?.value as? Bool == true)
@@ -412,7 +412,7 @@ struct MCPServerTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             MCPServer.self,
-            from: TestFixtures.mcpServerStdioJSON.data(using: .utf8)!
+            from: #require(TestFixtures.mcpServerStdioJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(MCPServer.self, from: encoded)
@@ -421,7 +421,7 @@ struct MCPServerTests {
     }
 }
 
-// MARK: - MCPConfig Tests
+// MARK: - MCPConfigTests
 
 @Suite("MCPConfig Tests")
 struct MCPConfigTests {
@@ -429,7 +429,7 @@ struct MCPConfigTests {
     func decodesMCPConfig() throws {
         let decoded = try JSONDecoder().decode(
             MCPConfig.self,
-            from: TestFixtures.mcpConfigJSON.data(using: .utf8)!
+            from: #require(TestFixtures.mcpConfigJSON.data(using: .utf8))
         )
 
         #expect(decoded.serverNames.count == 2)
@@ -441,7 +441,7 @@ struct MCPConfigTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             MCPConfig.self,
-            from: TestFixtures.mcpConfigJSON.data(using: .utf8)!
+            from: #require(TestFixtures.mcpConfigJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["version"]?.value as? String == "1.0")
@@ -451,7 +451,7 @@ struct MCPConfigTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             MCPConfig.self,
-            from: TestFixtures.mcpConfigJSON.data(using: .utf8)!
+            from: #require(TestFixtures.mcpConfigJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(MCPConfig.self, from: encoded)
@@ -460,7 +460,7 @@ struct MCPConfigTests {
     }
 }
 
-// MARK: - ClaudeSettings Tests
+// MARK: - ClaudeSettingsTests
 
 @Suite("ClaudeSettings Tests")
 struct ClaudeSettingsTests {
@@ -468,7 +468,7 @@ struct ClaudeSettingsTests {
     func decodesClaudeSettings() throws {
         let decoded = try JSONDecoder().decode(
             ClaudeSettings.self,
-            from: TestFixtures.claudeSettingsJSON.data(using: .utf8)!
+            from: #require(TestFixtures.claudeSettingsJSON.data(using: .utf8))
         )
 
         #expect(decoded.permissions?.allow == ["Bash(npm run *)"])
@@ -485,7 +485,7 @@ struct ClaudeSettingsTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             ClaudeSettings.self,
-            from: TestFixtures.claudeSettingsJSON.data(using: .utf8)!
+            from: #require(TestFixtures.claudeSettingsJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["experimentalFeature"]?.value as? String == "enabled")
@@ -495,7 +495,7 @@ struct ClaudeSettingsTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             ClaudeSettings.self,
-            from: TestFixtures.claudeSettingsJSON.data(using: .utf8)!
+            from: #require(TestFixtures.claudeSettingsJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(ClaudeSettings.self, from: encoded)
@@ -504,7 +504,7 @@ struct ClaudeSettingsTests {
     }
 }
 
-// MARK: - ProjectEntry Tests
+// MARK: - ProjectEntryTests
 
 @Suite("ProjectEntry Tests")
 struct ProjectEntryTests {
@@ -512,7 +512,7 @@ struct ProjectEntryTests {
     func decodesProjectEntry() throws {
         let decoded = try JSONDecoder().decode(
             ProjectEntry.self,
-            from: TestFixtures.projectEntryJSON.data(using: .utf8)!
+            from: #require(TestFixtures.projectEntryJSON.data(using: .utf8))
         )
 
         #expect(decoded.allowedTools == ["Bash", "Read", "Write"])
@@ -532,7 +532,7 @@ struct ProjectEntryTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             ProjectEntry.self,
-            from: TestFixtures.projectEntryJSON.data(using: .utf8)!
+            from: #require(TestFixtures.projectEntryJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["customData"] != nil)
@@ -542,7 +542,7 @@ struct ProjectEntryTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             ProjectEntry.self,
-            from: TestFixtures.projectEntryJSON.data(using: .utf8)!
+            from: #require(TestFixtures.projectEntryJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(ProjectEntry.self, from: encoded)
@@ -551,7 +551,7 @@ struct ProjectEntryTests {
     }
 }
 
-// MARK: - LegacyConfig Tests
+// MARK: - LegacyConfigTests
 
 @Suite("LegacyConfig Tests")
 struct LegacyConfigTests {
@@ -559,7 +559,7 @@ struct LegacyConfigTests {
     func decodesLegacyConfig() throws {
         let decoded = try JSONDecoder().decode(
             LegacyConfig.self,
-            from: TestFixtures.legacyConfigJSON.data(using: .utf8)!
+            from: #require(TestFixtures.legacyConfigJSON.data(using: .utf8))
         )
 
         #expect(decoded.projectPaths == ["/path/to/project"])
@@ -572,7 +572,7 @@ struct LegacyConfigTests {
     func allProjectsWithPaths() throws {
         let decoded = try JSONDecoder().decode(
             LegacyConfig.self,
-            from: TestFixtures.legacyConfigJSON.data(using: .utf8)!
+            from: #require(TestFixtures.legacyConfigJSON.data(using: .utf8))
         )
 
         let projects = decoded.allProjects
@@ -584,7 +584,7 @@ struct LegacyConfigTests {
     func preservesUnknownKeys() throws {
         let decoded = try JSONDecoder().decode(
             LegacyConfig.self,
-            from: TestFixtures.legacyConfigJSON.data(using: .utf8)!
+            from: #require(TestFixtures.legacyConfigJSON.data(using: .utf8))
         )
 
         #expect(decoded.additionalProperties?["analytics"]?.value as? Bool == false)
@@ -594,7 +594,7 @@ struct LegacyConfigTests {
     func roundTrip() throws {
         let original = try JSONDecoder().decode(
             LegacyConfig.self,
-            from: TestFixtures.legacyConfigJSON.data(using: .utf8)!
+            from: #require(TestFixtures.legacyConfigJSON.data(using: .utf8))
         )
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(LegacyConfig.self, from: encoded)
@@ -603,12 +603,12 @@ struct LegacyConfigTests {
     }
 }
 
-// MARK: - Sendable Conformance Tests
+// MARK: - SendableTests
 
 @Suite("Sendable Conformance Tests")
 struct SendableTests {
     @Test("All models conform to Sendable")
-    func sendableConformance() async {
+    func sendableConformance() {
         // These compile-time checks ensure Sendable conformance
         let _: any Sendable = AnyCodable("test")
         let _: any Sendable = Permissions()

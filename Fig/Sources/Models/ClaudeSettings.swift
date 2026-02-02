@@ -26,23 +26,7 @@ import Foundation
 /// }
 /// ```
 public struct ClaudeSettings: Codable, Equatable, Hashable, Sendable {
-    /// Permission rules for Claude Code operations.
-    public var permissions: Permissions?
-
-    /// Environment variables to set for Claude Code.
-    public var env: [String: String]?
-
-    /// Hook configurations keyed by event name (e.g., "PreToolUse", "PostToolUse").
-    public var hooks: [String: [HookGroup]]?
-
-    /// Array of tool names that are not allowed.
-    public var disallowedTools: [String]?
-
-    /// Attribution settings for commits and pull requests.
-    public var attribution: Attribution?
-
-    /// Additional properties not explicitly modeled, preserved during round-trip.
-    public var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     public init(
         permissions: Permissions? = nil,
@@ -59,30 +43,6 @@ public struct ClaudeSettings: Codable, Equatable, Hashable, Sendable {
         self.attribution = attribution
         self.additionalProperties = additionalProperties
     }
-
-    /// Returns hooks for the specified event.
-    public func hooks(for event: String) -> [HookGroup]? {
-        hooks?[event]
-    }
-
-    /// Checks if a specific tool is disallowed.
-    public func isToolDisallowed(_ toolName: String) -> Bool {
-        disallowedTools?.contains(toolName) ?? false
-    }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case permissions
-        case env
-        case hooks
-        case disallowedTools
-        case attribution
-    }
-
-    private static let knownKeys: Set<String> = [
-        "permissions", "env", "hooks", "disallowedTools", "attribution"
-    ]
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -105,6 +65,36 @@ public struct ClaudeSettings: Codable, Equatable, Hashable, Sendable {
         additionalProperties = additional.isEmpty ? nil : additional
     }
 
+    // MARK: Public
+
+    /// Permission rules for Claude Code operations.
+    public var permissions: Permissions?
+
+    /// Environment variables to set for Claude Code.
+    public var env: [String: String]?
+
+    /// Hook configurations keyed by event name (e.g., "PreToolUse", "PostToolUse").
+    public var hooks: [String: [HookGroup]]?
+
+    /// Array of tool names that are not allowed.
+    public var disallowedTools: [String]?
+
+    /// Attribution settings for commits and pull requests.
+    public var attribution: Attribution?
+
+    /// Additional properties not explicitly modeled, preserved during round-trip.
+    public var additionalProperties: [String: AnyCodable]?
+
+    /// Returns hooks for the specified event.
+    public func hooks(for event: String) -> [HookGroup]? {
+        hooks?[event]
+    }
+
+    /// Checks if a specific tool is disallowed.
+    public func isToolDisallowed(_ toolName: String) -> Bool {
+        disallowedTools?.contains(toolName) ?? false
+    }
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(permissions, forKey: .permissions)
@@ -121,4 +111,20 @@ public struct ClaudeSettings: Codable, Equatable, Hashable, Sendable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case permissions
+        case env
+        case hooks
+        case disallowedTools
+        case attribution
+    }
+
+    private static let knownKeys: Set<String> = [
+        "permissions", "env", "hooks", "disallowedTools", "attribution",
+    ]
 }

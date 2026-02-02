@@ -1,5 +1,5 @@
-import Testing
 @testable import Fig
+import Testing
 
 @Suite("SidebarItem Tests")
 struct SidebarItemTests {

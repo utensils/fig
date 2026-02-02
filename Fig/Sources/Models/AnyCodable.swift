@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - AnyCodable
+
 /// A type-erased `Codable` value that preserves arbitrary JSON during round-trip encoding/decoding.
 ///
 /// This is essential for preserving unknown keys in Claude Code's configuration files,
@@ -10,7 +12,7 @@ import Foundation
 ///   arrays, and dictionaries) or from the ExpressibleBy literal protocols. Avoid storing
 ///   non-Sendable types directly.
 public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
-    public let value: Any
+    // MARK: Lifecycle
 
     public init(_ value: Any) {
         self.value = Self.sanitize(value)
@@ -20,25 +22,35 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
         let container = try decoder.singleValueContainer()
 
         if container.decodeNil() {
-            self.value = NSNull()
+            value = NSNull()
         } else if let bool = try? container.decode(Bool.self) {
-            self.value = bool
+            value = bool
         } else if let double = try? container.decode(Double.self) {
-            self.value = double
+            value = double
         } else if let int = try? container.decode(Int.self) {
-            self.value = int
+            value = int
         } else if let string = try? container.decode(String.self) {
-            self.value = string
+            value = string
         } else if let array = try? container.decode([AnyCodable].self) {
-            self.value = array.map(\.value)
+            value = array.map(\.value)
         } else if let dictionary = try? container.decode([String: AnyCodable].self) {
-            self.value = dictionary.mapValues(\.value)
+            value = dictionary.mapValues(\.value)
         } else {
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "AnyCodable cannot decode value"
             )
         }
+    }
+
+    // MARK: Public
+
+    public let value: Any
+
+    // MARK: - Equatable
+
+    public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+        areEqual(lhs.value, rhs.value)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -70,11 +82,13 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
         }
     }
 
-    // MARK: - Equatable
+    // MARK: - Hashable
 
-    public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
-        areEqual(lhs.value, rhs.value)
+    public func hash(into hasher: inout Hasher) {
+        Self.hashValue(value, into: &hasher)
     }
+
+    // MARK: Private
 
     /// Compares two `Any` values for equality without allocating wrapper objects.
     private static func areEqual(_ lhs: Any, _ rhs: Any) -> Bool {
@@ -90,23 +104,23 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
         case let (lhs as String, rhs as String):
             return lhs == rhs
         case let (lhs as [Any], rhs as [Any]):
-            guard lhs.count == rhs.count else { return false }
+            guard lhs.count == rhs.count else {
+                return false
+            }
             return zip(lhs, rhs).allSatisfy { areEqual($0, $1) }
         case let (lhs as [String: Any], rhs as [String: Any]):
-            guard lhs.count == rhs.count else { return false }
+            guard lhs.count == rhs.count else {
+                return false
+            }
             return lhs.allSatisfy { key, value in
-                guard let rhsValue = rhs[key] else { return false }
+                guard let rhsValue = rhs[key] else {
+                    return false
+                }
                 return areEqual(value, rhsValue)
             }
         default:
             return false
         }
-    }
-
-    // MARK: - Hashable
-
-    public func hash(into hasher: inout Hasher) {
-        Self.hashValue(value, into: &hasher)
     }
 
     /// Hashes an `Any` value without allocating wrapper objects.
@@ -146,22 +160,20 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
         }
     }
 
-    // MARK: - Private
-
     /// Recursively sanitize values to ensure Sendable compliance.
     private static func sanitize(_ value: Any) -> Any {
         switch value {
         case let array as [Any]:
-            return array.map { sanitize($0) }
+            array.map { sanitize($0) }
         case let dictionary as [String: Any]:
-            return dictionary.mapValues { sanitize($0) }
+            dictionary.mapValues { sanitize($0) }
         default:
-            return value
+            value
         }
     }
 }
 
-// MARK: - ExpressibleBy Literals
+// MARK: ExpressibleByNilLiteral
 
 extension AnyCodable: ExpressibleByNilLiteral {
     public init(nilLiteral: ()) {
@@ -169,11 +181,15 @@ extension AnyCodable: ExpressibleByNilLiteral {
     }
 }
 
+// MARK: ExpressibleByBooleanLiteral
+
 extension AnyCodable: ExpressibleByBooleanLiteral {
     public init(booleanLiteral value: Bool) {
         self.init(value)
     }
 }
+
+// MARK: ExpressibleByIntegerLiteral
 
 extension AnyCodable: ExpressibleByIntegerLiteral {
     public init(integerLiteral value: Int) {
@@ -181,11 +197,15 @@ extension AnyCodable: ExpressibleByIntegerLiteral {
     }
 }
 
+// MARK: ExpressibleByFloatLiteral
+
 extension AnyCodable: ExpressibleByFloatLiteral {
     public init(floatLiteral value: Double) {
         self.init(value)
     }
 }
+
+// MARK: ExpressibleByStringLiteral
 
 extension AnyCodable: ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
@@ -193,11 +213,15 @@ extension AnyCodable: ExpressibleByStringLiteral {
     }
 }
 
+// MARK: ExpressibleByArrayLiteral
+
 extension AnyCodable: ExpressibleByArrayLiteral {
     public init(arrayLiteral elements: Any...) {
         self.init(elements)
     }
 }
+
+// MARK: ExpressibleByDictionaryLiteral
 
 extension AnyCodable: ExpressibleByDictionaryLiteral {
     public init(dictionaryLiteral elements: (String, Any)...) {

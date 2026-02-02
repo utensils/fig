@@ -1,0 +1,67 @@
+# lefthook.yml
+# Git hooks configuration for Fig
+
+# Run commands from the Fig directory where Package.swift is located
+source_dir: "{root}/Fig"
+
+pre-commit:
+  parallel: true
+  commands:
+    swift-format:
+      glob: "*.swift"
+      run: |
+        if command -v swiftformat &> /dev/null; then
+          swiftformat --lint {staged_files}
+        else
+          echo "SwiftFormat not installed, skipping format check"
+        fi
+
+    swift-lint:
+      glob: "*.swift"
+      run: |
+        if command -v swiftlint &> /dev/null; then
+          swiftlint lint {staged_files} --quiet
+        else
+          echo "SwiftLint not installed, skipping lint check"
+        fi
+
+    trailing-whitespace:
+      run: |
+        FILES=$(git diff --cached --name-only)
+        if [ -n "$FILES" ] && echo "$FILES" | xargs grep -l "[[:blank:]]$" 2>/dev/null; then
+          echo "Error: Trailing whitespace detected in staged files"
+          exit 1
+        fi
+
+pre-push:
+  parallel: false
+  commands:
+    build:
+      run: swift build --quiet
+      fail_text: "Build failed. Fix build errors before pushing."
+
+    test:
+      run: swift test --quiet
+      fail_text: "Tests failed. Fix failing tests before pushing."
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: |
+        # Validate conventional commit format
+        MSG=$(head -1 {1})
+        if ! echo "$MSG" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\(.+\))?\!?: .{1,}$"; then
+          echo "Error: Commit message must follow Conventional Commits format"
+          echo ""
+          echo "Format: <type>(<scope>): <description>"
+          echo ""
+          echo "Types: feat, fix, docs, style, refactor, perf, test, chore, build, ci"
+          echo ""
+          echo "Examples:"
+          echo "  feat(parser): add ability to parse arrays"
+          echo "  fix: resolve crash on startup"
+          echo "  docs: update README with installation instructions"
+          echo ""
+          echo "Your message: $MSG"
+          exit 1
+        fi

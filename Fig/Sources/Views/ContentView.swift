@@ -2,8 +2,7 @@ import SwiftUI
 
 /// The main content view with NavigationSplitView layout.
 struct ContentView: View {
-    @State private var selectedItem: SidebarItem?
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    // MARK: Internal
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -13,6 +12,11 @@ struct ContentView: View {
         }
         .navigationSplitViewStyle(.balanced)
     }
+
+    // MARK: Private
+
+    @State private var selectedItem: SidebarItem?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 }
 
 #Preview {

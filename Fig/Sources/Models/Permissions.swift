@@ -13,14 +13,7 @@ import Foundation
 /// }
 /// ```
 public struct Permissions: Codable, Equatable, Hashable, Sendable {
-    /// Array of allowed permission patterns.
-    public var allow: [String]?
-
-    /// Array of denied permission patterns.
-    public var deny: [String]?
-
-    /// Additional properties not explicitly modeled, preserved during round-trip.
-    public var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     public init(
         allow: [String]? = nil,
@@ -31,15 +24,6 @@ public struct Permissions: Codable, Equatable, Hashable, Sendable {
         self.deny = deny
         self.additionalProperties = additionalProperties
     }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case allow
-        case deny
-    }
-
-    private static let knownKeys: Set<String> = ["allow", "deny"]
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -59,6 +43,17 @@ public struct Permissions: Codable, Equatable, Hashable, Sendable {
         additionalProperties = additional.isEmpty ? nil : additional
     }
 
+    // MARK: Public
+
+    /// Array of allowed permission patterns.
+    public var allow: [String]?
+
+    /// Array of denied permission patterns.
+    public var deny: [String]?
+
+    /// Additional properties not explicitly modeled, preserved during round-trip.
+    public var additionalProperties: [String: AnyCodable]?
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(allow, forKey: .allow)
@@ -72,4 +67,15 @@ public struct Permissions: Codable, Equatable, Hashable, Sendable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case allow
+        case deny
+    }
+
+    private static let knownKeys: Set<String> = ["allow", "deny"]
 }
