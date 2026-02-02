@@ -78,30 +78,6 @@ public enum ConfigSource: String, Sendable, Equatable, Hashable, CaseIterable, C
         }
     }
 
-    /// Short label for UI display.
-    public var label: String {
-        switch self {
-        case .global:
-            "Global"
-        case .projectShared:
-            "Shared"
-        case .projectLocal:
-            "Local"
-        }
-    }
-
-    /// SF Symbol icon name for UI display.
-    public var icon: String {
-        switch self {
-        case .global:
-            "globe"
-        case .projectShared:
-            "person.2"
-        case .projectLocal:
-            "person"
-        }
-    }
-
     public static func < (lhs: ConfigSource, rhs: ConfigSource) -> Bool {
         lhs.precedence < rhs.precedence
     }

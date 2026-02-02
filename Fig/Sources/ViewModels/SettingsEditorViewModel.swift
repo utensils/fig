@@ -2,11 +2,14 @@ import Foundation
 import OSLog
 import SwiftUI
 
+// swiftlint:disable file_length
+
 // MARK: - SettingsEditorViewModel
 
 /// View model for editing project settings with undo/redo, dirty tracking, and file watching.
 @MainActor
 @Observable
+// swiftlint:disable:next type_body_length
 final class SettingsEditorViewModel {
     // MARK: Lifecycle
 

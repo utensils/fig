@@ -115,7 +115,8 @@ struct ProjectSettingsEditorView: View {
     @State private var showingConflictSheet = false
     @State private var closeAction: (() -> Void)?
 
-    @Environment(\.undoManager) private var undoManager
+    @Environment(\.undoManager)
+    private var undoManager
 
     private var windowTitle: String {
         var title = viewModel.projectName

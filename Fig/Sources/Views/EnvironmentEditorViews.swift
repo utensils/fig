@@ -205,8 +205,7 @@ struct EditableEnvironmentVariableRow: View {
         !editedKey.isEmpty && !isDuplicateKey(editedKey)
     }
 
-    @ViewBuilder
-    private var editingContent: some View {
+    @ViewBuilder private var editingContent: some View {
         TextField("Key", text: $editedKey)
             .textFieldStyle(.roundedBorder)
             .font(.system(.body, design: .monospaced))
@@ -230,8 +229,7 @@ struct EditableEnvironmentVariableRow: View {
         .frame(width: 120)
     }
 
-    @ViewBuilder
-    private var displayContent: some View {
+    @ViewBuilder private var displayContent: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(envVar.key)
                 .font(.system(.body, design: .monospaced))
@@ -400,7 +398,8 @@ struct AddEnvironmentVariableSheet: View {
 
     // MARK: Private
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss)
+    private var dismiss
 
     @State private var key = ""
     @State private var value = ""

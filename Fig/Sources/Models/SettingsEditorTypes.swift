@@ -39,7 +39,6 @@ struct KnownEnvironmentVariable: Identifiable {
     let description: String
     let defaultValue: String?
 
-    // swiftlint:disable comma
     static let allVariables: [KnownEnvironmentVariable] = [
         KnownEnvironmentVariable(
             id: "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
@@ -102,7 +101,6 @@ struct KnownEnvironmentVariable: Identifiable {
             defaultValue: nil
         )
     ]
-    // swiftlint:enable comma
 
     static func description(for key: String) -> String? {
         allVariables.first { $0.name == key }?.description
@@ -118,7 +116,6 @@ struct PermissionPreset: Identifiable {
     let description: String
     let rules: [(rule: String, type: PermissionType)]
 
-    // swiftlint:disable comma
     static let allPresets: [PermissionPreset] = [
         PermissionPreset(
             id: "protect-env",
@@ -171,7 +168,6 @@ struct PermissionPreset: Identifiable {
             ]
         )
     ]
-    // swiftlint:enable comma
 }
 
 // MARK: - ToolType
