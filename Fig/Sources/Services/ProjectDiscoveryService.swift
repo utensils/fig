@@ -30,6 +30,13 @@ actor ProjectDiscoveryService {
     // MARK: Internal
 
     /// Default directories to scan for Claude projects.
+    ///
+    /// Includes the user's home directory (`"~"`) as well as common development folders
+    /// like `~/code`, `~/projects`, etc. Scanning the home directory can be expensive on
+    /// systems with many files or nested directories, even when the scan depth is limited.
+    /// Callers that enable directory scanning via `discoverProjects(scanDirectories:directories:)`
+    /// should be aware of this potential performance cost and may wish to provide a more
+    /// targeted set of directories instead of relying on these defaults.
     static let defaultScanDirectories: [String] = [
         "~",
         "~/code",
@@ -157,9 +164,9 @@ actor ProjectDiscoveryService {
         let localSettingsPath = claudeDir.appendingPathComponent("settings.local.json").path
         let mcpConfigPath = url.appendingPathComponent(".mcp.json").path
 
-        let hasSettings = fileManager.fileExists(atPath: settingsPath)
-        let hasLocalSettings = fileManager.fileExists(atPath: localSettingsPath)
-        let hasMCPConfig = fileManager.fileExists(atPath: mcpConfigPath)
+        let hasSettings = isFile(atPath: settingsPath)
+        let hasLocalSettings = isFile(atPath: localSettingsPath)
+        let hasMCPConfig = isFile(atPath: mcpConfigPath)
 
         // Get last modified date
         let lastModified = getLastModifiedDate(for: url)
@@ -186,7 +193,7 @@ actor ProjectDiscoveryService {
 
         // Check if this directory itself is a Claude project
         let claudeDir = url.appendingPathComponent(".claude")
-        if fileManager.fileExists(atPath: claudeDir.path) {
+        if isDirectory(atPath: claudeDir.path) {
             discoveredPaths.append(path)
         }
 
@@ -239,6 +246,20 @@ actor ProjectDiscoveryService {
         "Library",
         "Applications",
     ]
+
+    /// Checks if a path exists and is a regular file (not a directory).
+    private func isFile(atPath path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        let exists = fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+        return exists && !isDirectory.boolValue
+    }
+
+    /// Checks if a path exists and is a directory.
+    private func isDirectory(atPath path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        let exists = fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+        return exists && isDirectory.boolValue
+    }
 
     /// Expands tilde in path.
     private func expandPath(_ path: String) -> String {
