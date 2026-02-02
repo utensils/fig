@@ -69,6 +69,21 @@ struct ProjectDetailView: View {
         } message: { server in
             Text("Are you sure you want to delete '\(server.name)'? This action cannot be undone.")
         }
+        .sheet(isPresented: $showCopySheet, onDismiss: {
+            Task {
+                await viewModel.loadConfiguration()
+            }
+        }) {
+            if let copyVM = copyViewModel {
+                MCPCopySheet(viewModel: copyVM)
+                    .task {
+                        // Load projects for destination picker
+                        let config = try? await ConfigFileManager.shared.readGlobalConfig()
+                        let projects = config?.allProjects ?? []
+                        copyVM.loadDestinations(projects: projects)
+                    }
+            }
+        }
     }
 
     // MARK: Private
@@ -78,6 +93,8 @@ struct ProjectDetailView: View {
     @State private var mcpEditorViewModel: MCPServerEditorViewModel?
     @State private var showDeleteConfirmation = false
     @State private var serverToDelete: (name: String, source: ConfigSource)?
+    @State private var showCopySheet = false
+    @State private var copyViewModel: MCPCopyViewModel?
 
     @ViewBuilder
     private func tabContent(for tab: ProjectDetailTab) -> some View {
@@ -118,8 +135,17 @@ struct ProjectDetailView: View {
                     serverToDelete = (name, source)
                     showDeleteConfirmation = true
                 },
-                onCopy: { _, _ in
-                    // Copy is handled by MCPServerCard directly via clipboard
+                onCopy: { name, server in
+                    let sourceDestination = CopyDestination.project(
+                        path: viewModel.projectPath,
+                        name: viewModel.projectName
+                    )
+                    copyViewModel = MCPCopyViewModel(
+                        serverName: name,
+                        server: server,
+                        sourceDestination: sourceDestination
+                    )
+                    showCopySheet = true
                 }
             )
         case .hooks:

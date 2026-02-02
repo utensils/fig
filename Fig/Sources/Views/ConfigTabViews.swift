@@ -372,15 +372,26 @@ struct MCPServerCard: View {
                         // Health check button
                         MCPHealthCheckButton(serverName: name, server: server)
 
+                        // Copy to clipboard
+                        Button {
+                            copyToClipboard()
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Copy as JSON")
+
+                        // Copy to project
                         if onCopy != nil {
                             Button {
-                                copyToClipboard()
+                                onCopy?()
                             } label: {
-                                Image(systemName: "doc.on.doc")
+                                Image(systemName: "arrow.right.doc.on.clipboard")
                                     .font(.caption)
                             }
                             .buttonStyle(.plain)
-                            .help("Copy as JSON")
+                            .help("Copy to...")
                         }
 
                         if onEdit != nil {
@@ -484,13 +495,21 @@ struct MCPServerCard: View {
             }
         }
         .contextMenu {
+            Button {
+                copyToClipboard()
+            } label: {
+                Label("Copy as JSON", systemImage: "doc.on.doc")
+            }
+
             if onCopy != nil {
                 Button {
-                    copyToClipboard()
+                    onCopy?()
                 } label: {
-                    Label("Copy as JSON", systemImage: "doc.on.doc")
+                    Label("Copy to...", systemImage: "arrow.right.doc.on.clipboard")
                 }
             }
+
+            Divider()
 
             if onEdit != nil {
                 Button {
