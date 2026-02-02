@@ -15,7 +15,23 @@ struct ProjectDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            ProjectHeaderView(viewModel: viewModel)
+            ProjectHeaderView(
+                viewModel: viewModel,
+                onExport: {
+                    exportViewModel = ConfigExportViewModel(
+                        projectPath: viewModel.projectURL,
+                        projectName: viewModel.projectName
+                    )
+                    showExportSheet = true
+                },
+                onImport: {
+                    importViewModel = ConfigImportViewModel(
+                        projectPath: viewModel.projectURL,
+                        projectName: viewModel.projectName
+                    )
+                    showImportSheet = true
+                }
+            )
 
             Divider()
 
@@ -84,6 +100,20 @@ struct ProjectDetailView: View {
                     }
             }
         }
+        .sheet(isPresented: $showExportSheet) {
+            if let exportVM = exportViewModel {
+                ConfigExportView(viewModel: exportVM)
+            }
+        }
+        .sheet(isPresented: $showImportSheet, onDismiss: {
+            Task {
+                await viewModel.loadConfiguration()
+            }
+        }) {
+            if let importVM = importViewModel {
+                ConfigImportView(viewModel: importVM)
+            }
+        }
     }
 
     // MARK: Private
@@ -95,6 +125,10 @@ struct ProjectDetailView: View {
     @State private var serverToDelete: (name: String, source: ConfigSource)?
     @State private var showCopySheet = false
     @State private var copyViewModel: MCPCopyViewModel?
+    @State private var showExportSheet = false
+    @State private var exportViewModel: ConfigExportViewModel?
+    @State private var showImportSheet = false
+    @State private var importViewModel: ConfigImportViewModel?
 
     @ViewBuilder
     private func tabContent(for tab: ProjectDetailTab) -> some View {
@@ -167,6 +201,8 @@ struct ProjectHeaderView: View {
     // MARK: Internal
 
     @Bindable var viewModel: ProjectDetailViewModel
+    var onExport: (() -> Void)?
+    var onImport: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -214,6 +250,24 @@ struct ProjectHeaderView: View {
                         viewModel.openInTerminal()
                     } label: {
                         Label("Terminal", systemImage: "terminal")
+                    }
+                    .disabled(!viewModel.projectExists)
+
+                    // Export/Import menu
+                    Menu {
+                        Button {
+                            onExport?()
+                        } label: {
+                            Label("Export Configuration...", systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            onImport?()
+                        } label: {
+                            Label("Import Configuration...", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Label("More", systemImage: "ellipsis.circle")
                     }
                     .disabled(!viewModel.projectExists)
                 }
