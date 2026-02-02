@@ -221,7 +221,7 @@ actor ConfigFileManager {
     /// - Parameters:
     ///   - url: The URL of the file to watch.
     ///   - handler: Callback invoked when the file changes.
-    func startWatching(_ url: URL, handler: @escaping (URL) -> Void) {
+    func startWatching(_ url: URL, handler: @escaping @Sendable (URL) -> Void) {
         // Store handler for this specific URL
         self.changeHandlers[url] = handler
 
