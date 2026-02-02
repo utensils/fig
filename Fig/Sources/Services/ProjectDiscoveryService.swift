@@ -56,9 +56,14 @@ actor ProjectDiscoveryService {
     ) async throws -> [DiscoveredProject] {
         var allPaths = Set<String>()
 
-        // 1. Discover from legacy config
-        let legacyPaths = try await discoverFromLegacyConfig()
-        allPaths.formUnion(legacyPaths)
+        // 1. Discover from legacy config (fault-tolerant: continue if config is corrupted)
+        do {
+            let legacyPaths = try await discoverFromLegacyConfig()
+            allPaths.formUnion(legacyPaths)
+        } catch {
+            // Log error but continue with other discovery sources
+            // Legacy config may be missing or corrupted, but we can still scan directories
+        }
 
         // 2. Optionally scan directories
         if scanDirectories {
@@ -244,7 +249,7 @@ actor ProjectDiscoveryService {
         return path
     }
 
-    /// Canonicalizes a path by resolving symlinks and standardizing.
+    /// Canonicalizes a path by expanding tilde and standardizing.
     private func canonicalizePath(_ path: String) -> String? {
         let expandedPath = expandPath(path)
         let url = URL(fileURLWithPath: expandedPath)
@@ -273,7 +278,7 @@ actor ProjectDiscoveryService {
             if let attrs = try? fileManager.attributesOfItem(atPath: configPath.path),
                let modDate = attrs[.modificationDate] as? Date
             {
-                if mostRecent == nil || modDate > mostRecent! {
+                if mostRecent.map({ modDate > $0 }) ?? true {
                     mostRecent = modDate
                 }
             }

@@ -170,8 +170,8 @@ struct ProjectDiscoveryServiceTests {
 
     @Suite("Discovery Integration Tests")
     struct DiscoveryIntegrationTests {
-        @Test("Discovers projects from legacy config")
-        func discoverFromLegacyConfig() async throws {
+        @Test("Builds project metadata from filesystem path")
+        func buildsProjectFromPath() async throws {
             // Create temporary directory structure
             let tempDir = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString)
