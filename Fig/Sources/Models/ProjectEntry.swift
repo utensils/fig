@@ -14,7 +14,7 @@ import Foundation
 ///   "mcpServers": { ... }
 /// }
 /// ```
-public struct ProjectEntry: Codable, Equatable, Hashable, Sendable, Identifiable {
+public struct ProjectEntry: Codable, Sendable, Identifiable {
     /// The file path to the project directory.
     /// This is typically the dictionary key in LegacyConfig, stored here for convenience.
     public var path: String?
@@ -34,8 +34,11 @@ public struct ProjectEntry: Codable, Equatable, Hashable, Sendable, Identifiable
     /// Additional properties not explicitly modeled, preserved during round-trip.
     public var additionalProperties: [String: AnyCodable]?
 
+    /// Fallback identifier used when `path` is nil, ensuring stable identity for SwiftUI.
+    private let fallbackID: String
+
     public var id: String {
-        path ?? UUID().uuidString
+        path ?? fallbackID
     }
 
     public init(
@@ -52,6 +55,7 @@ public struct ProjectEntry: Codable, Equatable, Hashable, Sendable, Identifiable
         self.history = history
         self.mcpServers = mcpServers
         self.additionalProperties = additionalProperties
+        self.fallbackID = UUID().uuidString
     }
 
     /// The project name derived from the path.
@@ -87,6 +91,7 @@ public struct ProjectEntry: Codable, Equatable, Hashable, Sendable, Identifiable
         hasTrustDialogAccepted = try container.decodeIfPresent(Bool.self, forKey: .hasTrustDialogAccepted)
         history = try container.decodeIfPresent([String].self, forKey: .history)
         mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
+        fallbackID = UUID().uuidString
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -116,5 +121,33 @@ public struct ProjectEntry: Codable, Equatable, Hashable, Sendable, Identifiable
                 try additionalContainer.encode(value, forKey: DynamicCodingKey(stringValue: key))
             }
         }
+    }
+}
+
+// MARK: - Equatable
+
+extension ProjectEntry: Equatable {
+    public static func == (lhs: ProjectEntry, rhs: ProjectEntry) -> Bool {
+        // Exclude fallbackID from equality comparison
+        lhs.path == rhs.path &&
+        lhs.allowedTools == rhs.allowedTools &&
+        lhs.hasTrustDialogAccepted == rhs.hasTrustDialogAccepted &&
+        lhs.history == rhs.history &&
+        lhs.mcpServers == rhs.mcpServers &&
+        lhs.additionalProperties == rhs.additionalProperties
+    }
+}
+
+// MARK: - Hashable
+
+extension ProjectEntry: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        // Exclude fallbackID from hash computation
+        hasher.combine(path)
+        hasher.combine(allowedTools)
+        hasher.combine(hasTrustDialogAccepted)
+        hasher.combine(history)
+        hasher.combine(mcpServers)
+        hasher.combine(additionalProperties)
     }
 }

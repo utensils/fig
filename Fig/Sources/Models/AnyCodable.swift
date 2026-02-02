@@ -4,6 +4,11 @@ import Foundation
 ///
 /// This is essential for preserving unknown keys in Claude Code's configuration files,
 /// ensuring Fig doesn't lose fields it doesn't understand.
+///
+/// - Note: This type is marked `@unchecked Sendable` because it stores `Any` internally.
+///   In practice, values are only created from JSON decoding (which produces Sendable primitives,
+///   arrays, and dictionaries) or from the ExpressibleBy literal protocols. Avoid storing
+///   non-Sendable types directly.
 public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
     public let value: Any
 
@@ -68,7 +73,12 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
     // MARK: - Equatable
 
     public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
-        switch (lhs.value, rhs.value) {
+        areEqual(lhs.value, rhs.value)
+    }
+
+    /// Compares two `Any` values for equality without allocating wrapper objects.
+    private static func areEqual(_ lhs: Any, _ rhs: Any) -> Bool {
+        switch (lhs, rhs) {
         case is (NSNull, NSNull):
             return true
         case let (lhs as Bool, rhs as Bool):
@@ -80,9 +90,14 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
         case let (lhs as String, rhs as String):
             return lhs == rhs
         case let (lhs as [Any], rhs as [Any]):
-            return lhs.map { AnyCodable($0) } == rhs.map { AnyCodable($0) }
+            guard lhs.count == rhs.count else { return false }
+            return zip(lhs, rhs).allSatisfy { areEqual($0, $1) }
         case let (lhs as [String: Any], rhs as [String: Any]):
-            return lhs.mapValues { AnyCodable($0) } == rhs.mapValues { AnyCodable($0) }
+            guard lhs.count == rhs.count else { return false }
+            return lhs.allSatisfy { key, value in
+                guard let rhsValue = rhs[key] else { return false }
+                return areEqual(value, rhsValue)
+            }
         default:
             return false
         }
@@ -91,23 +106,43 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
     // MARK: - Hashable
 
     public func hash(into hasher: inout Hasher) {
+        Self.hashValue(value, into: &hasher)
+    }
+
+    /// Hashes an `Any` value without allocating wrapper objects.
+    private static func hashValue(_ value: Any, into hasher: inout Hasher) {
         switch value {
         case is NSNull:
             hasher.combine(0)
         case let bool as Bool:
+            hasher.combine(1)
             hasher.combine(bool)
         case let int as Int:
+            hasher.combine(2)
             hasher.combine(int)
         case let double as Double:
+            hasher.combine(3)
             hasher.combine(double)
         case let string as String:
+            hasher.combine(4)
             hasher.combine(string)
         case let array as [Any]:
-            hasher.combine(array.map { AnyCodable($0) })
+            hasher.combine(5)
+            hasher.combine(array.count)
+            for element in array {
+                hashValue(element, into: &hasher)
+            }
         case let dictionary as [String: Any]:
-            hasher.combine(dictionary.mapValues { AnyCodable($0) })
+            hasher.combine(6)
+            hasher.combine(dictionary.count)
+            for key in dictionary.keys.sorted() {
+                hasher.combine(key)
+                hashValue(dictionary[key]!, into: &hasher)
+            }
         default:
-            break
+            // Hash the type to ensure different unsupported types don't collide
+            hasher.combine(7)
+            hasher.combine(ObjectIdentifier(type(of: value)))
         }
     }
 
