@@ -214,6 +214,11 @@ actor ConfigFileManager {
         try await self.write(config, to: self.mcpConfigURL(for: projectPath))
     }
 
+    /// Writes the global legacy config to ~/.claude.json.
+    func writeGlobalConfig(_ config: LegacyConfig) async throws {
+        try await write(config, to: globalConfigURL)
+    }
+
     // MARK: - File Watching
 
     /// Starts watching a file for external changes.

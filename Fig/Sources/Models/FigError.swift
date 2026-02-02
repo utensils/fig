@@ -36,6 +36,9 @@ enum FigError: Error, LocalizedError, Sendable {
     /// A configuration value has an invalid type.
     case invalidConfigValue(key: String, expected: String, got: String)
 
+    /// A general configuration error.
+    case configurationError(message: String)
+
     // MARK: - Project Errors
 
     /// The specified project was not found.
@@ -85,6 +88,8 @@ enum FigError: Error, LocalizedError, Sendable {
             return "Missing required configuration key: \(key)"
         case let .invalidConfigValue(key, expected, got):
             return "Invalid value for '\(key)': expected \(expected), got \(got)"
+        case let .configurationError(message):
+            return "Configuration error: \(message)"
         case let .projectNotFound(path):
             return "Project not found: \(path)"
         case let .corruptProjectConfig(path):
@@ -118,6 +123,8 @@ enum FigError: Error, LocalizedError, Sendable {
             "A required configuration key was not found."
         case .invalidConfigValue:
             "A configuration value has the wrong type."
+        case .configurationError:
+            "An error occurred with the configuration."
         case .projectNotFound:
             "The project directory does not exist or is not accessible."
         case .corruptProjectConfig:
@@ -151,6 +158,8 @@ enum FigError: Error, LocalizedError, Sendable {
             "Add the required key to your configuration file."
         case .invalidConfigValue:
             "Update the configuration value to use the correct type."
+        case .configurationError:
+            "Review the configuration and correct any errors."
         case .projectNotFound:
             "Verify the project path exists and try again."
         case .corruptProjectConfig:

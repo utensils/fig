@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // MARK: - SourceBadge
@@ -10,21 +11,21 @@ struct SourceBadge: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            Image(systemName: self.source.icon)
+            Image(systemName: source.icon)
                 .font(.caption2)
-            Text(self.source.label)
+            Text(source.label)
                 .font(.caption2)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
-        .background(self.backgroundColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
-        .foregroundStyle(self.backgroundColor)
+        .background(backgroundColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
+        .foregroundStyle(backgroundColor)
     }
 
     // MARK: Private
 
     private var backgroundColor: Color {
-        switch self.source {
+        switch source {
         case .global:
             .blue
         case .projectShared:
@@ -50,7 +51,7 @@ struct PermissionsTabView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Source legend for project views
-                if self.allPermissions != nil {
+                if allPermissions != nil {
                     SourceLegend()
                 }
 
@@ -61,7 +62,7 @@ struct PermissionsTabView: View {
                             .font(.headline)
                             .foregroundStyle(.green)
 
-                        let allowRules = self.allowPermissions
+                        let allowRules = allowPermissions
                         if allowRules.isEmpty {
                             Text("No allow rules configured.")
                                 .foregroundStyle(.secondary)
@@ -86,7 +87,7 @@ struct PermissionsTabView: View {
                             .font(.headline)
                             .foregroundStyle(.red)
 
-                        let denyRules = self.denyPermissions
+                        let denyRules = denyPermissions
                         if denyRules.isEmpty {
                             Text("No deny rules configured.")
                                 .foregroundStyle(.secondary)
@@ -143,18 +144,18 @@ struct PermissionRuleRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: self.type.icon)
-                .foregroundStyle(self.type == .allow ? .green : .red)
+            Image(systemName: type.icon)
+                .foregroundStyle(type == .allow ? .green : .red)
                 .frame(width: 20)
 
-            Text(self.rule)
+            Text(rule)
                 .font(.system(.body, design: .monospaced))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
             Spacer()
 
-            SourceBadge(source: self.source)
+            SourceBadge(source: source)
         }
         .padding(.vertical, 2)
     }
@@ -170,20 +171,20 @@ struct EnvironmentTabView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if !self.envVars.isEmpty {
+                if !envVars.isEmpty {
                     SourceLegend()
                 }
 
-                if self.envVars.isEmpty {
+                if envVars.isEmpty {
                     ContentUnavailableView(
                         "No Environment Variables",
                         systemImage: "list.bullet.rectangle",
-                        description: Text(self.emptyMessage)
+                        description: Text(emptyMessage)
                     )
                 } else {
                     GroupBox {
                         VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(self.envVars.enumerated()), id: \.offset) { index, item in
+                            ForEach(Array(envVars.enumerated()), id: \.offset) { index, item in
                                 if index > 0 {
                                     Divider()
                                 }
@@ -216,7 +217,7 @@ struct EnvironmentVariableRow: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            Text(self.key)
+            Text(key)
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.medium)
                 .frame(minWidth: 200, alignment: .leading)
@@ -225,29 +226,29 @@ struct EnvironmentVariableRow: View {
                 .foregroundStyle(.secondary)
 
             Group {
-                if self.isValueVisible || !self.isSensitive {
-                    Text(self.value)
+                if isValueVisible || !isSensitive {
+                    Text(value)
                         .font(.system(.body, design: .monospaced))
                         .lineLimit(2)
                         .truncationMode(.middle)
                 } else {
-                    Text(String(repeating: "\u{2022}", count: min(self.value.count, 20)))
+                    Text(String(repeating: "\u{2022}", count: min(value.count, 20)))
                         .font(.system(.body, design: .monospaced))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if self.isSensitive {
+            if isSensitive {
                 Button {
-                    self.isValueVisible.toggle()
+                    isValueVisible.toggle()
                 } label: {
-                    Image(systemName: self.isValueVisible ? "eye.slash" : "eye")
+                    Image(systemName: isValueVisible ? "eye.slash" : "eye")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
             }
 
-            SourceBadge(source: self.source)
+            SourceBadge(source: source)
         }
         .padding(.vertical, 8)
     }
@@ -258,7 +259,7 @@ struct EnvironmentVariableRow: View {
 
     private var isSensitive: Bool {
         let sensitivePatterns = ["token", "key", "secret", "password", "credential", "api"]
-        let lowercaseKey = self.key.lowercased()
+        let lowercaseKey = key.lowercased()
         return sensitivePatterns.contains { lowercaseKey.contains($0) }
     }
 }
@@ -269,33 +270,67 @@ struct EnvironmentVariableRow: View {
 struct MCPServersTabView: View {
     let servers: [(name: String, server: MCPServer, source: ConfigSource)]
     var emptyMessage = "No MCP servers configured."
+    var projectPath: URL?
+    var onAdd: (() -> Void)?
+    var onEdit: ((String, MCPServer, ConfigSource) -> Void)?
+    var onDelete: ((String, ConfigSource) -> Void)?
+    var onCopy: ((String, MCPServer) -> Void)?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if !self.servers.isEmpty {
-                    SourceLegend()
-                }
-
-                if self.servers.isEmpty {
-                    ContentUnavailableView(
-                        "No MCP Servers",
-                        systemImage: "server.rack",
-                        description: Text(self.emptyMessage)
-                    )
-                } else {
-                    ForEach(Array(self.servers.enumerated()), id: \.offset) { _, item in
-                        MCPServerCard(
-                            name: item.name,
-                            server: item.server,
-                            source: item.source
-                        )
+        VStack(spacing: 0) {
+            // Toolbar
+            if onAdd != nil {
+                HStack {
+                    Spacer()
+                    Button {
+                        onAdd?()
+                    } label: {
+                        Label("Add Server", systemImage: "plus")
                     }
+                    .buttonStyle(.bordered)
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
 
-                Spacer()
+                Divider()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !servers.isEmpty {
+                        SourceLegend()
+                    }
+
+                    if servers.isEmpty {
+                        ContentUnavailableView(
+                            "No MCP Servers",
+                            systemImage: "server.rack",
+                            description: Text(emptyMessage)
+                        )
+                    } else {
+                        ForEach(Array(servers.enumerated()), id: \.offset) { _, item in
+                            MCPServerCard(
+                                name: item.name,
+                                server: item.server,
+                                source: item.source,
+                                onEdit: onEdit != nil ? {
+                                    onEdit?(item.name, item.server, item.source)
+                                } : nil,
+                                onDelete: onDelete != nil ? {
+                                    onDelete?(item.name, item.source)
+                                } : nil,
+                                onCopy: onCopy != nil ? {
+                                    onCopy?(item.name, item.server)
+                                } : nil
+                            )
+                        }
+                    }
+
+                    Spacer()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 }
@@ -309,19 +344,22 @@ struct MCPServerCard: View {
     let name: String
     let server: MCPServer
     let source: ConfigSource
+    var onEdit: (() -> Void)?
+    var onDelete: (() -> Void)?
+    var onCopy: (() -> Void)?
 
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
                 // Header
                 HStack {
-                    Image(systemName: self.server.isHTTP ? "globe" : "terminal")
-                        .foregroundStyle(self.server.isHTTP ? .blue : .green)
+                    Image(systemName: server.isHTTP ? "globe" : "terminal")
+                        .foregroundStyle(server.isHTTP ? .blue : .green)
 
-                    Text(self.name)
+                    Text(name)
                         .font(.headline)
 
-                    Text(self.server.isHTTP ? "HTTP" : "Stdio")
+                    Text(server.isHTTP ? "HTTP" : "Stdio")
                         .font(.caption)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -329,21 +367,72 @@ struct MCPServerCard: View {
 
                     Spacer()
 
-                    SourceBadge(source: self.source)
+                    // Action buttons
+                    HStack(spacing: 4) {
+                        // Health check button
+                        MCPHealthCheckButton(serverName: name, server: server)
+
+                        // Copy to clipboard
+                        Button {
+                            copyToClipboard()
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Copy as JSON")
+
+                        // Copy to project
+                        if onCopy != nil {
+                            Button {
+                                onCopy?()
+                            } label: {
+                                Image(systemName: "arrow.right.doc.on.clipboard")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Copy to...")
+                        }
+
+                        if onEdit != nil {
+                            Button {
+                                onEdit?()
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Edit server")
+                        }
+
+                        if onDelete != nil {
+                            Button {
+                                onDelete?()
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Delete server")
+                        }
+                    }
+
+                    SourceBadge(source: source)
 
                     Button {
                         withAnimation {
-                            self.isExpanded.toggle()
+                            isExpanded.toggle()
                         }
                     } label: {
-                        Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption)
                     }
                     .buttonStyle(.plain)
                 }
 
                 // Summary line
-                if self.server.isHTTP {
+                if server.isHTTP {
                     if let url = server.url {
                         Text(url)
                             .font(.system(.caption, design: .monospaced))
@@ -364,10 +453,10 @@ struct MCPServerCard: View {
                 }
 
                 // Expanded details
-                if self.isExpanded {
+                if isExpanded {
                     Divider()
 
-                    if self.server.isHTTP {
+                    if server.isHTTP {
                         if let headers = server.headers, !headers.isEmpty {
                             Text("Headers:")
                                 .font(.caption)
@@ -378,7 +467,7 @@ struct MCPServerCard: View {
                                         .font(.system(.caption, design: .monospaced))
                                     Text(":")
                                         .foregroundStyle(.secondary)
-                                    Text(self.maskSensitiveValue(key: key, value: headers[key] ?? ""))
+                                    Text(maskSensitiveValue(key: key, value: headers[key] ?? ""))
                                         .font(.system(.caption, design: .monospaced))
                                         .foregroundStyle(.secondary)
                                 }
@@ -395,13 +484,47 @@ struct MCPServerCard: View {
                                         .font(.system(.caption, design: .monospaced))
                                     Text("=")
                                         .foregroundStyle(.secondary)
-                                    Text(self.maskSensitiveValue(key: key, value: env[key] ?? ""))
+                                    Text(maskSensitiveValue(key: key, value: env[key] ?? ""))
                                         .font(.system(.caption, design: .monospaced))
                                         .foregroundStyle(.secondary)
                                 }
                             }
                         }
                     }
+                }
+            }
+        }
+        .contextMenu {
+            Button {
+                copyToClipboard()
+            } label: {
+                Label("Copy as JSON", systemImage: "doc.on.doc")
+            }
+
+            if onCopy != nil {
+                Button {
+                    onCopy?()
+                } label: {
+                    Label("Copy to...", systemImage: "arrow.right.doc.on.clipboard")
+                }
+            }
+
+            Divider()
+
+            if onEdit != nil {
+                Button {
+                    onEdit?()
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+            }
+
+            if onDelete != nil {
+                Divider()
+                Button(role: .destructive) {
+                    onDelete?()
+                } label: {
+                    Label("Delete", systemImage: "trash")
                 }
             }
         }
@@ -418,6 +541,19 @@ struct MCPServerCard: View {
             return String(repeating: "\u{2022}", count: min(value.count, 20))
         }
         return value
+    }
+
+    private func copyToClipboard() {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+
+        if let data = try? encoder.encode([name: server]),
+           let jsonString = String(data: data, encoding: .utf8)
+        {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(jsonString, forType: .string)
+            NotificationManager.shared.showSuccess("Copied to clipboard", message: "Server '\(name)' copied as JSON")
+        }
     }
 }
 
@@ -436,7 +572,7 @@ struct HooksTabView: View {
             VStack(alignment: .leading, spacing: 16) {
                 SourceLegend()
 
-                if self.allHooksEmpty {
+                if allHooksEmpty {
                     ContentUnavailableView(
                         "No Hooks Configured",
                         systemImage: "arrow.triangle.branch",
@@ -446,12 +582,12 @@ struct HooksTabView: View {
                     )
                 } else {
                     // List all hook events
-                    ForEach(self.allHookEvents, id: \.self) { event in
+                    ForEach(allHookEvents, id: \.self) { event in
                         HookEventSection(
                             event: event,
-                            globalGroups: self.globalHooks?[event],
-                            projectGroups: self.projectHooks?[event],
-                            localGroups: self.localHooks?[event]
+                            globalGroups: globalHooks?[event],
+                            projectGroups: projectHooks?[event],
+                            localGroups: localHooks?[event]
                         )
                     }
                 }
@@ -465,9 +601,9 @@ struct HooksTabView: View {
     // MARK: Private
 
     private var allHooksEmpty: Bool {
-        (self.globalHooks?.isEmpty ?? true) &&
-            (self.projectHooks?.isEmpty ?? true) &&
-            (self.localHooks?.isEmpty ?? true)
+        (globalHooks?.isEmpty ?? true) &&
+            (projectHooks?.isEmpty ?? true) &&
+            (localHooks?.isEmpty ?? true)
     }
 
     private var allHookEvents: [String] {
@@ -497,7 +633,7 @@ struct HookEventSection: View {
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
-                Text(self.event)
+                Text(event)
                     .font(.headline)
 
                 // Global hooks
@@ -542,7 +678,7 @@ struct HookGroupRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                SourceBadge(source: self.source)
+                SourceBadge(source: source)
             }
 
             if let hooks = group.hooks {

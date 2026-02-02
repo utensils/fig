@@ -15,24 +15,40 @@ struct ProjectDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            ProjectHeaderView(viewModel: self.viewModel, showingEditor: self.$showingEditor)
+            ProjectHeaderView(
+                viewModel: viewModel,
+                onExport: {
+                    exportViewModel = ConfigExportViewModel(
+                        projectPath: viewModel.projectURL,
+                        projectName: viewModel.projectName
+                    )
+                    showExportSheet = true
+                },
+                onImport: {
+                    importViewModel = ConfigImportViewModel(
+                        projectPath: viewModel.projectURL,
+                        projectName: viewModel.projectName
+                    )
+                    showImportSheet = true
+                }
+            )
 
             Divider()
 
             // Tab content
-            if self.viewModel.isLoading {
+            if viewModel.isLoading {
                 ProgressView("Loading configuration...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if !self.viewModel.projectExists {
+            } else if !viewModel.projectExists {
                 ContentUnavailableView(
                     "Project Not Found",
                     systemImage: "folder.badge.questionmark",
-                    description: Text("The project directory no longer exists at:\n\(self.viewModel.projectPath)")
+                    description: Text("The project directory no longer exists at:\n\(viewModel.projectPath)")
                 )
             } else {
-                TabView(selection: self.$viewModel.selectedTab) {
+                TabView(selection: $viewModel.selectedTab) {
                     ForEach(ProjectDetailTab.allCases) { tab in
-                        self.tabContent(for: tab)
+                        tabContent(for: tab)
                             .tabItem {
                                 Label(tab.title, systemImage: tab.icon)
                             }
@@ -44,18 +60,58 @@ struct ProjectDetailView: View {
         }
         .frame(minWidth: 500)
         .task {
-            await self.viewModel.loadConfiguration()
+            await viewModel.loadConfiguration()
         }
-        .sheet(isPresented: $showingEditor) {
-            ProjectSettingsEditorView(projectPath: viewModel.projectPath)
-                .frame(minWidth: 700, minHeight: 600)
+        .sheet(isPresented: $showMCPServerEditor, onDismiss: {
+            Task {
+                await viewModel.loadConfiguration()
+            }
+        }) {
+            if let editorViewModel = mcpEditorViewModel {
+                MCPServerEditorView(viewModel: editorViewModel)
+            }
         }
-        .onChange(of: showingEditor) { _, isShowing in
-            // Reload configuration when editor closes in case settings changed
-            if !isShowing {
+        .alert(
+            "Delete Server",
+            isPresented: $showDeleteConfirmation,
+            presenting: serverToDelete
+        ) { server in
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
                 Task {
-                    await viewModel.loadConfiguration()
+                    await viewModel.deleteMCPServer(name: server.name, source: server.source)
                 }
+            }
+        } message: { server in
+            Text("Are you sure you want to delete '\(server.name)'? This action cannot be undone.")
+        }
+        .sheet(isPresented: $showCopySheet, onDismiss: {
+            Task {
+                await viewModel.loadConfiguration()
+            }
+        }) {
+            if let copyVM = copyViewModel {
+                MCPCopySheet(viewModel: copyVM)
+                    .task {
+                        // Load projects for destination picker
+                        let config = try? await ConfigFileManager.shared.readGlobalConfig()
+                        let projects = config?.allProjects ?? []
+                        copyVM.loadDestinations(projects: projects)
+                    }
+            }
+        }
+        .sheet(isPresented: $showExportSheet) {
+            if let exportVM = exportViewModel {
+                ConfigExportView(viewModel: exportVM)
+            }
+        }
+        .sheet(isPresented: $showImportSheet, onDismiss: {
+            Task {
+                await viewModel.loadConfiguration()
+            }
+        }) {
+            if let importVM = importViewModel {
+                ConfigImportView(viewModel: importVM)
             }
         }
     }
@@ -63,34 +119,77 @@ struct ProjectDetailView: View {
     // MARK: Private
 
     @State private var viewModel: ProjectDetailViewModel
-    @State private var showingEditor = false
+    @State private var showMCPServerEditor = false
+    @State private var mcpEditorViewModel: MCPServerEditorViewModel?
+    @State private var showDeleteConfirmation = false
+    @State private var serverToDelete: (name: String, source: ConfigSource)?
+    @State private var showCopySheet = false
+    @State private var copyViewModel: MCPCopyViewModel?
+    @State private var showExportSheet = false
+    @State private var exportViewModel: ConfigExportViewModel?
+    @State private var showImportSheet = false
+    @State private var importViewModel: ConfigImportViewModel?
 
     @ViewBuilder
     private func tabContent(for tab: ProjectDetailTab) -> some View {
         switch tab {
         case .permissions:
             PermissionsTabView(
-                allPermissions: self.viewModel.allPermissions,
+                allPermissions: viewModel.allPermissions,
                 emptyMessage: "No permission rules configured for this project."
             )
         case .environment:
             EnvironmentTabView(
-                envVars: self.viewModel.allEnvironmentVariables,
+                envVars: viewModel.allEnvironmentVariables,
                 emptyMessage: "No environment variables configured for this project."
             )
         case .mcpServers:
             MCPServersTabView(
-                servers: self.viewModel.allMCPServers,
-                emptyMessage: "No MCP servers configured for this project."
+                servers: viewModel.allMCPServers,
+                emptyMessage: "No MCP servers configured for this project.",
+                projectPath: viewModel.projectURL,
+                onAdd: {
+                    mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
+                        projectPath: viewModel.projectURL,
+                        defaultScope: .project
+                    )
+                    showMCPServerEditor = true
+                },
+                onEdit: { name, server, source in
+                    let scope: MCPServerScope = source == .global ? .global : .project
+                    mcpEditorViewModel = MCPServerEditorViewModel.forEditing(
+                        name: name,
+                        server: server,
+                        scope: scope,
+                        projectPath: viewModel.projectURL
+                    )
+                    showMCPServerEditor = true
+                },
+                onDelete: { name, source in
+                    serverToDelete = (name, source)
+                    showDeleteConfirmation = true
+                },
+                onCopy: { name, server in
+                    let sourceDestination = CopyDestination.project(
+                        path: viewModel.projectPath,
+                        name: viewModel.projectName
+                    )
+                    copyViewModel = MCPCopyViewModel(
+                        serverName: name,
+                        server: server,
+                        sourceDestination: sourceDestination
+                    )
+                    showCopySheet = true
+                }
             )
         case .hooks:
             HooksTabView(
-                globalHooks: self.viewModel.globalSettings?.hooks,
-                projectHooks: self.viewModel.projectSettings?.hooks,
-                localHooks: self.viewModel.projectLocalSettings?.hooks
+                globalHooks: viewModel.globalSettings?.hooks,
+                projectHooks: viewModel.projectSettings?.hooks,
+                localHooks: viewModel.projectLocalSettings?.hooks
             )
         case .advanced:
-            AdvancedTabView(viewModel: self.viewModel)
+            AdvancedTabView(viewModel: viewModel)
         }
     }
 }
@@ -102,32 +201,33 @@ struct ProjectHeaderView: View {
     // MARK: Internal
 
     @Bindable var viewModel: ProjectDetailViewModel
-    @Binding var showingEditor: Bool
+    var onExport: (() -> Void)?
+    var onImport: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 // Project icon
-                Image(systemName: self.viewModel.projectExists ? "folder.fill" : "folder.badge.questionmark")
+                Image(systemName: viewModel.projectExists ? "folder.fill" : "folder.badge.questionmark")
                     .font(.title)
-                    .foregroundStyle(self.viewModel.projectExists ? .blue : .orange)
+                    .foregroundStyle(viewModel.projectExists ? .blue : .orange)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(self.viewModel.projectName)
+                    Text(viewModel.projectName)
                         .font(.title2)
                         .fontWeight(.semibold)
 
                     Button {
-                        self.viewModel.revealInFinder()
+                        viewModel.revealInFinder()
                     } label: {
-                        Text(self.abbreviatePath(self.viewModel.projectPath))
+                        Text(abbreviatePath(viewModel.projectPath))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .disabled(!self.viewModel.projectExists)
+                    .disabled(!viewModel.projectExists)
                     .onHover { isHovered in
-                        if isHovered, self.viewModel.projectExists {
+                        if isHovered, viewModel.projectExists {
                             NSCursor.pointingHand.push()
                         } else {
                             NSCursor.pop()
@@ -140,26 +240,36 @@ struct ProjectHeaderView: View {
                 // Action buttons
                 HStack(spacing: 8) {
                     Button {
-                        self.showingEditor = true
-                    } label: {
-                        Label("Edit Settings", systemImage: "pencil")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!self.viewModel.projectExists)
-
-                    Button {
-                        self.viewModel.revealInFinder()
+                        viewModel.revealInFinder()
                     } label: {
                         Label("Reveal", systemImage: "folder")
                     }
-                    .disabled(!self.viewModel.projectExists)
+                    .disabled(!viewModel.projectExists)
 
                     Button {
-                        self.viewModel.openInTerminal()
+                        viewModel.openInTerminal()
                     } label: {
                         Label("Terminal", systemImage: "terminal")
                     }
-                    .disabled(!self.viewModel.projectExists)
+                    .disabled(!viewModel.projectExists)
+
+                    // Export/Import menu
+                    Menu {
+                        Button {
+                            onExport?()
+                        } label: {
+                            Label("Export Configuration...", systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            onImport?()
+                        } label: {
+                            Label("Import Configuration...", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Label("More", systemImage: "ellipsis.circle")
+                    }
+                    .disabled(!viewModel.projectExists)
                 }
             }
 
@@ -214,25 +324,25 @@ struct ConfigFileBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: self.status.exists ? "checkmark.circle.fill" : "plus.circle.dashed")
-                .foregroundStyle(self.status.exists ? .green : .secondary)
+            Image(systemName: status.exists ? "checkmark.circle.fill" : "plus.circle.dashed")
+                .foregroundStyle(status.exists ? .green : .secondary)
                 .font(.caption)
-            Text(self.label)
+            Text(label)
                 .font(.caption)
-            Image(systemName: self.source.icon)
-                .foregroundStyle(self.sourceColor)
+            Image(systemName: source.icon)
+                .foregroundStyle(sourceColor)
                 .font(.caption2)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
-        .help(self.status.exists ? "File exists" : "File not created yet")
+        .help(status.exists ? "File exists" : "File not created yet")
     }
 
     // MARK: Private
 
     private var sourceColor: Color {
-        switch self.source {
+        switch source {
         case .global:
             .blue
         case .projectShared:
@@ -320,7 +430,7 @@ struct AdvancedTabView: View {
 
                 // Disallowed tools
                 GroupBox("Disallowed Tools") {
-                    let tools = self.viewModel.allDisallowedTools
+                    let tools = viewModel.allDisallowedTools
                     if tools.isEmpty {
                         Text("No tools are disallowed for this project.")
                             .foregroundStyle(.secondary)
@@ -358,12 +468,12 @@ struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
-        let result = self.layout(proposal: proposal, subviews: subviews)
+        let result = layout(proposal: proposal, subviews: subviews)
         return result.size
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
-        let result = self.layout(proposal: proposal, subviews: subviews)
+        let result = layout(proposal: proposal, subviews: subviews)
         for (index, position) in result.positions.enumerated() {
             subviews[index].place(
                 at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
@@ -387,13 +497,13 @@ struct FlowLayout: Layout {
 
             if currentX + size.width > maxWidth, currentX > 0 {
                 currentX = 0
-                currentY += lineHeight + self.spacing
+                currentY += lineHeight + spacing
                 lineHeight = 0
             }
 
             positions.append(CGPoint(x: currentX, y: currentY))
             lineHeight = max(lineHeight, size.height)
-            currentX += size.width + self.spacing
+            currentX += size.width + spacing
             totalHeight = currentY + lineHeight
         }
 

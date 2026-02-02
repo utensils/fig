@@ -185,7 +185,7 @@ final class ProjectExplorerViewModel {
         self.errorMessage = nil
 
         do {
-            let config = try await configManager.readGlobalConfig()
+            let config = try await self.configManager.readGlobalConfig()
             self.projects = config?.allProjects ?? []
             Log.general.info("Loaded \(self.projects.count) projects")
         } catch {
