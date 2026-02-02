@@ -404,8 +404,7 @@ struct AddEnvironmentVariableSheet: View {
     @State private var key = ""
     @State private var value = ""
 
-    @ViewBuilder
-    private var autocompleteView: some View {
+    @ViewBuilder private var autocompleteView: some View {
         let suggestions = KnownEnvironmentVariable.allVariables.filter {
             $0.name.localizedCaseInsensitiveContains(key)
         }

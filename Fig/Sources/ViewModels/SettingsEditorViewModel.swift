@@ -9,8 +9,7 @@ import SwiftUI
 /// View model for editing project settings with undo/redo, dirty tracking, and file watching.
 @MainActor
 @Observable
-// swiftlint:disable:next type_body_length
-final class SettingsEditorViewModel {
+final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
     // MARK: Lifecycle
 
     init(projectPath: String, configManager: ConfigFileManager = .shared) {
