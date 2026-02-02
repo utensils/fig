@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // MARK: - SourceBadge
@@ -269,33 +270,67 @@ struct EnvironmentVariableRow: View {
 struct MCPServersTabView: View {
     let servers: [(name: String, server: MCPServer, source: ConfigSource)]
     var emptyMessage = "No MCP servers configured."
+    var projectPath: URL?
+    var onAdd: (() -> Void)?
+    var onEdit: ((String, MCPServer, ConfigSource) -> Void)?
+    var onDelete: ((String, ConfigSource) -> Void)?
+    var onCopy: ((String, MCPServer) -> Void)?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if !servers.isEmpty {
-                    SourceLegend()
-                }
-
-                if servers.isEmpty {
-                    ContentUnavailableView(
-                        "No MCP Servers",
-                        systemImage: "server.rack",
-                        description: Text(emptyMessage)
-                    )
-                } else {
-                    ForEach(Array(servers.enumerated()), id: \.offset) { _, item in
-                        MCPServerCard(
-                            name: item.name,
-                            server: item.server,
-                            source: item.source
-                        )
+        VStack(spacing: 0) {
+            // Toolbar
+            if onAdd != nil {
+                HStack {
+                    Spacer()
+                    Button {
+                        onAdd?()
+                    } label: {
+                        Label("Add Server", systemImage: "plus")
                     }
+                    .buttonStyle(.bordered)
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
 
-                Spacer()
+                Divider()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !servers.isEmpty {
+                        SourceLegend()
+                    }
+
+                    if servers.isEmpty {
+                        ContentUnavailableView(
+                            "No MCP Servers",
+                            systemImage: "server.rack",
+                            description: Text(emptyMessage)
+                        )
+                    } else {
+                        ForEach(Array(servers.enumerated()), id: \.offset) { _, item in
+                            MCPServerCard(
+                                name: item.name,
+                                server: item.server,
+                                source: item.source,
+                                onEdit: onEdit != nil ? {
+                                    onEdit?(item.name, item.server, item.source)
+                                } : nil,
+                                onDelete: onDelete != nil ? {
+                                    onDelete?(item.name, item.source)
+                                } : nil,
+                                onCopy: onCopy != nil ? {
+                                    onCopy?(item.name, item.server)
+                                } : nil
+                            )
+                        }
+                    }
+
+                    Spacer()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 }
@@ -309,6 +344,9 @@ struct MCPServerCard: View {
     let name: String
     let server: MCPServer
     let source: ConfigSource
+    var onEdit: (() -> Void)?
+    var onDelete: (() -> Void)?
+    var onCopy: (() -> Void)?
 
     var body: some View {
         GroupBox {
@@ -328,6 +366,43 @@ struct MCPServerCard: View {
                         .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
 
                     Spacer()
+
+                    // Action buttons
+                    HStack(spacing: 4) {
+                        if onCopy != nil {
+                            Button {
+                                copyToClipboard()
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Copy as JSON")
+                        }
+
+                        if onEdit != nil {
+                            Button {
+                                onEdit?()
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Edit server")
+                        }
+
+                        if onDelete != nil {
+                            Button {
+                                onDelete?()
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Delete server")
+                        }
+                    }
 
                     SourceBadge(source: source)
 
@@ -405,6 +480,32 @@ struct MCPServerCard: View {
                 }
             }
         }
+        .contextMenu {
+            if onCopy != nil {
+                Button {
+                    copyToClipboard()
+                } label: {
+                    Label("Copy as JSON", systemImage: "doc.on.doc")
+                }
+            }
+
+            if onEdit != nil {
+                Button {
+                    onEdit?()
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+            }
+
+            if onDelete != nil {
+                Divider()
+                Button(role: .destructive) {
+                    onDelete?()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
     }
 
     // MARK: Private
@@ -418,6 +519,19 @@ struct MCPServerCard: View {
             return String(repeating: "\u{2022}", count: min(value.count, 20))
         }
         return value
+    }
+
+    private func copyToClipboard() {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+
+        if let data = try? encoder.encode([name: server]),
+           let jsonString = String(data: data, encoding: .utf8)
+        {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(jsonString, forType: .string)
+            NotificationManager.shared.showSuccess("Copied to clipboard", message: "Server '\(name)' copied as JSON")
+        }
     }
 }
 

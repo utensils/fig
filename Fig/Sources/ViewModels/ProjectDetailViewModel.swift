@@ -2,39 +2,6 @@ import AppKit
 import Foundation
 import OSLog
 
-// MARK: - ConfigSource
-
-/// Indicates the source of a configuration value.
-enum ConfigSource: String, CaseIterable, Sendable {
-    case global
-    case projectShared
-    case projectLocal
-
-    // MARK: Internal
-
-    var label: String {
-        switch self {
-        case .global:
-            "Global"
-        case .projectShared:
-            "Shared"
-        case .projectLocal:
-            "Local"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .global:
-            "globe"
-        case .projectShared:
-            "person.2"
-        case .projectLocal:
-            "person"
-        }
-    }
-}
-
 // MARK: - ProjectDetailTab
 
 /// Tabs available in the project detail view.
@@ -321,7 +288,7 @@ final class ProjectDetailViewModel {
                 url: mcpURL
             )
 
-            Log.general.info("Loaded configuration for project: \(projectName)")
+            Log.general.info("Loaded configuration for project: \(self.projectName)")
         } catch {
             Log.general.error("Failed to load project configuration: \(error.localizedDescription)")
         }
@@ -348,6 +315,41 @@ final class ProjectDetailViewModel {
             if let error {
                 Log.general.error("Failed to open Terminal: \(error)")
             }
+        }
+    }
+
+    // MARK: - MCP Server Management
+
+    /// Deletes an MCP server by name and source.
+    func deleteMCPServer(name: String, source: ConfigSource) async {
+        do {
+            switch source {
+            case .projectShared:
+                // Delete from .mcp.json
+                guard var config = mcpConfig else { return }
+                config.mcpServers?.removeValue(forKey: name)
+                try await configManager.writeMCPConfig(config, for: projectURL)
+                mcpConfig = config
+                NotificationManager.shared.showSuccess("Server deleted", message: "'\(name)' removed from project")
+
+            case .global:
+                // Delete from ~/.claude.json
+                guard var globalConfig = try await configManager.readGlobalConfig() else { return }
+                globalConfig.mcpServers?.removeValue(forKey: name)
+                try await configManager.writeGlobalConfig(globalConfig)
+                // Also update projectEntry if it exists
+                projectEntry = globalConfig.project(at: projectPath)
+                NotificationManager.shared.showSuccess("Server deleted", message: "'\(name)' removed from global config")
+
+            case .projectLocal:
+                // Local settings don't typically have MCP servers, but handle gracefully
+                Log.general.warning("Attempted to delete MCP server from local settings - not supported")
+            }
+
+            Log.general.info("Deleted MCP server '\(name)' from \(source.label)")
+        } catch {
+            Log.general.error("Failed to delete MCP server '\(name)': \(error)")
+            NotificationManager.shared.showError(error)
         }
     }
 

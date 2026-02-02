@@ -187,7 +187,7 @@ final class ProjectExplorerViewModel {
         do {
             let config = try await configManager.readGlobalConfig()
             projects = config?.allProjects ?? []
-            Log.general.info("Loaded \(projects.count) projects")
+            Log.general.info("Loaded \(self.projects.count) projects")
         } catch {
             errorMessage = error.localizedDescription
             Log.general.error("Failed to load projects: \(error.localizedDescription)")

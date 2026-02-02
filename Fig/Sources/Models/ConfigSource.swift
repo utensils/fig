@@ -30,6 +30,30 @@ public enum ConfigSource: String, Sendable, Equatable, Hashable, CaseIterable, C
         }
     }
 
+    /// Short label for the configuration source (used in badges).
+    public var label: String {
+        switch self {
+        case .global:
+            "Global"
+        case .projectShared:
+            "Shared"
+        case .projectLocal:
+            "Local"
+        }
+    }
+
+    /// Icon for the configuration source.
+    public var icon: String {
+        switch self {
+        case .global:
+            "globe"
+        case .projectShared:
+            "person.2"
+        case .projectLocal:
+            "person"
+        }
+    }
+
     /// File name associated with this source.
     public var fileName: String {
         switch self {
