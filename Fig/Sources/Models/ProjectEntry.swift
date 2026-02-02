@@ -34,11 +34,20 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
     /// Additional properties not explicitly modeled, preserved during round-trip.
     public var additionalProperties: [String: AnyCodable]?
 
-    /// Fallback identifier used when `path` is nil, ensuring stable identity for SwiftUI.
-    private let fallbackID: String
-
+    /// A stable identifier for SwiftUI. Returns `path` if available, otherwise a deterministic
+    /// hash based on the entry's content to ensure stable identity across decodes.
     public var id: String {
-        path ?? fallbackID
+        if let path {
+            return path
+        }
+        // Compute deterministic ID from content hash
+        var hasher = Hasher()
+        hasher.combine(allowedTools)
+        hasher.combine(hasTrustDialogAccepted)
+        hasher.combine(history)
+        hasher.combine(mcpServers)
+        hasher.combine(additionalProperties)
+        return "project-\(hasher.finalize())"
     }
 
     public init(
@@ -55,7 +64,6 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
         self.history = history
         self.mcpServers = mcpServers
         self.additionalProperties = additionalProperties
-        self.fallbackID = UUID().uuidString
     }
 
     /// The project name derived from the path.
@@ -91,7 +99,6 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
         hasTrustDialogAccepted = try container.decodeIfPresent(Bool.self, forKey: .hasTrustDialogAccepted)
         history = try container.decodeIfPresent([String].self, forKey: .history)
         mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
-        fallbackID = UUID().uuidString
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)

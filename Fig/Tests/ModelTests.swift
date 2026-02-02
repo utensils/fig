@@ -149,7 +149,8 @@ struct AnyCodableTests {
         let decoded = try JSONDecoder().decode([String: AnyCodable].self, from: json.data(using: .utf8)!)
 
         #expect(decoded["string"]?.value as? String == "hello")
-        #expect(decoded["int"]?.value as? Int == 42)
+        // Note: All JSON numbers decode as Double for round-trip consistency
+        #expect(decoded["int"]?.value as? Double == 42.0)
         #expect(decoded["double"]?.value as? Double == 3.14)
         #expect(decoded["bool"]?.value as? Bool == true)
         #expect(decoded["null"]?.value is NSNull)
@@ -261,7 +262,7 @@ struct AttributionTests {
             from: TestFixtures.attributionJSON.data(using: .utf8)!
         )
 
-        #expect(decoded.additionalProperties?["unknownField"]?.value as? Int == 123)
+        #expect(decoded.additionalProperties?["unknownField"]?.value as? Double == 123.0)
     }
 
     @Test("Round-trip preserves data")
@@ -299,7 +300,7 @@ struct HookDefinitionTests {
             from: TestFixtures.hookDefinitionJSON.data(using: .utf8)!
         )
 
-        #expect(decoded.additionalProperties?["timeout"]?.value as? Int == 30)
+        #expect(decoded.additionalProperties?["timeout"]?.value as? Double == 30.0)
     }
 
     @Test("Round-trip preserves data")
@@ -338,7 +339,7 @@ struct HookGroupTests {
             from: TestFixtures.hookGroupJSON.data(using: .utf8)!
         )
 
-        #expect(decoded.additionalProperties?["priority"]?.value as? Int == 1)
+        #expect(decoded.additionalProperties?["priority"]?.value as? Double == 1.0)
     }
 
     @Test("Round-trip preserves data")
