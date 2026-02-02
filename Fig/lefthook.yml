@@ -1,6 +1,9 @@
 # lefthook.yml
 # Git hooks configuration for Fig
 
+# Run commands from the Fig directory where Package.swift is located
+source_dir: "{root}/Fig"
+
 pre-commit:
   parallel: true
   commands:
@@ -24,7 +27,8 @@ pre-commit:
 
     trailing-whitespace:
       run: |
-        if git diff --cached --name-only | xargs -I {} grep -l "[[:blank:]]$" {} 2>/dev/null; then
+        FILES=$(git diff --cached --name-only)
+        if [ -n "$FILES" ] && echo "$FILES" | xargs grep -l "[[:blank:]]$" 2>/dev/null; then
           echo "Error: Trailing whitespace detected in staged files"
           exit 1
         fi

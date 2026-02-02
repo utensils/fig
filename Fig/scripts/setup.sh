@@ -14,9 +14,16 @@ if ! command -v brew &> /dev/null; then
     exit 1
 fi
 
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FIG_DIR="$(dirname "$SCRIPT_DIR")"
+
 # Install Homebrew dependencies
 echo "Installing Homebrew dependencies..."
-brew bundle install --file="$(dirname "$0")/../Brewfile"
+brew bundle install --file="$FIG_DIR/Brewfile"
+
+# Change to Fig directory for remaining commands
+cd "$FIG_DIR"
 
 # Install git hooks
 echo ""
@@ -31,7 +38,7 @@ swift package resolve
 echo ""
 echo "Setup complete!"
 echo ""
-echo "You can now:"
+echo "From the Fig directory, you can now:"
 echo "  - Build: swift build"
 echo "  - Test: swift test"
 echo "  - Format: swiftformat ."

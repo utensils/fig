@@ -222,8 +222,8 @@ actor ConfigFileManager {
     ///   - url: The URL of the file to watch.
     ///   - handler: Callback invoked when the file changes.
     func startWatching(_ url: URL, handler: @escaping (URL) -> Void) {
-        // Store handler for notifications
-        changeHandler = handler
+        // Store handler for this specific URL
+        changeHandlers[url] = handler
 
         guard fileManager.fileExists(atPath: url.path) else {
             Log.fileIO.warning("Cannot watch non-existent file: \(url.path)")
@@ -268,6 +268,7 @@ actor ConfigFileManager {
     func stopWatching(_ url: URL) {
         watchers[url]?.cancel()
         watchers.removeValue(forKey: url)
+        changeHandlers.removeValue(forKey: url)
         Log.fileIO.debug("Stopped watching: \(url.path)")
     }
 
@@ -278,6 +279,7 @@ actor ConfigFileManager {
             Log.fileIO.debug("Stopped watching: \(url.path)")
         }
         watchers.removeAll()
+        changeHandlers.removeAll()
     }
 
     // MARK: - Utilities
@@ -310,7 +312,7 @@ actor ConfigFileManager {
     private var watchers: [URL: DispatchSourceFileSystemObject] = [:]
 
     /// Callback for file change notifications.
-    private var changeHandler: ((URL) -> Void)?
+    private var changeHandlers: [URL: (URL) -> Void] = [:]
 
     /// Maximum symlink depth to prevent infinite loops.
     private let maxSymlinkDepth = 10
@@ -338,7 +340,7 @@ actor ConfigFileManager {
 
     private func handleFileChange(url: URL) {
         Log.fileIO.info("File changed externally: \(url.path)")
-        changeHandler?(url)
+        changeHandlers[url]?(url)
     }
 
     // MARK: - Symlink Resolution

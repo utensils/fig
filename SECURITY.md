@@ -14,7 +14,7 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 ### How to Report
 
 1. **Do not** open a public GitHub issue for security vulnerabilities
-2. Email your report to security@example.com (or use GitHub's private vulnerability reporting)
+2. Use [GitHub's private vulnerability reporting](https://github.com/doomspork/fig/security/advisories/new) to submit your report
 3. Include as much detail as possible:
    - Description of the vulnerability
    - Steps to reproduce

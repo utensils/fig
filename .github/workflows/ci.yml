@@ -46,7 +46,6 @@ jobs:
   test:
     name: Test
     runs-on: macos-14
-    needs: build
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,6 +83,7 @@ jobs:
         with:
           files: Fig/coverage.lcov
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
   lint:
