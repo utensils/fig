@@ -2,28 +2,16 @@ import SwiftUI
 
 /// The detail view displaying content for the selected sidebar item.
 struct DetailView: View {
-    let selectedItem: SidebarItem?
+    let selection: NavigationSelection?
 
     var body: some View {
         Group {
-            if let item = selectedItem {
-                VStack(spacing: 16) {
-                    Image(systemName: item.icon)
-                        .font(.system(size: 64))
-                        .foregroundStyle(.secondary)
-
-                    Text(item.title)
-                        .font(.largeTitle)
-                        .fontWeight(.semibold)
-
-                    Text(item.description)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 400)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
+            switch selection {
+            case .globalSettings:
+                GlobalSettingsDetailView()
+            case let .project(path):
+                ProjectDetailView(projectPath: path)
+            case nil:
                 ContentUnavailableView(
                     "Select an Item",
                     systemImage: "sidebar.left",
@@ -31,14 +19,21 @@ struct DetailView: View {
                 )
             }
         }
-        .frame(minWidth: 400)
+        .frame(minWidth: 500)
     }
 }
 
-#Preview {
-    DetailView(selectedItem: .home)
+#Preview("Global Settings") {
+    DetailView(selection: .globalSettings)
+        .frame(width: 700, height: 500)
+}
+
+#Preview("Project") {
+    DetailView(selection: .project("/Users/test/project"))
+        .frame(width: 700, height: 500)
 }
 
 #Preview("No Selection") {
-    DetailView(selectedItem: nil)
+    DetailView(selection: nil)
+        .frame(width: 700, height: 500)
 }
