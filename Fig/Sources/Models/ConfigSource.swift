@@ -30,6 +30,30 @@ public enum ConfigSource: String, Sendable, Equatable, Hashable, CaseIterable, C
         }
     }
 
+    /// Short label for the configuration source.
+    public var label: String {
+        switch self {
+        case .global:
+            "Global"
+        case .projectShared:
+            "Shared"
+        case .projectLocal:
+            "Local"
+        }
+    }
+
+    /// SF Symbol icon name for the configuration source.
+    public var icon: String {
+        switch self {
+        case .global:
+            "globe"
+        case .projectShared:
+            "person.2"
+        case .projectLocal:
+            "person"
+        }
+    }
+
     /// File name associated with this source.
     public var fileName: String {
         switch self {
