@@ -14,6 +14,6 @@ final class AppViewModel {
     private(set) var errorMessage: String?
 
     func clearError() {
-        errorMessage = nil
+        self.errorMessage = nil
     }
 }

@@ -30,7 +30,7 @@ public enum ConfigSource: String, Sendable, Equatable, Hashable, CaseIterable, C
         }
     }
 
-    /// Short label for the configuration source (used in badges).
+    /// Short label for the configuration source.
     public var label: String {
         switch self {
         case .global:
@@ -42,7 +42,7 @@ public enum ConfigSource: String, Sendable, Equatable, Hashable, CaseIterable, C
         }
     }
 
-    /// Icon for the configuration source.
+    /// SF Symbol icon name for the configuration source.
     public var icon: String {
         switch self {
         case .global:

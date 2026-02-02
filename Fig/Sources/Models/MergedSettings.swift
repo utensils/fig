@@ -15,16 +15,20 @@ import Foundation
 /// print(attribution.source.displayName) // "Local"
 /// ```
 public struct MergedValue<T: Sendable>: Sendable {
-    /// The actual configuration value.
-    public let value: T
-
-    /// The source file where this value originated.
-    public let source: ConfigSource
+    // MARK: Lifecycle
 
     public init(value: T, source: ConfigSource) {
         self.value = value
         self.source = source
     }
+
+    // MARK: Public
+
+    /// The actual configuration value.
+    public let value: T
+
+    /// The source file where this value originated.
+    public let source: ConfigSource
 }
 
 // MARK: Equatable
@@ -42,11 +46,7 @@ extension MergedValue: Hashable where T: Hashable {}
 /// Permission arrays are unioned across all sources, with each entry
 /// tracking which configuration file it came from.
 public struct MergedPermissions: Sendable, Equatable, Hashable {
-    /// Allowed permission patterns with their sources.
-    public let allow: [MergedValue<String>]
-
-    /// Denied permission patterns with their sources.
-    public let deny: [MergedValue<String>]
+    // MARK: Lifecycle
 
     public init(
         allow: [MergedValue<String>] = [],
@@ -56,14 +56,22 @@ public struct MergedPermissions: Sendable, Equatable, Hashable {
         self.deny = deny
     }
 
+    // MARK: Public
+
+    /// Allowed permission patterns with their sources.
+    public let allow: [MergedValue<String>]
+
+    /// Denied permission patterns with their sources.
+    public let deny: [MergedValue<String>]
+
     /// Returns all unique allow patterns (without source tracking).
     public var allowPatterns: [String] {
-        allow.map(\.value)
+        self.allow.map(\.value)
     }
 
     /// Returns all unique deny patterns (without source tracking).
     public var denyPatterns: [String] {
-        deny.map(\.value)
+        self.deny.map(\.value)
     }
 }
 
@@ -74,21 +82,25 @@ public struct MergedPermissions: Sendable, Equatable, Hashable {
 /// Hooks are merged by event type, with hook arrays concatenated
 /// from all sources (lower precedence first).
 public struct MergedHooks: Sendable, Equatable, Hashable {
-    /// Hook groups keyed by event name, with source tracking.
-    public let hooks: [String: [MergedValue<HookGroup>]]
+    // MARK: Lifecycle
 
     public init(hooks: [String: [MergedValue<HookGroup>]] = [:]) {
         self.hooks = hooks
     }
 
-    /// Returns hook groups for a specific event.
-    public func groups(for event: String) -> [MergedValue<HookGroup>]? {
-        hooks[event]
-    }
+    // MARK: Public
+
+    /// Hook groups keyed by event name, with source tracking.
+    public let hooks: [String: [MergedValue<HookGroup>]]
 
     /// Returns all event names that have hooks configured.
     public var eventNames: [String] {
-        hooks.keys.sorted()
+        self.hooks.keys.sorted()
+    }
+
+    /// Returns hook groups for a specific event.
+    public func groups(for event: String) -> [MergedValue<HookGroup>]? {
+        self.hooks[event]
     }
 }
 
@@ -142,21 +154,21 @@ public struct MergedSettings: Sendable, Equatable, Hashable {
 
     /// Returns the effective environment variables without source tracking.
     public var effectiveEnv: [String: String] {
-        env.mapValues(\.value)
+        self.env.mapValues(\.value)
     }
 
     /// Returns the effective disallowed tools without source tracking.
     public var effectiveDisallowedTools: [String] {
-        disallowedTools.map(\.value)
+        self.disallowedTools.map(\.value)
     }
 
     /// Checks if a specific tool is disallowed.
     public func isToolDisallowed(_ toolName: String) -> Bool {
-        effectiveDisallowedTools.contains(toolName)
+        self.effectiveDisallowedTools.contains(toolName)
     }
 
     /// Returns the source for a specific environment variable.
     public func envSource(for key: String) -> ConfigSource? {
-        env[key]?.source
+        self.env[key]?.source
     }
 }

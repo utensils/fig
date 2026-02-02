@@ -37,10 +37,13 @@ public struct LegacyConfig: Codable, Equatable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        projects = try container.decodeIfPresent([String: ProjectEntry].self, forKey: .projects)
-        customApiKeyResponses = try container.decodeIfPresent([String: AnyCodable].self, forKey: .customApiKeyResponses)
-        preferences = try container.decodeIfPresent([String: AnyCodable].self, forKey: .preferences)
-        mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
+        self.projects = try container.decodeIfPresent([String: ProjectEntry].self, forKey: .projects)
+        self.customApiKeyResponses = try container.decodeIfPresent(
+            [String: AnyCodable].self,
+            forKey: .customApiKeyResponses
+        )
+        self.preferences = try container.decodeIfPresent([String: AnyCodable].self, forKey: .preferences)
+        self.mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -52,7 +55,7 @@ public struct LegacyConfig: Codable, Equatable, Hashable, Sendable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -74,7 +77,7 @@ public struct LegacyConfig: Codable, Equatable, Hashable, Sendable {
 
     /// Returns all project paths.
     public var projectPaths: [String] {
-        projects?.keys.sorted() ?? []
+        self.projects?.keys.sorted() ?? []
     }
 
     /// Returns all projects as an array with their paths set.
@@ -91,25 +94,25 @@ public struct LegacyConfig: Codable, Equatable, Hashable, Sendable {
 
     /// Returns all global MCP server names.
     public var globalServerNames: [String] {
-        mcpServers?.keys.sorted() ?? []
+        self.mcpServers?.keys.sorted() ?? []
     }
 
     /// Returns the project entry for the given path.
     public func project(at path: String) -> ProjectEntry? {
-        projects?[path]
+        self.projects?[path]
     }
 
     /// Returns the global MCP server configuration for the given name.
     public func globalServer(named name: String) -> MCPServer? {
-        mcpServers?[name]
+        self.mcpServers?[name]
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(projects, forKey: .projects)
-        try container.encodeIfPresent(customApiKeyResponses, forKey: .customApiKeyResponses)
-        try container.encodeIfPresent(preferences, forKey: .preferences)
-        try container.encodeIfPresent(mcpServers, forKey: .mcpServers)
+        try container.encodeIfPresent(self.projects, forKey: .projects)
+        try container.encodeIfPresent(self.customApiKeyResponses, forKey: .customApiKeyResponses)
+        try container.encodeIfPresent(self.preferences, forKey: .preferences)
+        try container.encodeIfPresent(self.mcpServers, forKey: .mcpServers)
 
         // Encode additional properties
         if let additionalProperties {

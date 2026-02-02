@@ -67,7 +67,7 @@ final class ProjectDetailViewModel {
 
     init(projectPath: String, configManager: ConfigFileManager = .shared) {
         self.projectPath = projectPath
-        projectURL = URL(fileURLWithPath: projectPath)
+        self.projectURL = URL(fileURLWithPath: projectPath)
         self.configManager = configManager
     }
 
@@ -111,12 +111,12 @@ final class ProjectDetailViewModel {
 
     /// The project name derived from the path.
     var projectName: String {
-        projectURL.lastPathComponent
+        self.projectURL.lastPathComponent
     }
 
     /// Whether the project directory exists.
     var projectExists: Bool {
-        FileManager.default.fileExists(atPath: projectPath)
+        FileManager.default.fileExists(atPath: self.projectPath)
     }
 
     /// All permission rules with their sources.
@@ -250,41 +250,41 @@ final class ProjectDetailViewModel {
 
     /// Loads all configuration data for the project.
     func loadConfiguration() async {
-        isLoading = true
+        self.isLoading = true
 
         do {
             // Load global config to get project entry
             let globalConfig = try await configManager.readGlobalConfig()
-            projectEntry = globalConfig?.project(at: projectPath)
+            self.projectEntry = globalConfig?.project(at: self.projectPath)
 
             // Load global settings
-            globalSettings = try await configManager.readGlobalSettings()
+            self.globalSettings = try await self.configManager.readGlobalSettings()
 
             // Load project settings
-            projectSettings = try await configManager.readProjectSettings(for: projectURL)
+            self.projectSettings = try await self.configManager.readProjectSettings(for: self.projectURL)
 
             // Load project local settings
-            projectLocalSettings = try await configManager.readProjectLocalSettings(for: projectURL)
+            self.projectLocalSettings = try await self.configManager.readProjectLocalSettings(for: self.projectURL)
 
             // Load MCP config
-            mcpConfig = try await configManager.readMCPConfig(for: projectURL)
+            self.mcpConfig = try await self.configManager.readMCPConfig(for: self.projectURL)
 
             // Update file statuses
-            let settingsURL = await configManager.projectSettingsURL(for: projectURL)
-            projectSettingsStatus = await ConfigFileStatus(
-                exists: configManager.fileExists(at: settingsURL),
+            let settingsURL = await configManager.projectSettingsURL(for: self.projectURL)
+            self.projectSettingsStatus = await ConfigFileStatus(
+                exists: self.configManager.fileExists(at: settingsURL),
                 url: settingsURL
             )
 
-            let localSettingsURL = await configManager.projectLocalSettingsURL(for: projectURL)
-            projectLocalSettingsStatus = await ConfigFileStatus(
-                exists: configManager.fileExists(at: localSettingsURL),
+            let localSettingsURL = await configManager.projectLocalSettingsURL(for: self.projectURL)
+            self.projectLocalSettingsStatus = await ConfigFileStatus(
+                exists: self.configManager.fileExists(at: localSettingsURL),
                 url: localSettingsURL
             )
 
-            let mcpURL = await configManager.mcpConfigURL(for: projectURL)
-            mcpConfigStatus = await ConfigFileStatus(
-                exists: configManager.fileExists(at: mcpURL),
+            let mcpURL = await configManager.mcpConfigURL(for: self.projectURL)
+            self.mcpConfigStatus = await ConfigFileStatus(
+                exists: self.configManager.fileExists(at: mcpURL),
                 url: mcpURL
             )
 
@@ -293,12 +293,12 @@ final class ProjectDetailViewModel {
             Log.general.error("Failed to load project configuration: \(error.localizedDescription)")
         }
 
-        isLoading = false
+        self.isLoading = false
     }
 
     /// Reveals the project in Finder.
     func revealInFinder() {
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: projectPath)
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: self.projectPath)
     }
 
     /// Opens the project in Terminal.

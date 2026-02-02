@@ -27,8 +27,8 @@ public struct Permissions: Codable, Equatable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        allow = try container.decodeIfPresent([String].self, forKey: .allow)
-        deny = try container.decodeIfPresent([String].self, forKey: .deny)
+        self.allow = try container.decodeIfPresent([String].self, forKey: .allow)
+        self.deny = try container.decodeIfPresent([String].self, forKey: .deny)
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -40,7 +40,7 @@ public struct Permissions: Codable, Equatable, Hashable, Sendable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -56,8 +56,8 @@ public struct Permissions: Codable, Equatable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(allow, forKey: .allow)
-        try container.encodeIfPresent(deny, forKey: .deny)
+        try container.encodeIfPresent(self.allow, forKey: .allow)
+        try container.encodeIfPresent(self.deny, forKey: .deny)
 
         // Encode additional properties
         if let additionalProperties {

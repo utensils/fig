@@ -26,8 +26,8 @@ public struct HookDefinition: Codable, Equatable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        type = try container.decodeIfPresent(String.self, forKey: .type)
-        command = try container.decodeIfPresent(String.self, forKey: .command)
+        self.type = try container.decodeIfPresent(String.self, forKey: .type)
+        self.command = try container.decodeIfPresent(String.self, forKey: .command)
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -39,7 +39,7 @@ public struct HookDefinition: Codable, Equatable, Hashable, Sendable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -55,8 +55,8 @@ public struct HookDefinition: Codable, Equatable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(type, forKey: .type)
-        try container.encodeIfPresent(command, forKey: .command)
+        try container.encodeIfPresent(self.type, forKey: .type)
+        try container.encodeIfPresent(self.command, forKey: .command)
 
         // Encode additional properties
         if let additionalProperties {

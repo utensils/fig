@@ -217,7 +217,8 @@ struct SettingsMergeServiceTests {
                 permissions: Permissions(allow: ["Read(src/**)"])
             )
             let projectLocal = ClaudeSettings(
-                permissions: Permissions(allow: ["Write(docs/**)"]))
+                permissions: Permissions(allow: ["Write(docs/**)"])
+            )
 
             let service = SettingsMergeService()
             let merged = await service.mergeSettings(
@@ -271,7 +272,7 @@ struct SettingsMergeServiceTests {
 
             let patterns = merged.permissions.allowPatterns
             #expect(patterns.count == 2)
-            #expect(patterns.filter { $0 == "Bash(*)" }.count == 1)
+            #expect(patterns.count(where: { $0 == "Bash(*)" }) == 1)
         }
 
         @Test("Tracks source for each permission")

@@ -42,10 +42,10 @@ actor ConfigFileManager {
     // MARK: Lifecycle
 
     private init() {
-        encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        self.encoder = JSONEncoder()
+        self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
-        decoder = JSONDecoder()
+        self.decoder = JSONDecoder()
     }
 
     // MARK: Internal
@@ -57,17 +57,17 @@ actor ConfigFileManager {
 
     /// Path to the global Claude config file (~/.claude.json).
     var globalConfigURL: URL {
-        fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+        self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
     }
 
     /// Path to the global settings directory (~/.claude).
     var globalSettingsDirectory: URL {
-        fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".claude")
+        self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".claude")
     }
 
     /// Path to the global settings file (~/.claude/settings.json).
     var globalSettingsURL: URL {
-        globalSettingsDirectory.appendingPathComponent("settings.json")
+        self.globalSettingsDirectory.appendingPathComponent("settings.json")
     }
 
     /// Returns the project settings directory for a given project path.
@@ -77,12 +77,12 @@ actor ConfigFileManager {
 
     /// Returns the project settings file for a given project path.
     func projectSettingsURL(for projectPath: URL) -> URL {
-        projectSettingsDirectory(for: projectPath).appendingPathComponent("settings.json")
+        self.projectSettingsDirectory(for: projectPath).appendingPathComponent("settings.json")
     }
 
     /// Returns the project local settings file for a given project path.
     func projectLocalSettingsURL(for projectPath: URL) -> URL {
-        projectSettingsDirectory(for: projectPath).appendingPathComponent("settings.local.json")
+        self.projectSettingsDirectory(for: projectPath).appendingPathComponent("settings.local.json")
     }
 
     /// Returns the MCP config file for a given project path.
@@ -102,12 +102,12 @@ actor ConfigFileManager {
     func read<T: Decodable>(_ type: T.Type, from url: URL) async throws -> T? {
         let resolvedURL = try resolveSymlinks(url)
 
-        guard fileManager.fileExists(atPath: resolvedURL.path) else {
+        guard self.fileManager.fileExists(atPath: resolvedURL.path) else {
             Log.fileIO.debug("File not found (expected): \(url.path)")
             return nil
         }
 
-        guard fileManager.isReadableFile(atPath: resolvedURL.path) else {
+        guard self.fileManager.isReadableFile(atPath: resolvedURL.path) else {
             Log.fileIO.error("Permission denied: \(url.path)")
             throw ConfigFileError.permissionDenied(url)
         }
@@ -128,27 +128,27 @@ actor ConfigFileManager {
 
     /// Reads the global legacy config file (~/.claude.json).
     func readGlobalConfig() async throws -> LegacyConfig? {
-        try await read(LegacyConfig.self, from: globalConfigURL)
+        try await self.read(LegacyConfig.self, from: self.globalConfigURL)
     }
 
     /// Reads the global settings file (~/.claude/settings.json).
     func readGlobalSettings() async throws -> ClaudeSettings? {
-        try await read(ClaudeSettings.self, from: globalSettingsURL)
+        try await self.read(ClaudeSettings.self, from: self.globalSettingsURL)
     }
 
     /// Reads project-specific settings.
     func readProjectSettings(for projectPath: URL) async throws -> ClaudeSettings? {
-        try await read(ClaudeSettings.self, from: projectSettingsURL(for: projectPath))
+        try await self.read(ClaudeSettings.self, from: self.projectSettingsURL(for: projectPath))
     }
 
     /// Reads project local settings (gitignored overrides).
     func readProjectLocalSettings(for projectPath: URL) async throws -> ClaudeSettings? {
-        try await read(ClaudeSettings.self, from: projectLocalSettingsURL(for: projectPath))
+        try await self.read(ClaudeSettings.self, from: self.projectLocalSettingsURL(for: projectPath))
     }
 
     /// Reads the MCP configuration for a project.
     func readMCPConfig(for projectPath: URL) async throws -> MCPConfig? {
-        try await read(MCPConfig.self, from: mcpConfigURL(for: projectPath))
+        try await self.read(MCPConfig.self, from: self.mcpConfigURL(for: projectPath))
     }
 
     // MARK: - Writing Files
@@ -161,15 +161,15 @@ actor ConfigFileManager {
     /// - Throws: `ConfigFileError` if the write fails.
     func write(_ value: some Encodable, to url: URL) async throws {
         // Create backup if file exists
-        if fileManager.fileExists(atPath: url.path) {
-            try await createBackup(of: url)
+        if self.fileManager.fileExists(atPath: url.path) {
+            try await self.createBackup(of: url)
         }
 
         // Ensure parent directory exists
         let parentDirectory = url.deletingLastPathComponent()
-        if !fileManager.fileExists(atPath: parentDirectory.path) {
+        if !self.fileManager.fileExists(atPath: parentDirectory.path) {
             do {
-                try fileManager.createDirectory(
+                try self.fileManager.createDirectory(
                     at: parentDirectory,
                     withIntermediateDirectories: true
                 )
@@ -196,22 +196,22 @@ actor ConfigFileManager {
 
     /// Writes global settings to ~/.claude/settings.json.
     func writeGlobalSettings(_ settings: ClaudeSettings) async throws {
-        try await write(settings, to: globalSettingsURL)
+        try await self.write(settings, to: self.globalSettingsURL)
     }
 
     /// Writes project settings.
     func writeProjectSettings(_ settings: ClaudeSettings, for projectPath: URL) async throws {
-        try await write(settings, to: projectSettingsURL(for: projectPath))
+        try await self.write(settings, to: self.projectSettingsURL(for: projectPath))
     }
 
     /// Writes project local settings.
     func writeProjectLocalSettings(_ settings: ClaudeSettings, for projectPath: URL) async throws {
-        try await write(settings, to: projectLocalSettingsURL(for: projectPath))
+        try await self.write(settings, to: self.projectLocalSettingsURL(for: projectPath))
     }
 
     /// Writes MCP configuration for a project.
     func writeMCPConfig(_ config: MCPConfig, for projectPath: URL) async throws {
-        try await write(config, to: mcpConfigURL(for: projectPath))
+        try await self.write(config, to: self.mcpConfigURL(for: projectPath))
     }
 
     /// Writes the global legacy config to ~/.claude.json.
@@ -228,9 +228,9 @@ actor ConfigFileManager {
     ///   - handler: Callback invoked when the file changes.
     func startWatching(_ url: URL, handler: @escaping (URL) -> Void) {
         // Store handler for this specific URL
-        changeHandlers[url] = handler
+        self.changeHandlers[url] = handler
 
-        guard fileManager.fileExists(atPath: url.path) else {
+        guard self.fileManager.fileExists(atPath: url.path) else {
             Log.fileIO.warning("Cannot watch non-existent file: \(url.path)")
             return
         }
@@ -262,8 +262,8 @@ actor ConfigFileManager {
         }
 
         // Cancel existing watcher if any
-        watchers[url]?.cancel()
-        watchers[url] = source
+        self.watchers[url]?.cancel()
+        self.watchers[url] = source
 
         source.resume()
         Log.fileIO.debug("Started watching: \(url.path)")
@@ -271,39 +271,39 @@ actor ConfigFileManager {
 
     /// Stops watching a file.
     func stopWatching(_ url: URL) {
-        watchers[url]?.cancel()
-        watchers.removeValue(forKey: url)
-        changeHandlers.removeValue(forKey: url)
+        self.watchers[url]?.cancel()
+        self.watchers.removeValue(forKey: url)
+        self.changeHandlers.removeValue(forKey: url)
         Log.fileIO.debug("Stopped watching: \(url.path)")
     }
 
     /// Stops all file watchers.
     func stopAllWatchers() {
-        for (url, source) in watchers {
+        for (url, source) in self.watchers {
             source.cancel()
             Log.fileIO.debug("Stopped watching: \(url.path)")
         }
-        watchers.removeAll()
-        changeHandlers.removeAll()
+        self.watchers.removeAll()
+        self.changeHandlers.removeAll()
     }
 
     // MARK: - Utilities
 
     /// Checks if a file exists at the given URL.
     func fileExists(at url: URL) -> Bool {
-        fileManager.fileExists(atPath: url.path)
+        self.fileManager.fileExists(atPath: url.path)
     }
 
     /// Deletes a file at the given URL.
     func delete(at url: URL) async throws {
-        guard fileManager.fileExists(atPath: url.path) else {
+        guard self.fileManager.fileExists(atPath: url.path) else {
             return
         }
 
         // Create backup before deletion
-        try await createBackup(of: url)
+        try await self.createBackup(of: url)
 
-        try fileManager.removeItem(at: url)
+        try self.fileManager.removeItem(at: url)
         Log.fileIO.info("Deleted file: \(url.path)")
     }
 
@@ -335,7 +335,7 @@ actor ConfigFileManager {
         let backupURL = url.deletingLastPathComponent().appendingPathComponent(backupName)
 
         do {
-            try fileManager.copyItem(at: url, to: backupURL)
+            try self.fileManager.copyItem(at: url, to: backupURL)
             Log.fileIO.debug("Created backup: \(backupURL.path)")
         } catch {
             Log.fileIO.error("Failed to create backup of \(url.path): \(error)")
@@ -345,14 +345,14 @@ actor ConfigFileManager {
 
     private func handleFileChange(url: URL) {
         Log.fileIO.info("File changed externally: \(url.path)")
-        changeHandlers[url]?(url)
+        self.changeHandlers[url]?(url)
     }
 
     // MARK: - Symlink Resolution
 
     /// Resolves symlinks while detecting circular references.
     private func resolveSymlinks(_ url: URL, depth: Int = 0) throws -> URL {
-        guard depth < maxSymlinkDepth else {
+        guard depth < self.maxSymlinkDepth else {
             throw ConfigFileError.circularSymlink(url)
         }
 
@@ -366,6 +366,6 @@ actor ConfigFileManager {
             throw ConfigFileError.circularSymlink(url)
         }
 
-        return try resolveSymlinks(resolved, depth: depth + 1)
+        return try self.resolveSymlinks(resolved, depth: depth + 1)
     }
 }

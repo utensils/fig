@@ -5,21 +5,21 @@ struct ContentView: View {
     // MARK: Internal
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(selection: $selection, viewModel: viewModel)
+        NavigationSplitView(columnVisibility: self.$columnVisibility) {
+            SidebarView(selection: self.$selection, viewModel: self.viewModel)
         } detail: {
-            DetailView(selection: selection)
+            DetailView(selection: self.selection)
         }
         .navigationSplitViewStyle(.balanced)
         .onKeyPress(keys: [KeyEquivalent("k")], phases: .down) { press in
             guard press.modifiers.contains(.command) else {
                 return .ignored
             }
-            viewModel.isQuickSwitcherPresented = true
+            self.viewModel.isQuickSwitcherPresented = true
             return .handled
         }
-        .sheet(isPresented: $viewModel.isQuickSwitcherPresented) {
-            QuickSwitcherView(viewModel: viewModel, selection: $selection)
+        .sheet(isPresented: self.$viewModel.isQuickSwitcherPresented) {
+            QuickSwitcherView(viewModel: self.viewModel, selection: self.$selection)
         }
     }
 

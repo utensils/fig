@@ -30,7 +30,7 @@
 --operatorfunc spaced
 --patternlet hoist
 --ranges spaced
---self remove
+--self insert
 --semicolons inline
 --smarttabs enabled
 --stripunusedargs closure-only

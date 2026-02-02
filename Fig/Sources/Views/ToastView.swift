@@ -9,12 +9,12 @@ struct ToastView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: notification.type.icon)
-                .foregroundStyle(notification.type.color)
+            Image(systemName: self.notification.type.icon)
+                .foregroundStyle(self.notification.type.color)
                 .font(.title2)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(notification.title)
+                Text(self.notification.title)
                     .font(.headline)
                     .foregroundStyle(.primary)
 
@@ -29,7 +29,7 @@ struct ToastView: View {
             Spacer()
 
             Button {
-                onDismiss()
+                self.onDismiss()
             } label: {
                 Image(systemName: "xmark")
                     .font(.caption)
@@ -55,9 +55,9 @@ struct ToastContainerView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            ForEach(notificationManager.toasts) { toast in
+            ForEach(self.notificationManager.toasts) { toast in
                 ToastView(notification: toast) {
-                    notificationManager.dismissToast(id: toast.id)
+                    self.notificationManager.dismissToast(id: toast.id)
                 }
                 .transition(.asymmetric(
                     insertion: .move(edge: .top).combined(with: .opacity),
@@ -66,7 +66,7 @@ struct ToastContainerView: View {
             }
         }
         .padding()
-        .animation(.spring(duration: 0.3), value: notificationManager.toasts.map(\.id))
+        .animation(.spring(duration: 0.3), value: self.notificationManager.toasts.map(\.id))
     }
 }
 
@@ -79,7 +79,7 @@ struct ToastModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .overlay(alignment: .top) {
-                ToastContainerView(notificationManager: notificationManager)
+                ToastContainerView(notificationManager: self.notificationManager)
             }
     }
 }
@@ -100,23 +100,23 @@ struct AlertModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .alert(
-                notificationManager.currentAlert?.title ?? "",
+                self.notificationManager.currentAlert?.title ?? "",
                 isPresented: .init(
-                    get: { notificationManager.currentAlert != nil },
+                    get: { self.notificationManager.currentAlert != nil },
                     set: { if !$0 {
-                        notificationManager.dismissAlert()
+                        self.notificationManager.dismissAlert()
                     } }
                 ),
-                presenting: notificationManager.currentAlert
+                presenting: self.notificationManager.currentAlert
             ) { alertInfo in
                 Button(alertInfo.primaryButton.title, role: alertInfo.primaryButton.role) {
                     alertInfo.primaryButton.action?()
-                    notificationManager.dismissAlert()
+                    self.notificationManager.dismissAlert()
                 }
                 if let secondary = alertInfo.secondaryButton {
                     Button(secondary.title, role: secondary.role) {
                         secondary.action?()
-                        notificationManager.dismissAlert()
+                        self.notificationManager.dismissAlert()
                     }
                 }
             } message: { alertInfo in
@@ -135,7 +135,7 @@ extension View {
 
     /// Adds both toast and alert support to the view.
     func withNotifications(_ notificationManager: NotificationManager) -> some View {
-        withToasts(notificationManager)
+        self.withToasts(notificationManager)
             .withAlerts(notificationManager)
     }
 }

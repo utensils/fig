@@ -6,7 +6,7 @@ struct DetailView: View {
 
     var body: some View {
         Group {
-            switch selection {
+            switch self.selection {
             case .globalSettings:
                 GlobalSettingsDetailView()
             case let .project(path):

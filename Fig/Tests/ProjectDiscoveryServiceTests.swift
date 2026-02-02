@@ -206,7 +206,7 @@ struct ProjectDiscoveryServiceTests {
         }
 
         @Test("Handles non-existent project gracefully")
-        func handlesMissingProject() async throws {
+        func handlesMissingProject() async {
             let service = ProjectDiscoveryService()
             let project = await service.refreshProject(at: "/nonexistent/path/12345")
 
