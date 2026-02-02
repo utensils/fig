@@ -1,0 +1,64 @@
+# .swiftformat
+# SwiftFormat configuration for Fig
+
+# File options
+--exclude .build,DerivedData,Packages
+
+# Format options
+--allman false
+--binarygrouping 4,8
+--closingparen balanced
+--commas always
+--decimalgrouping 3,6
+--elseposition same-line
+--empty void
+--exponentcase lowercase
+--exponentgrouping disabled
+--fractiongrouping disabled
+--header ignore
+--hexgrouping 4,8
+--hexliteralcase uppercase
+--ifdef indent
+--importgrouping alpha
+--indent 4
+--indentcase false
+--linebreaks lf
+--maxwidth 120
+--modifierorder
+--nospaceoperators
+--octalgrouping 4,8
+--operatorfunc spaced
+--patternlet hoist
+--ranges spaced
+--self remove
+--semicolons inline
+--smarttabs enabled
+--stripunusedargs closure-only
+--tabwidth 4
+--trailingclosures
+--trimwhitespace always
+--typeattributes preserve
+--varattributes preserve
+--voidtype void
+--wraparguments preserve
+--wrapcollections preserve
+--wrapconditions preserve
+--wrapparameters preserve
+--wrapreturntype preserve
+--xcodeindentation disabled
+--yodaswap always
+
+# Rules
+--enable blankLinesBetweenImports
+--enable blockComments
+--enable docComments
+--enable isEmpty
+--enable markTypes
+--enable organizeDeclarations
+--enable sortImports
+--enable wrapConditionalBodies
+--enable wrapEnumCases
+--enable wrapSwitchCases
+
+--disable acronyms
+--disable redundantProperty

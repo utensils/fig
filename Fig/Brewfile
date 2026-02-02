@@ -1,0 +1,9 @@
+# Brewfile
+# Development dependencies for Fig
+
+# Code quality tools
+brew "swiftlint"
+brew "swiftformat"
+
+# Git hooks manager
+brew "lefthook"

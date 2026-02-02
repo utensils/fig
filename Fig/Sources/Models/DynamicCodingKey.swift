@@ -4,16 +4,20 @@ import Foundation
 ///
 /// Used for encoding/decoding unknown keys during round-trip JSON serialization.
 struct DynamicCodingKey: CodingKey {
-    var stringValue: String
-    var intValue: Int?
+    // MARK: Lifecycle
 
     init(stringValue: String) {
         self.stringValue = stringValue
-        self.intValue = nil
+        intValue = nil
     }
 
     init?(intValue: Int) {
         self.intValue = intValue
-        self.stringValue = String(intValue)
+        stringValue = String(intValue)
     }
+
+    // MARK: Internal
+
+    var stringValue: String
+    var intValue: Int?
 }

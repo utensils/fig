@@ -6,38 +6,42 @@ enum SidebarItem: String, CaseIterable, Identifiable, Sendable {
     case projects
     case settings
 
-    var id: String { rawValue }
+    // MARK: Internal
+
+    var id: String {
+        rawValue
+    }
 
     var title: String {
         switch self {
         case .home:
-            return "Home"
+            "Home"
         case .projects:
-            return "Projects"
+            "Projects"
         case .settings:
-            return "Settings"
+            "Settings"
         }
     }
 
     var icon: String {
         switch self {
         case .home:
-            return "house"
+            "house"
         case .projects:
-            return "folder"
+            "folder"
         case .settings:
-            return "gear"
+            "gear"
         }
     }
 
     var description: String {
         switch self {
         case .home:
-            return "Welcome to Fig. This is your home screen where you can see an overview of your activity."
+            "Welcome to Fig. This is your home screen where you can see an overview of your activity."
         case .projects:
-            return "Manage and organize your projects. Create new projects or open existing ones."
+            "Manage and organize your projects. Create new projects or open existing ones."
         case .settings:
-            return "Configure application settings and preferences."
+            "Configure application settings and preferences."
         }
     }
 }

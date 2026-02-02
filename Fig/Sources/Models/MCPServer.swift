@@ -22,6 +22,50 @@ import Foundation
 /// }
 /// ```
 public struct MCPServer: Codable, Equatable, Hashable, Sendable {
+    // MARK: Lifecycle
+
+    public init(
+        command: String? = nil,
+        args: [String]? = nil,
+        env: [String: String]? = nil,
+        type: String? = nil,
+        url: String? = nil,
+        headers: [String: String]? = nil,
+        additionalProperties: [String: AnyCodable]? = nil
+    ) {
+        self.command = command
+        self.args = args
+        self.env = env
+        self.type = type
+        self.url = url
+        self.headers = headers
+        self.additionalProperties = additionalProperties
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        command = try container.decodeIfPresent(String.self, forKey: .command)
+        args = try container.decodeIfPresent([String].self, forKey: .args)
+        env = try container.decodeIfPresent([String: String].self, forKey: .env)
+        type = try container.decodeIfPresent(String.self, forKey: .type)
+        url = try container.decodeIfPresent(String.self, forKey: .url)
+        headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
+
+        // Capture unknown keys
+        let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
+        var additional: [String: AnyCodable] = [:]
+
+        for key in allKeysContainer.allKeys {
+            if !Self.knownKeys.contains(key.stringValue) {
+                additional[key.stringValue] = try allKeysContainer.decode(AnyCodable.self, forKey: key)
+            }
+        }
+
+        additionalProperties = additional.isEmpty ? nil : additional
+    }
+
+    // MARK: Public
+
     // MARK: - Stdio Server Properties
 
     /// The command to execute for stdio servers.
@@ -49,22 +93,14 @@ public struct MCPServer: Codable, Equatable, Hashable, Sendable {
     /// Additional properties not explicitly modeled, preserved during round-trip.
     public var additionalProperties: [String: AnyCodable]?
 
-    public init(
-        command: String? = nil,
-        args: [String]? = nil,
-        env: [String: String]? = nil,
-        type: String? = nil,
-        url: String? = nil,
-        headers: [String: String]? = nil,
-        additionalProperties: [String: AnyCodable]? = nil
-    ) {
-        self.command = command
-        self.args = args
-        self.env = env
-        self.type = type
-        self.url = url
-        self.headers = headers
-        self.additionalProperties = additionalProperties
+    /// Whether this server uses stdio transport.
+    public var isStdio: Bool {
+        command != nil && type != "http"
+    }
+
+    /// Whether this server uses HTTP transport.
+    public var isHTTP: Bool {
+        type == "http" && url != nil
     }
 
     /// Creates a stdio-based MCP server configuration.
@@ -84,51 +120,6 @@ public struct MCPServer: Codable, Equatable, Hashable, Sendable {
         MCPServer(type: "http", url: url, headers: headers)
     }
 
-    /// Whether this server uses stdio transport.
-    public var isStdio: Bool {
-        command != nil && type != "http"
-    }
-
-    /// Whether this server uses HTTP transport.
-    public var isHTTP: Bool {
-        type == "http" && url != nil
-    }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case command
-        case args
-        case env
-        case type
-        case url
-        case headers
-    }
-
-    private static let knownKeys: Set<String> = ["command", "args", "env", "type", "url", "headers"]
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        command = try container.decodeIfPresent(String.self, forKey: .command)
-        args = try container.decodeIfPresent([String].self, forKey: .args)
-        env = try container.decodeIfPresent([String: String].self, forKey: .env)
-        type = try container.decodeIfPresent(String.self, forKey: .type)
-        url = try container.decodeIfPresent(String.self, forKey: .url)
-        headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
-
-        // Capture unknown keys
-        let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
-        var additional: [String: AnyCodable] = [:]
-
-        for key in allKeysContainer.allKeys {
-            if !Self.knownKeys.contains(key.stringValue) {
-                additional[key.stringValue] = try allKeysContainer.decode(AnyCodable.self, forKey: key)
-            }
-        }
-
-        additionalProperties = additional.isEmpty ? nil : additional
-    }
-
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(command, forKey: .command)
@@ -146,4 +137,19 @@ public struct MCPServer: Codable, Equatable, Hashable, Sendable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case command
+        case args
+        case env
+        case type
+        case url
+        case headers
+    }
+
+    private static let knownKeys: Set<String> = ["command", "args", "env", "type", "url", "headers"]
 }

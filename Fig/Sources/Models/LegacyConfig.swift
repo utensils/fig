@@ -19,20 +19,7 @@ import Foundation
 /// }
 /// ```
 public struct LegacyConfig: Codable, Equatable, Hashable, Sendable {
-    /// Dictionary of projects keyed by their file path.
-    public var projects: [String: ProjectEntry]?
-
-    /// Custom API key responses stored by Claude Code.
-    public var customApiKeyResponses: [String: AnyCodable]?
-
-    /// User preferences.
-    public var preferences: [String: AnyCodable]?
-
-    /// Global MCP server configurations.
-    public var mcpServers: [String: MCPServer]?
-
-    /// Additional properties not explicitly modeled, preserved during round-trip.
-    public var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     public init(
         projects: [String: ProjectEntry]? = nil,
@@ -47,49 +34,6 @@ public struct LegacyConfig: Codable, Equatable, Hashable, Sendable {
         self.mcpServers = mcpServers
         self.additionalProperties = additionalProperties
     }
-
-    /// Returns the project entry for the given path.
-    public func project(at path: String) -> ProjectEntry? {
-        projects?[path]
-    }
-
-    /// Returns all project paths.
-    public var projectPaths: [String] {
-        projects?.keys.sorted() ?? []
-    }
-
-    /// Returns all projects as an array with their paths set.
-    public var allProjects: [ProjectEntry] {
-        guard let projects else { return [] }
-        return projects.map { path, entry in
-            var project = entry
-            project.path = path
-            return project
-        }.sorted { ($0.path ?? "") < ($1.path ?? "") }
-    }
-
-    /// Returns the global MCP server configuration for the given name.
-    public func globalServer(named name: String) -> MCPServer? {
-        mcpServers?[name]
-    }
-
-    /// Returns all global MCP server names.
-    public var globalServerNames: [String] {
-        mcpServers?.keys.sorted() ?? []
-    }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case projects
-        case customApiKeyResponses
-        case preferences
-        case mcpServers
-    }
-
-    private static let knownKeys: Set<String> = [
-        "projects", "customApiKeyResponses", "preferences", "mcpServers"
-    ]
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -111,6 +55,55 @@ public struct LegacyConfig: Codable, Equatable, Hashable, Sendable {
         additionalProperties = additional.isEmpty ? nil : additional
     }
 
+    // MARK: Public
+
+    /// Dictionary of projects keyed by their file path.
+    public var projects: [String: ProjectEntry]?
+
+    /// Custom API key responses stored by Claude Code.
+    public var customApiKeyResponses: [String: AnyCodable]?
+
+    /// User preferences.
+    public var preferences: [String: AnyCodable]?
+
+    /// Global MCP server configurations.
+    public var mcpServers: [String: MCPServer]?
+
+    /// Additional properties not explicitly modeled, preserved during round-trip.
+    public var additionalProperties: [String: AnyCodable]?
+
+    /// Returns all project paths.
+    public var projectPaths: [String] {
+        projects?.keys.sorted() ?? []
+    }
+
+    /// Returns all projects as an array with their paths set.
+    public var allProjects: [ProjectEntry] {
+        guard let projects else {
+            return []
+        }
+        return projects.map { path, entry in
+            var project = entry
+            project.path = path
+            return project
+        }.sorted { ($0.path ?? "") < ($1.path ?? "") }
+    }
+
+    /// Returns all global MCP server names.
+    public var globalServerNames: [String] {
+        mcpServers?.keys.sorted() ?? []
+    }
+
+    /// Returns the project entry for the given path.
+    public func project(at path: String) -> ProjectEntry? {
+        projects?[path]
+    }
+
+    /// Returns the global MCP server configuration for the given name.
+    public func globalServer(named name: String) -> MCPServer? {
+        mcpServers?[name]
+    }
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(projects, forKey: .projects)
@@ -126,4 +119,19 @@ public struct LegacyConfig: Codable, Equatable, Hashable, Sendable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case projects
+        case customApiKeyResponses
+        case preferences
+        case mcpServers
+    }
+
+    private static let knownKeys: Set<String> = [
+        "projects", "customApiKeyResponses", "preferences", "mcpServers",
+    ]
 }

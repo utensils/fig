@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - ProjectEntry
+
 /// Represents a project discovered from LegacyConfig or filesystem scan.
 ///
 /// Projects are directories that have been used with Claude Code,
@@ -15,6 +17,49 @@ import Foundation
 /// }
 /// ```
 public struct ProjectEntry: Codable, Sendable, Identifiable {
+    // MARK: Lifecycle
+
+    public init(
+        path: String? = nil,
+        allowedTools: [String]? = nil,
+        hasTrustDialogAccepted: Bool? = nil,
+        history: [String]? = nil,
+        mcpServers: [String: MCPServer]? = nil,
+        additionalProperties: [String: AnyCodable]? = nil
+    ) {
+        self.path = path
+        self.allowedTools = allowedTools
+        self.hasTrustDialogAccepted = hasTrustDialogAccepted
+        self.history = history
+        self.mcpServers = mcpServers
+        self.additionalProperties = additionalProperties
+        fallbackID = UUID().uuidString
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        path = try container.decodeIfPresent(String.self, forKey: .path)
+        allowedTools = try container.decodeIfPresent([String].self, forKey: .allowedTools)
+        hasTrustDialogAccepted = try container.decodeIfPresent(Bool.self, forKey: .hasTrustDialogAccepted)
+        history = try container.decodeIfPresent([String].self, forKey: .history)
+        mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
+        fallbackID = UUID().uuidString
+
+        // Capture unknown keys
+        let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
+        var additional: [String: AnyCodable] = [:]
+
+        for key in allKeysContainer.allKeys {
+            if !Self.knownKeys.contains(key.stringValue) {
+                additional[key.stringValue] = try allKeysContainer.decode(AnyCodable.self, forKey: key)
+            }
+        }
+
+        additionalProperties = additional.isEmpty ? nil : additional
+    }
+
+    // MARK: Public
+
     /// The file path to the project directory.
     /// This is typically the dictionary key in LegacyConfig, stored here for convenience.
     public var path: String?
@@ -34,83 +79,24 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
     /// Additional properties not explicitly modeled, preserved during round-trip.
     public var additionalProperties: [String: AnyCodable]?
 
-    /// A stable identifier for SwiftUI. Returns `path` if available, otherwise a deterministic
-    /// hash based on the entry's content to ensure stable identity across decodes.
     public var id: String {
-        if let path {
-            return path
-        }
-        // Compute deterministic ID from content hash
-        var hasher = Hasher()
-        hasher.combine(allowedTools)
-        hasher.combine(hasTrustDialogAccepted)
-        hasher.combine(history)
-        hasher.combine(mcpServers)
-        hasher.combine(additionalProperties)
-        return "project-\(hasher.finalize())"
-    }
-
-    public init(
-        path: String? = nil,
-        allowedTools: [String]? = nil,
-        hasTrustDialogAccepted: Bool? = nil,
-        history: [String]? = nil,
-        mcpServers: [String: MCPServer]? = nil,
-        additionalProperties: [String: AnyCodable]? = nil
-    ) {
-        self.path = path
-        self.allowedTools = allowedTools
-        self.hasTrustDialogAccepted = hasTrustDialogAccepted
-        self.history = history
-        self.mcpServers = mcpServers
-        self.additionalProperties = additionalProperties
+        path ?? fallbackID
     }
 
     /// The project name derived from the path.
     public var name: String? {
-        guard let path else { return nil }
+        guard let path else {
+            return nil
+        }
         return URL(fileURLWithPath: path).lastPathComponent
     }
 
     /// Whether this project has any MCP servers configured.
     public var hasMCPServers: Bool {
-        guard let servers = mcpServers else { return false }
-        return !servers.isEmpty
-    }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case path
-        case allowedTools
-        case hasTrustDialogAccepted
-        case history
-        case mcpServers
-    }
-
-    private static let knownKeys: Set<String> = [
-        "path", "allowedTools", "hasTrustDialogAccepted", "history", "mcpServers"
-    ]
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        path = try container.decodeIfPresent(String.self, forKey: .path)
-        allowedTools = try container.decodeIfPresent([String].self, forKey: .allowedTools)
-        hasTrustDialogAccepted = try container.decodeIfPresent(Bool.self, forKey: .hasTrustDialogAccepted)
-        history = try container.decodeIfPresent([String].self, forKey: .history)
-        mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
-
-        // Capture unknown keys
-        let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
-        var additional: [String: AnyCodable] = [:]
-
-        for key in allKeysContainer.allKeys {
-            if !Self.knownKeys.contains(key.stringValue) {
-                additional[key.stringValue] = try allKeysContainer.decode(AnyCodable.self, forKey: key)
-            }
+        guard let servers = mcpServers else {
+            return false
         }
-
-        additionalProperties = additional.isEmpty ? nil : additional
+        return !servers.isEmpty
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -129,23 +115,42 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case path
+        case allowedTools
+        case hasTrustDialogAccepted
+        case history
+        case mcpServers
+    }
+
+    private static let knownKeys: Set<String> = [
+        "path", "allowedTools", "hasTrustDialogAccepted", "history", "mcpServers",
+    ]
+
+    /// Fallback identifier used when `path` is nil, ensuring stable identity for SwiftUI.
+    private let fallbackID: String
 }
 
-// MARK: - Equatable
+// MARK: Equatable
 
 extension ProjectEntry: Equatable {
     public static func == (lhs: ProjectEntry, rhs: ProjectEntry) -> Bool {
         // Exclude fallbackID from equality comparison
         lhs.path == rhs.path &&
-        lhs.allowedTools == rhs.allowedTools &&
-        lhs.hasTrustDialogAccepted == rhs.hasTrustDialogAccepted &&
-        lhs.history == rhs.history &&
-        lhs.mcpServers == rhs.mcpServers &&
-        lhs.additionalProperties == rhs.additionalProperties
+            lhs.allowedTools == rhs.allowedTools &&
+            lhs.hasTrustDialogAccepted == rhs.hasTrustDialogAccepted &&
+            lhs.history == rhs.history &&
+            lhs.mcpServers == rhs.mcpServers &&
+            lhs.additionalProperties == rhs.additionalProperties
     }
 }
 
-// MARK: - Hashable
+// MARK: Hashable
 
 extension ProjectEntry: Hashable {
     public func hash(into hasher: inout Hasher) {

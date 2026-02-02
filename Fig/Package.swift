@@ -6,26 +6,36 @@ import PackageDescription
 let package = Package(
     name: "Fig",
     platforms: [
-        .macOS(.v14)
+        .macOS(.v14),
     ],
     products: [
         .executable(
             name: "Fig",
             targets: ["Fig"]
-        )
+        ),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.58.0"),
+        .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.55.0"),
     ],
     targets: [
         .executableTarget(
             name: "Fig",
             path: "Sources",
             swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency")
+                .enableExperimentalFeature("StrictConcurrency"),
+            ],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins"),
             ]
         ),
         .testTarget(
             name: "FigTests",
             dependencies: ["Fig"],
-            path: "Tests"
-        )
+            path: "Tests",
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins"),
+            ]
+        ),
     ]
 )

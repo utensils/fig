@@ -20,11 +20,7 @@ import Foundation
 /// }
 /// ```
 public struct MCPConfig: Codable, Equatable, Hashable, Sendable {
-    /// Dictionary of MCP server configurations keyed by server name.
-    public var mcpServers: [String: MCPServer]?
-
-    /// Additional properties not explicitly modeled, preserved during round-trip.
-    public var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     public init(
         mcpServers: [String: MCPServer]? = nil,
@@ -33,24 +29,6 @@ public struct MCPConfig: Codable, Equatable, Hashable, Sendable {
         self.mcpServers = mcpServers
         self.additionalProperties = additionalProperties
     }
-
-    /// Returns the server configuration for the given name.
-    public func server(named name: String) -> MCPServer? {
-        mcpServers?[name]
-    }
-
-    /// Returns an array of all server names.
-    public var serverNames: [String] {
-        mcpServers?.keys.sorted() ?? []
-    }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case mcpServers
-    }
-
-    private static let knownKeys: Set<String> = ["mcpServers"]
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -69,6 +47,24 @@ public struct MCPConfig: Codable, Equatable, Hashable, Sendable {
         additionalProperties = additional.isEmpty ? nil : additional
     }
 
+    // MARK: Public
+
+    /// Dictionary of MCP server configurations keyed by server name.
+    public var mcpServers: [String: MCPServer]?
+
+    /// Additional properties not explicitly modeled, preserved during round-trip.
+    public var additionalProperties: [String: AnyCodable]?
+
+    /// Returns an array of all server names.
+    public var serverNames: [String] {
+        mcpServers?.keys.sorted() ?? []
+    }
+
+    /// Returns the server configuration for the given name.
+    public func server(named name: String) -> MCPServer? {
+        mcpServers?[name]
+    }
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(mcpServers, forKey: .mcpServers)
@@ -81,4 +77,14 @@ public struct MCPConfig: Codable, Equatable, Hashable, Sendable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case mcpServers
+    }
+
+    private static let knownKeys: Set<String> = ["mcpServers"]
 }

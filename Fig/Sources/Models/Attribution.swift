@@ -10,14 +10,7 @@ import Foundation
 /// }
 /// ```
 public struct Attribution: Codable, Equatable, Hashable, Sendable {
-    /// Whether to include attribution in commit messages.
-    public var commits: Bool?
-
-    /// Whether to include attribution in pull request descriptions.
-    public var pullRequests: Bool?
-
-    /// Additional properties not explicitly modeled, preserved during round-trip.
-    public var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     public init(
         commits: Bool? = nil,
@@ -28,15 +21,6 @@ public struct Attribution: Codable, Equatable, Hashable, Sendable {
         self.pullRequests = pullRequests
         self.additionalProperties = additionalProperties
     }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case commits
-        case pullRequests
-    }
-
-    private static let knownKeys: Set<String> = ["commits", "pullRequests"]
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -56,6 +40,17 @@ public struct Attribution: Codable, Equatable, Hashable, Sendable {
         additionalProperties = additional.isEmpty ? nil : additional
     }
 
+    // MARK: Public
+
+    /// Whether to include attribution in commit messages.
+    public var commits: Bool?
+
+    /// Whether to include attribution in pull request descriptions.
+    public var pullRequests: Bool?
+
+    /// Additional properties not explicitly modeled, preserved during round-trip.
+    public var additionalProperties: [String: AnyCodable]?
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(commits, forKey: .commits)
@@ -69,4 +64,15 @@ public struct Attribution: Codable, Equatable, Hashable, Sendable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case commits
+        case pullRequests
+    }
+
+    private static let knownKeys: Set<String> = ["commits", "pullRequests"]
 }

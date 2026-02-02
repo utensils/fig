@@ -12,14 +12,7 @@ import Foundation
 /// }
 /// ```
 public struct HookDefinition: Codable, Equatable, Hashable, Sendable {
-    /// The type of hook (e.g., "command").
-    public var type: String?
-
-    /// The command to execute when the hook fires.
-    public var command: String?
-
-    /// Additional properties not explicitly modeled, preserved during round-trip.
-    public var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     public init(
         type: String? = nil,
@@ -30,15 +23,6 @@ public struct HookDefinition: Codable, Equatable, Hashable, Sendable {
         self.command = command
         self.additionalProperties = additionalProperties
     }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case type
-        case command
-    }
-
-    private static let knownKeys: Set<String> = ["type", "command"]
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -58,6 +42,17 @@ public struct HookDefinition: Codable, Equatable, Hashable, Sendable {
         additionalProperties = additional.isEmpty ? nil : additional
     }
 
+    // MARK: Public
+
+    /// The type of hook (e.g., "command").
+    public var type: String?
+
+    /// The command to execute when the hook fires.
+    public var command: String?
+
+    /// Additional properties not explicitly modeled, preserved during round-trip.
+    public var additionalProperties: [String: AnyCodable]?
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(type, forKey: .type)
@@ -71,4 +66,15 @@ public struct HookDefinition: Codable, Equatable, Hashable, Sendable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case command
+    }
+
+    private static let knownKeys: Set<String> = ["type", "command"]
 }

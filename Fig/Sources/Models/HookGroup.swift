@@ -14,14 +14,7 @@ import Foundation
 /// }
 /// ```
 public struct HookGroup: Codable, Equatable, Hashable, Sendable {
-    /// Optional pattern to match against tool names or operations.
-    public var matcher: String?
-
-    /// Array of hook definitions in this group.
-    public var hooks: [HookDefinition]?
-
-    /// Additional properties not explicitly modeled, preserved during round-trip.
-    public var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     public init(
         matcher: String? = nil,
@@ -32,15 +25,6 @@ public struct HookGroup: Codable, Equatable, Hashable, Sendable {
         self.hooks = hooks
         self.additionalProperties = additionalProperties
     }
-
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case matcher
-        case hooks
-    }
-
-    private static let knownKeys: Set<String> = ["matcher", "hooks"]
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -60,6 +44,17 @@ public struct HookGroup: Codable, Equatable, Hashable, Sendable {
         additionalProperties = additional.isEmpty ? nil : additional
     }
 
+    // MARK: Public
+
+    /// Optional pattern to match against tool names or operations.
+    public var matcher: String?
+
+    /// Array of hook definitions in this group.
+    public var hooks: [HookDefinition]?
+
+    /// Additional properties not explicitly modeled, preserved during round-trip.
+    public var additionalProperties: [String: AnyCodable]?
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(matcher, forKey: .matcher)
@@ -73,4 +68,15 @@ public struct HookGroup: Codable, Equatable, Hashable, Sendable {
             }
         }
     }
+
+    // MARK: Private
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case matcher
+        case hooks
+    }
+
+    private static let knownKeys: Set<String> = ["matcher", "hooks"]
 }

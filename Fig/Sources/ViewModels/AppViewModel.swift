@@ -4,10 +4,14 @@ import Foundation
 @MainActor
 @Observable
 final class AppViewModel {
-    private(set) var isLoading: Bool = false
-    private(set) var errorMessage: String?
+    // MARK: Lifecycle
 
     init() {}
+
+    // MARK: Internal
+
+    private(set) var isLoading: Bool = false
+    private(set) var errorMessage: String?
 
     func clearError() {
         errorMessage = nil
