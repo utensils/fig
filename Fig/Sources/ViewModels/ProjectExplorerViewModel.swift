@@ -23,50 +23,50 @@ final class FavoritesStorage {
     /// Loads favorites and recents from UserDefaults.
     func load() {
         if let favorites = UserDefaults.standard.array(forKey: Self.favoritesKey) as? [String] {
-            favoriteProjectPaths = Set(favorites)
+            self.favoriteProjectPaths = Set(favorites)
         }
         if let recents = UserDefaults.standard.array(forKey: Self.recentsKey) as? [String] {
-            recentProjectPaths = recents
+            self.recentProjectPaths = recents
         }
     }
 
     /// Adds a project to favorites.
     func addFavorite(_ path: String) {
-        favoriteProjectPaths.insert(path)
-        save()
+        self.favoriteProjectPaths.insert(path)
+        self.save()
     }
 
     /// Removes a project from favorites.
     func removeFavorite(_ path: String) {
-        favoriteProjectPaths.remove(path)
-        save()
+        self.favoriteProjectPaths.remove(path)
+        self.save()
     }
 
     /// Toggles a project's favorite status.
     func toggleFavorite(_ path: String) {
-        if favoriteProjectPaths.contains(path) {
-            removeFavorite(path)
+        if self.favoriteProjectPaths.contains(path) {
+            self.removeFavorite(path)
         } else {
-            addFavorite(path)
+            self.addFavorite(path)
         }
     }
 
     /// Checks if a project is a favorite.
     func isFavorite(_ path: String) -> Bool {
-        favoriteProjectPaths.contains(path)
+        self.favoriteProjectPaths.contains(path)
     }
 
     /// Records a project as recently opened.
     func recordRecentProject(_ path: String) {
         // Remove if already present
-        recentProjectPaths.removeAll { $0 == path }
+        self.recentProjectPaths.removeAll { $0 == path }
         // Insert at beginning
-        recentProjectPaths.insert(path, at: 0)
+        self.recentProjectPaths.insert(path, at: 0)
         // Trim to max
-        if recentProjectPaths.count > maxRecentProjects {
-            recentProjectPaths = Array(recentProjectPaths.prefix(maxRecentProjects))
+        if self.recentProjectPaths.count > self.maxRecentProjects {
+            self.recentProjectPaths = Array(self.recentProjectPaths.prefix(self.maxRecentProjects))
         }
-        save()
+        self.save()
     }
 
     // MARK: Private
@@ -75,8 +75,8 @@ final class FavoritesStorage {
     private static let recentsKey = "recentProjects"
 
     private func save() {
-        UserDefaults.standard.set(Array(favoriteProjectPaths), forKey: Self.favoritesKey)
-        UserDefaults.standard.set(recentProjectPaths, forKey: Self.recentsKey)
+        UserDefaults.standard.set(Array(self.favoriteProjectPaths), forKey: Self.favoritesKey)
+        UserDefaults.standard.set(self.recentProjectPaths, forKey: Self.recentsKey)
     }
 }
 
@@ -90,7 +90,7 @@ final class ProjectExplorerViewModel {
 
     init(configManager: ConfigFileManager = .shared) {
         self.configManager = configManager
-        favoritesStorage.load()
+        self.favoritesStorage.load()
     }
 
     // MARK: Internal
@@ -115,42 +115,42 @@ final class ProjectExplorerViewModel {
 
     /// Favorite projects.
     var favoriteProjects: [ProjectEntry] {
-        projects.filter { project in
+        self.projects.filter { project in
             guard let path = project.path else {
                 return false
             }
-            return favoritesStorage.isFavorite(path)
+            return self.favoritesStorage.isFavorite(path)
         }
     }
 
     /// Recent projects (excluding favorites).
     var recentProjects: [ProjectEntry] {
-        let favoritePaths = favoritesStorage.favoriteProjectPaths
-        return favoritesStorage.recentProjectPaths.compactMap { path in
+        let favoritePaths = self.favoritesStorage.favoriteProjectPaths
+        return self.favoritesStorage.recentProjectPaths.compactMap { path in
             // Skip if it's a favorite
             guard !favoritePaths.contains(path) else {
                 return nil
             }
-            return projects.first { $0.path == path }
+            return self.projects.first { $0.path == path }
         }
     }
 
     /// Projects filtered by the current search query, excluding favorites and recents.
     var filteredProjects: [ProjectEntry] {
-        let favoritePaths = favoritesStorage.favoriteProjectPaths
+        let favoritePaths = self.favoritesStorage.favoriteProjectPaths
         let recentPaths = Set(favoritesStorage.recentProjectPaths)
 
-        let baseProjects = projects.filter { project in
+        let baseProjects = self.projects.filter { project in
             guard let path = project.path else {
                 return true
             }
             return !favoritePaths.contains(path) && !recentPaths.contains(path)
         }
 
-        if searchQuery.isEmpty {
+        if self.searchQuery.isEmpty {
             return baseProjects
         }
-        let query = searchQuery.lowercased()
+        let query = self.searchQuery.lowercased()
         return baseProjects.filter { project in
             let nameMatch = project.name?.lowercased().contains(query) ?? false
             let pathMatch = project.path?.lowercased().contains(query) ?? false
@@ -160,11 +160,11 @@ final class ProjectExplorerViewModel {
 
     /// All projects matching the search query (for quick switcher).
     var searchResults: [ProjectEntry] {
-        if searchQuery.isEmpty {
-            return projects
+        if self.searchQuery.isEmpty {
+            return self.projects
         }
-        let query = searchQuery.lowercased()
-        return projects.filter { project in
+        let query = self.searchQuery.lowercased()
+        return self.projects.filter { project in
             let nameMatch = project.name?.lowercased().contains(query) ?? false
             let pathMatch = project.path?.lowercased().contains(query) ?? false
             return nameMatch || pathMatch
@@ -181,19 +181,19 @@ final class ProjectExplorerViewModel {
 
     /// Loads projects from the global configuration file.
     func loadProjects() async {
-        isLoading = true
-        errorMessage = nil
+        self.isLoading = true
+        self.errorMessage = nil
 
         do {
             let config = try await configManager.readGlobalConfig()
-            projects = config?.allProjects ?? []
-            Log.general.info("Loaded \(projects.count) projects")
+            self.projects = config?.allProjects ?? []
+            Log.general.info("Loaded \(self.projects.count) projects")
         } catch {
-            errorMessage = error.localizedDescription
+            self.errorMessage = error.localizedDescription
             Log.general.error("Failed to load projects: \(error.localizedDescription)")
         }
 
-        isLoading = false
+        self.isLoading = false
     }
 
     /// Returns the MCP server count for a project.
@@ -206,7 +206,7 @@ final class ProjectExplorerViewModel {
         guard let path = project.path else {
             return
         }
-        favoritesStorage.toggleFavorite(path)
+        self.favoritesStorage.toggleFavorite(path)
     }
 
     /// Checks if a project is a favorite.
@@ -214,7 +214,7 @@ final class ProjectExplorerViewModel {
         guard let path = project.path else {
             return false
         }
-        return favoritesStorage.isFavorite(path)
+        return self.favoritesStorage.isFavorite(path)
     }
 
     /// Records a project as recently opened.
@@ -222,7 +222,7 @@ final class ProjectExplorerViewModel {
         guard let path = project.path else {
             return
         }
-        favoritesStorage.recordRecentProject(path)
+        self.favoritesStorage.recordRecentProject(path)
     }
 
     /// Reveals a project in Finder.

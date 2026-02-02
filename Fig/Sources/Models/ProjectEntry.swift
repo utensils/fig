@@ -33,17 +33,17 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
         self.history = history
         self.mcpServers = mcpServers
         self.additionalProperties = additionalProperties
-        fallbackID = UUID().uuidString
+        self.fallbackID = UUID().uuidString
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        path = try container.decodeIfPresent(String.self, forKey: .path)
-        allowedTools = try container.decodeIfPresent([String].self, forKey: .allowedTools)
-        hasTrustDialogAccepted = try container.decodeIfPresent(Bool.self, forKey: .hasTrustDialogAccepted)
-        history = try container.decodeIfPresent([String].self, forKey: .history)
-        mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
-        fallbackID = UUID().uuidString
+        self.path = try container.decodeIfPresent(String.self, forKey: .path)
+        self.allowedTools = try container.decodeIfPresent([String].self, forKey: .allowedTools)
+        self.hasTrustDialogAccepted = try container.decodeIfPresent(Bool.self, forKey: .hasTrustDialogAccepted)
+        self.history = try container.decodeIfPresent([String].self, forKey: .history)
+        self.mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
+        self.fallbackID = UUID().uuidString
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -55,7 +55,7 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -80,7 +80,7 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
     public var additionalProperties: [String: AnyCodable]?
 
     public var id: String {
-        path ?? fallbackID
+        self.path ?? self.fallbackID
     }
 
     /// The project name derived from the path.
@@ -101,11 +101,11 @@ public struct ProjectEntry: Codable, Sendable, Identifiable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(path, forKey: .path)
-        try container.encodeIfPresent(allowedTools, forKey: .allowedTools)
-        try container.encodeIfPresent(hasTrustDialogAccepted, forKey: .hasTrustDialogAccepted)
-        try container.encodeIfPresent(history, forKey: .history)
-        try container.encodeIfPresent(mcpServers, forKey: .mcpServers)
+        try container.encodeIfPresent(self.path, forKey: .path)
+        try container.encodeIfPresent(self.allowedTools, forKey: .allowedTools)
+        try container.encodeIfPresent(self.hasTrustDialogAccepted, forKey: .hasTrustDialogAccepted)
+        try container.encodeIfPresent(self.history, forKey: .history)
+        try container.encodeIfPresent(self.mcpServers, forKey: .mcpServers)
 
         // Encode additional properties
         if let additionalProperties {
@@ -155,11 +155,11 @@ extension ProjectEntry: Equatable {
 extension ProjectEntry: Hashable {
     public func hash(into hasher: inout Hasher) {
         // Exclude fallbackID from hash computation
-        hasher.combine(path)
-        hasher.combine(allowedTools)
-        hasher.combine(hasTrustDialogAccepted)
-        hasher.combine(history)
-        hasher.combine(mcpServers)
-        hasher.combine(additionalProperties)
+        hasher.combine(self.path)
+        hasher.combine(self.allowedTools)
+        hasher.combine(self.hasTrustDialogAccepted)
+        hasher.combine(self.history)
+        hasher.combine(self.mcpServers)
+        hasher.combine(self.additionalProperties)
     }
 }

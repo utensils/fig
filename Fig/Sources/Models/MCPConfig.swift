@@ -32,7 +32,7 @@ public struct MCPConfig: Codable, Equatable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
+        self.mcpServers = try container.decodeIfPresent([String: MCPServer].self, forKey: .mcpServers)
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -44,7 +44,7 @@ public struct MCPConfig: Codable, Equatable, Hashable, Sendable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -57,17 +57,17 @@ public struct MCPConfig: Codable, Equatable, Hashable, Sendable {
 
     /// Returns an array of all server names.
     public var serverNames: [String] {
-        mcpServers?.keys.sorted() ?? []
+        self.mcpServers?.keys.sorted() ?? []
     }
 
     /// Returns the server configuration for the given name.
     public func server(named name: String) -> MCPServer? {
-        mcpServers?[name]
+        self.mcpServers?[name]
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(mcpServers, forKey: .mcpServers)
+        try container.encodeIfPresent(self.mcpServers, forKey: .mcpServers)
 
         // Encode additional properties
         if let additionalProperties {

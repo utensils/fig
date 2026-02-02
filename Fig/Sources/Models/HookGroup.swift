@@ -28,8 +28,8 @@ public struct HookGroup: Codable, Equatable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        matcher = try container.decodeIfPresent(String.self, forKey: .matcher)
-        hooks = try container.decodeIfPresent([HookDefinition].self, forKey: .hooks)
+        self.matcher = try container.decodeIfPresent(String.self, forKey: .matcher)
+        self.hooks = try container.decodeIfPresent([HookDefinition].self, forKey: .hooks)
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -41,7 +41,7 @@ public struct HookGroup: Codable, Equatable, Hashable, Sendable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -57,8 +57,8 @@ public struct HookGroup: Codable, Equatable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(matcher, forKey: .matcher)
-        try container.encodeIfPresent(hooks, forKey: .hooks)
+        try container.encodeIfPresent(self.matcher, forKey: .matcher)
+        try container.encodeIfPresent(self.hooks, forKey: .hooks)
 
         // Encode additional properties
         if let additionalProperties {

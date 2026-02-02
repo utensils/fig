@@ -44,12 +44,12 @@ public struct MCPServer: Codable, Equatable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        command = try container.decodeIfPresent(String.self, forKey: .command)
-        args = try container.decodeIfPresent([String].self, forKey: .args)
-        env = try container.decodeIfPresent([String: String].self, forKey: .env)
-        type = try container.decodeIfPresent(String.self, forKey: .type)
-        url = try container.decodeIfPresent(String.self, forKey: .url)
-        headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
+        self.command = try container.decodeIfPresent(String.self, forKey: .command)
+        self.args = try container.decodeIfPresent([String].self, forKey: .args)
+        self.env = try container.decodeIfPresent([String: String].self, forKey: .env)
+        self.type = try container.decodeIfPresent(String.self, forKey: .type)
+        self.url = try container.decodeIfPresent(String.self, forKey: .url)
+        self.headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -61,7 +61,7 @@ public struct MCPServer: Codable, Equatable, Hashable, Sendable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -95,12 +95,12 @@ public struct MCPServer: Codable, Equatable, Hashable, Sendable {
 
     /// Whether this server uses stdio transport.
     public var isStdio: Bool {
-        command != nil && type != "http"
+        self.command != nil && self.type != "http"
     }
 
     /// Whether this server uses HTTP transport.
     public var isHTTP: Bool {
-        type == "http" && url != nil
+        self.type == "http" && self.url != nil
     }
 
     /// Creates a stdio-based MCP server configuration.
@@ -122,12 +122,12 @@ public struct MCPServer: Codable, Equatable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(command, forKey: .command)
-        try container.encodeIfPresent(args, forKey: .args)
-        try container.encodeIfPresent(env, forKey: .env)
-        try container.encodeIfPresent(type, forKey: .type)
-        try container.encodeIfPresent(url, forKey: .url)
-        try container.encodeIfPresent(headers, forKey: .headers)
+        try container.encodeIfPresent(self.command, forKey: .command)
+        try container.encodeIfPresent(self.args, forKey: .args)
+        try container.encodeIfPresent(self.env, forKey: .env)
+        try container.encodeIfPresent(self.type, forKey: .type)
+        try container.encodeIfPresent(self.url, forKey: .url)
+        try container.encodeIfPresent(self.headers, forKey: .headers)
 
         // Encode additional properties
         if let additionalProperties {

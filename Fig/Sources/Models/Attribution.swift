@@ -24,8 +24,8 @@ public struct Attribution: Codable, Equatable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        commits = try container.decodeIfPresent(Bool.self, forKey: .commits)
-        pullRequests = try container.decodeIfPresent(Bool.self, forKey: .pullRequests)
+        self.commits = try container.decodeIfPresent(Bool.self, forKey: .commits)
+        self.pullRequests = try container.decodeIfPresent(Bool.self, forKey: .pullRequests)
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -37,7 +37,7 @@ public struct Attribution: Codable, Equatable, Hashable, Sendable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -53,8 +53,8 @@ public struct Attribution: Codable, Equatable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(commits, forKey: .commits)
-        try container.encodeIfPresent(pullRequests, forKey: .pullRequests)
+        try container.encodeIfPresent(self.commits, forKey: .commits)
+        try container.encodeIfPresent(self.pullRequests, forKey: .pullRequests)
 
         // Encode additional properties
         if let additionalProperties {

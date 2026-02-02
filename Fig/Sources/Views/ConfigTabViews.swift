@@ -10,21 +10,21 @@ struct SourceBadge: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            Image(systemName: source.icon)
+            Image(systemName: self.source.icon)
                 .font(.caption2)
-            Text(source.label)
+            Text(self.source.label)
                 .font(.caption2)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
-        .background(backgroundColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
-        .foregroundStyle(backgroundColor)
+        .background(self.backgroundColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
+        .foregroundStyle(self.backgroundColor)
     }
 
     // MARK: Private
 
     private var backgroundColor: Color {
-        switch source {
+        switch self.source {
         case .global:
             .blue
         case .projectShared:
@@ -50,7 +50,7 @@ struct PermissionsTabView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Source legend for project views
-                if allPermissions != nil {
+                if self.allPermissions != nil {
                     SourceLegend()
                 }
 
@@ -61,7 +61,7 @@ struct PermissionsTabView: View {
                             .font(.headline)
                             .foregroundStyle(.green)
 
-                        let allowRules = allowPermissions
+                        let allowRules = self.allowPermissions
                         if allowRules.isEmpty {
                             Text("No allow rules configured.")
                                 .foregroundStyle(.secondary)
@@ -86,7 +86,7 @@ struct PermissionsTabView: View {
                             .font(.headline)
                             .foregroundStyle(.red)
 
-                        let denyRules = denyPermissions
+                        let denyRules = self.denyPermissions
                         if denyRules.isEmpty {
                             Text("No deny rules configured.")
                                 .foregroundStyle(.secondary)
@@ -143,18 +143,18 @@ struct PermissionRuleRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: type.icon)
-                .foregroundStyle(type == .allow ? .green : .red)
+            Image(systemName: self.type.icon)
+                .foregroundStyle(self.type == .allow ? .green : .red)
                 .frame(width: 20)
 
-            Text(rule)
+            Text(self.rule)
                 .font(.system(.body, design: .monospaced))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
             Spacer()
 
-            SourceBadge(source: source)
+            SourceBadge(source: self.source)
         }
         .padding(.vertical, 2)
     }
@@ -170,20 +170,20 @@ struct EnvironmentTabView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if !envVars.isEmpty {
+                if !self.envVars.isEmpty {
                     SourceLegend()
                 }
 
-                if envVars.isEmpty {
+                if self.envVars.isEmpty {
                     ContentUnavailableView(
                         "No Environment Variables",
                         systemImage: "list.bullet.rectangle",
-                        description: Text(emptyMessage)
+                        description: Text(self.emptyMessage)
                     )
                 } else {
                     GroupBox {
                         VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(envVars.enumerated()), id: \.offset) { index, item in
+                            ForEach(Array(self.envVars.enumerated()), id: \.offset) { index, item in
                                 if index > 0 {
                                     Divider()
                                 }
@@ -216,7 +216,7 @@ struct EnvironmentVariableRow: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            Text(key)
+            Text(self.key)
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.medium)
                 .frame(minWidth: 200, alignment: .leading)
@@ -225,29 +225,29 @@ struct EnvironmentVariableRow: View {
                 .foregroundStyle(.secondary)
 
             Group {
-                if isValueVisible || !isSensitive {
-                    Text(value)
+                if self.isValueVisible || !self.isSensitive {
+                    Text(self.value)
                         .font(.system(.body, design: .monospaced))
                         .lineLimit(2)
                         .truncationMode(.middle)
                 } else {
-                    Text(String(repeating: "\u{2022}", count: min(value.count, 20)))
+                    Text(String(repeating: "\u{2022}", count: min(self.value.count, 20)))
                         .font(.system(.body, design: .monospaced))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if isSensitive {
+            if self.isSensitive {
                 Button {
-                    isValueVisible.toggle()
+                    self.isValueVisible.toggle()
                 } label: {
-                    Image(systemName: isValueVisible ? "eye.slash" : "eye")
+                    Image(systemName: self.isValueVisible ? "eye.slash" : "eye")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
             }
 
-            SourceBadge(source: source)
+            SourceBadge(source: self.source)
         }
         .padding(.vertical, 8)
     }
@@ -258,7 +258,7 @@ struct EnvironmentVariableRow: View {
 
     private var isSensitive: Bool {
         let sensitivePatterns = ["token", "key", "secret", "password", "credential", "api"]
-        let lowercaseKey = key.lowercased()
+        let lowercaseKey = self.key.lowercased()
         return sensitivePatterns.contains { lowercaseKey.contains($0) }
     }
 }
@@ -273,18 +273,18 @@ struct MCPServersTabView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if !servers.isEmpty {
+                if !self.servers.isEmpty {
                     SourceLegend()
                 }
 
-                if servers.isEmpty {
+                if self.servers.isEmpty {
                     ContentUnavailableView(
                         "No MCP Servers",
                         systemImage: "server.rack",
-                        description: Text(emptyMessage)
+                        description: Text(self.emptyMessage)
                     )
                 } else {
-                    ForEach(Array(servers.enumerated()), id: \.offset) { _, item in
+                    ForEach(Array(self.servers.enumerated()), id: \.offset) { _, item in
                         MCPServerCard(
                             name: item.name,
                             server: item.server,
@@ -315,13 +315,13 @@ struct MCPServerCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 // Header
                 HStack {
-                    Image(systemName: server.isHTTP ? "globe" : "terminal")
-                        .foregroundStyle(server.isHTTP ? .blue : .green)
+                    Image(systemName: self.server.isHTTP ? "globe" : "terminal")
+                        .foregroundStyle(self.server.isHTTP ? .blue : .green)
 
-                    Text(name)
+                    Text(self.name)
                         .font(.headline)
 
-                    Text(server.isHTTP ? "HTTP" : "Stdio")
+                    Text(self.server.isHTTP ? "HTTP" : "Stdio")
                         .font(.caption)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -329,21 +329,21 @@ struct MCPServerCard: View {
 
                     Spacer()
 
-                    SourceBadge(source: source)
+                    SourceBadge(source: self.source)
 
                     Button {
                         withAnimation {
-                            isExpanded.toggle()
+                            self.isExpanded.toggle()
                         }
                     } label: {
-                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption)
                     }
                     .buttonStyle(.plain)
                 }
 
                 // Summary line
-                if server.isHTTP {
+                if self.server.isHTTP {
                     if let url = server.url {
                         Text(url)
                             .font(.system(.caption, design: .monospaced))
@@ -364,10 +364,10 @@ struct MCPServerCard: View {
                 }
 
                 // Expanded details
-                if isExpanded {
+                if self.isExpanded {
                     Divider()
 
-                    if server.isHTTP {
+                    if self.server.isHTTP {
                         if let headers = server.headers, !headers.isEmpty {
                             Text("Headers:")
                                 .font(.caption)
@@ -378,7 +378,7 @@ struct MCPServerCard: View {
                                         .font(.system(.caption, design: .monospaced))
                                     Text(":")
                                         .foregroundStyle(.secondary)
-                                    Text(maskSensitiveValue(key: key, value: headers[key] ?? ""))
+                                    Text(self.maskSensitiveValue(key: key, value: headers[key] ?? ""))
                                         .font(.system(.caption, design: .monospaced))
                                         .foregroundStyle(.secondary)
                                 }
@@ -395,7 +395,7 @@ struct MCPServerCard: View {
                                         .font(.system(.caption, design: .monospaced))
                                     Text("=")
                                         .foregroundStyle(.secondary)
-                                    Text(maskSensitiveValue(key: key, value: env[key] ?? ""))
+                                    Text(self.maskSensitiveValue(key: key, value: env[key] ?? ""))
                                         .font(.system(.caption, design: .monospaced))
                                         .foregroundStyle(.secondary)
                                 }
@@ -436,7 +436,7 @@ struct HooksTabView: View {
             VStack(alignment: .leading, spacing: 16) {
                 SourceLegend()
 
-                if allHooksEmpty {
+                if self.allHooksEmpty {
                     ContentUnavailableView(
                         "No Hooks Configured",
                         systemImage: "arrow.triangle.branch",
@@ -446,12 +446,12 @@ struct HooksTabView: View {
                     )
                 } else {
                     // List all hook events
-                    ForEach(allHookEvents, id: \.self) { event in
+                    ForEach(self.allHookEvents, id: \.self) { event in
                         HookEventSection(
                             event: event,
-                            globalGroups: globalHooks?[event],
-                            projectGroups: projectHooks?[event],
-                            localGroups: localHooks?[event]
+                            globalGroups: self.globalHooks?[event],
+                            projectGroups: self.projectHooks?[event],
+                            localGroups: self.localHooks?[event]
                         )
                     }
                 }
@@ -465,9 +465,9 @@ struct HooksTabView: View {
     // MARK: Private
 
     private var allHooksEmpty: Bool {
-        (globalHooks?.isEmpty ?? true) &&
-            (projectHooks?.isEmpty ?? true) &&
-            (localHooks?.isEmpty ?? true)
+        (self.globalHooks?.isEmpty ?? true) &&
+            (self.projectHooks?.isEmpty ?? true) &&
+            (self.localHooks?.isEmpty ?? true)
     }
 
     private var allHookEvents: [String] {
@@ -497,7 +497,7 @@ struct HookEventSection: View {
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
-                Text(event)
+                Text(self.event)
                     .font(.headline)
 
                 // Global hooks
@@ -542,7 +542,7 @@ struct HookGroupRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                SourceBadge(source: source)
+                SourceBadge(source: self.source)
             }
 
             if let hooks = group.hooks {

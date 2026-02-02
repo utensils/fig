@@ -10,7 +10,7 @@ struct SidebarView: View {
     @Bindable var viewModel: ProjectExplorerViewModel
 
     var body: some View {
-        List(selection: $selection) {
+        List(selection: self.$selection) {
             // Global Settings Section
             Section("Configuration") {
                 Label("Global Settings", systemImage: "globe")
@@ -18,36 +18,36 @@ struct SidebarView: View {
             }
 
             // Favorites Section
-            if !viewModel.favoriteProjects.isEmpty {
+            if !self.viewModel.favoriteProjects.isEmpty {
                 Section("Favorites") {
-                    ForEach(viewModel.favoriteProjects) { project in
-                        projectRow(for: project, isFavoriteSection: true)
+                    ForEach(self.viewModel.favoriteProjects) { project in
+                        self.projectRow(for: project, isFavoriteSection: true)
                     }
                 }
             }
 
             // Recents Section
-            if !viewModel.recentProjects.isEmpty {
+            if !self.viewModel.recentProjects.isEmpty {
                 Section("Recent") {
-                    ForEach(viewModel.recentProjects) { project in
-                        projectRow(for: project, isFavoriteSection: false)
+                    ForEach(self.viewModel.recentProjects) { project in
+                        self.projectRow(for: project, isFavoriteSection: false)
                     }
                 }
             }
 
             // All Projects Section
             Section {
-                if viewModel.isLoading {
+                if self.viewModel.isLoading {
                     HStack {
                         ProgressView()
                             .controlSize(.small)
                         Text("Loading projects...")
                             .foregroundStyle(.secondary)
                     }
-                } else if viewModel.filteredProjects.isEmpty, viewModel.favoriteProjects.isEmpty,
-                          viewModel.recentProjects.isEmpty
+                } else if self.viewModel.filteredProjects.isEmpty, self.viewModel.favoriteProjects.isEmpty,
+                          self.viewModel.recentProjects.isEmpty
                 {
-                    if viewModel.searchQuery.isEmpty {
+                    if self.viewModel.searchQuery.isEmpty {
                         ContentUnavailableView(
                             "No Projects Found",
                             systemImage: "folder.badge.questionmark",
@@ -56,21 +56,21 @@ struct SidebarView: View {
                             )
                         )
                     } else {
-                        ContentUnavailableView.search(text: viewModel.searchQuery)
+                        ContentUnavailableView.search(text: self.viewModel.searchQuery)
                     }
-                } else if viewModel.filteredProjects.isEmpty, !viewModel.searchQuery.isEmpty {
-                    ContentUnavailableView.search(text: viewModel.searchQuery)
+                } else if self.viewModel.filteredProjects.isEmpty, !self.viewModel.searchQuery.isEmpty {
+                    ContentUnavailableView.search(text: self.viewModel.searchQuery)
                 } else {
-                    ForEach(viewModel.filteredProjects) { project in
-                        projectRow(for: project, isFavoriteSection: false)
+                    ForEach(self.viewModel.filteredProjects) { project in
+                        self.projectRow(for: project, isFavoriteSection: false)
                     }
                 }
             } header: {
                 HStack {
                     Text("Projects")
                     Spacer()
-                    if !viewModel.projects.isEmpty {
-                        Text("\(viewModel.filteredProjects.count)")
+                    if !self.viewModel.projects.isEmpty {
+                        Text("\(self.viewModel.filteredProjects.count)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 6)
@@ -82,25 +82,25 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .searchable(
-            text: $viewModel.searchQuery,
+            text: self.$viewModel.searchQuery,
             placement: .sidebar,
             prompt: "Filter projects"
         )
         .navigationTitle("Fig")
         .frame(minWidth: 220)
         .task {
-            await viewModel.loadProjects()
+            await self.viewModel.loadProjects()
         }
-        .onChange(of: selection) { _, newValue in
+        .onChange(of: self.selection) { _, newValue in
             // Record as recent when selecting a project
             if case let .project(path) = newValue {
                 if let project = viewModel.projects.first(where: { $0.path == path }) {
-                    viewModel.recordRecentProject(project)
+                    self.viewModel.recordRecentProject(project)
                 }
             }
         }
-        .sheet(isPresented: $viewModel.isQuickSwitcherPresented) {
-            QuickSwitcherView(viewModel: viewModel, selection: $selection)
+        .sheet(isPresented: self.$viewModel.isQuickSwitcherPresented) {
+            QuickSwitcherView(viewModel: self.viewModel, selection: self.$selection)
         }
         .keyboardShortcut("k", modifiers: .command)
     }
@@ -110,16 +110,16 @@ struct SidebarView: View {
     private func projectRow(for project: ProjectEntry, isFavoriteSection: Bool) -> some View {
         ProjectRowView(
             project: project,
-            exists: viewModel.projectExists(project),
-            mcpCount: viewModel.mcpServerCount(for: project),
-            isFavorite: viewModel.isFavorite(project)
+            exists: self.viewModel.projectExists(project),
+            mcpCount: self.viewModel.mcpServerCount(for: project),
+            isFavorite: self.viewModel.isFavorite(project)
         )
         .tag(NavigationSelection.project(project.path ?? ""))
         .contextMenu {
             Button {
-                viewModel.toggleFavorite(project)
+                self.viewModel.toggleFavorite(project)
             } label: {
-                if viewModel.isFavorite(project) {
+                if self.viewModel.isFavorite(project) {
                     Label("Remove from Favorites", systemImage: "star.slash")
                 } else {
                     Label("Add to Favorites", systemImage: "star")
@@ -129,18 +129,18 @@ struct SidebarView: View {
             Divider()
 
             Button {
-                viewModel.revealInFinder(project)
+                self.viewModel.revealInFinder(project)
             } label: {
                 Label("Reveal in Finder", systemImage: "folder")
             }
-            .disabled(!viewModel.projectExists(project))
+            .disabled(!self.viewModel.projectExists(project))
 
             Button {
-                viewModel.openInTerminal(project)
+                self.viewModel.openInTerminal(project)
             } label: {
                 Label("Open in Terminal", systemImage: "terminal")
             }
-            .disabled(!viewModel.projectExists(project))
+            .disabled(!self.viewModel.projectExists(project))
         }
     }
 }
@@ -159,19 +159,19 @@ struct ProjectRowView: View {
     var body: some View {
         HStack(spacing: 8) {
             // Project icon with status
-            Image(systemName: exists ? "folder.fill" : "folder.badge.questionmark")
-                .foregroundStyle(exists ? .blue : .orange)
+            Image(systemName: self.exists ? "folder.fill" : "folder.badge.questionmark")
+                .foregroundStyle(self.exists ? .blue : .orange)
                 .frame(width: 20)
 
             // Project info
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(project.name ?? "Unknown")
+                    Text(self.project.name ?? "Unknown")
                         .font(.body)
-                        .foregroundStyle(exists ? .primary : .secondary)
+                        .foregroundStyle(self.exists ? .primary : .secondary)
                         .lineLimit(1)
 
-                    if isFavorite {
+                    if self.isFavorite {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption2)
@@ -179,7 +179,7 @@ struct ProjectRowView: View {
                 }
 
                 if let path = project.path {
-                    Text(abbreviatePath(path))
+                    Text(self.abbreviatePath(path))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -190,19 +190,19 @@ struct ProjectRowView: View {
             Spacer()
 
             // MCP server badge
-            if mcpCount > 0 {
-                Text("\(mcpCount)")
+            if self.mcpCount > 0 {
+                Text("\(self.mcpCount)")
                     .font(.caption2)
                     .fontWeight(.medium)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(.purple, in: Capsule())
-                    .help("\(mcpCount) MCP server\(mcpCount == 1 ? "" : "s") configured")
+                    .help("\(self.mcpCount) MCP server\(self.mcpCount == 1 ? "" : "s") configured")
             }
 
             // Missing indicator
-            if !exists {
+            if !self.exists {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .font(.caption)
@@ -240,16 +240,16 @@ struct QuickSwitcherView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
 
-                TextField("Search projects...", text: $searchText)
+                TextField("Search projects...", text: self.$searchText)
                     .textFieldStyle(.plain)
                     .font(.title3)
                     .onSubmit {
-                        selectFirstResult()
+                        self.selectFirstResult()
                     }
 
-                if !searchText.isEmpty {
+                if !self.searchText.isEmpty {
                     Button {
-                        searchText = ""
+                        self.searchText = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
@@ -264,18 +264,18 @@ struct QuickSwitcherView: View {
             // Results list
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(filteredResults.enumerated()), id: \.element.id) { index, project in
+                    ForEach(Array(self.filteredResults.enumerated()), id: \.element.id) { index, project in
                         QuickSwitcherRow(
                             project: project,
-                            isSelected: index == selectedIndex,
-                            isFavorite: viewModel.isFavorite(project)
+                            isSelected: index == self.selectedIndex,
+                            isFavorite: self.viewModel.isFavorite(project)
                         )
                         .onTapGesture {
-                            selectProject(project)
+                            self.selectProject(project)
                         }
                     }
 
-                    if filteredResults.isEmpty {
+                    if self.filteredResults.isEmpty {
                         Text("No projects found")
                             .foregroundStyle(.secondary)
                             .padding()
@@ -301,27 +301,27 @@ struct QuickSwitcherView: View {
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .onAppear {
-            searchText = ""
-            selectedIndex = 0
+            self.searchText = ""
+            self.selectedIndex = 0
         }
         .onKeyPress(.upArrow) {
-            if selectedIndex > 0 {
-                selectedIndex -= 1
+            if self.selectedIndex > 0 {
+                self.selectedIndex -= 1
             }
             return .handled
         }
         .onKeyPress(.downArrow) {
-            if selectedIndex < filteredResults.count - 1 {
-                selectedIndex += 1
+            if self.selectedIndex < self.filteredResults.count - 1 {
+                self.selectedIndex += 1
             }
             return .handled
         }
         .onKeyPress(.return) {
-            selectFirstResult()
+            self.selectFirstResult()
             return .handled
         }
         .onKeyPress(.escape) {
-            viewModel.isQuickSwitcherPresented = false
+            self.viewModel.isQuickSwitcherPresented = false
             return .handled
         }
     }
@@ -333,21 +333,21 @@ struct QuickSwitcherView: View {
     @State private var selectedIndex = 0
 
     private var filteredResults: [ProjectEntry] {
-        if searchText.isEmpty {
+        if self.searchText.isEmpty {
             // Show favorites first, then recents, then all
-            let favorites = viewModel.favoriteProjects
-            let recents = viewModel.recentProjects
-            let others = viewModel.projects.filter { project in
+            let favorites = self.viewModel.favoriteProjects
+            let recents = self.viewModel.recentProjects
+            let others = self.viewModel.projects.filter { project in
                 guard let path = project.path else {
                     return true
                 }
-                return !viewModel.favoritesStorage.favoriteProjectPaths.contains(path) &&
-                    !viewModel.favoritesStorage.recentProjectPaths.contains(path)
+                return !self.viewModel.favoritesStorage.favoriteProjectPaths.contains(path) &&
+                    !self.viewModel.favoritesStorage.recentProjectPaths.contains(path)
             }
             return favorites + recents + others
         }
-        let query = searchText.lowercased()
-        return viewModel.projects.filter { project in
+        let query = self.searchText.lowercased()
+        return self.viewModel.projects.filter { project in
             let nameMatch = project.name?.lowercased().contains(query) ?? false
             let pathMatch = project.path?.lowercased().contains(query) ?? false
             return nameMatch || pathMatch
@@ -355,19 +355,19 @@ struct QuickSwitcherView: View {
     }
 
     private func selectFirstResult() {
-        guard !filteredResults.isEmpty else {
+        guard !self.filteredResults.isEmpty else {
             return
         }
-        let project = filteredResults[min(selectedIndex, filteredResults.count - 1)]
-        selectProject(project)
+        let project = self.filteredResults[min(self.selectedIndex, self.filteredResults.count - 1)]
+        self.selectProject(project)
     }
 
     private func selectProject(_ project: ProjectEntry) {
         if let path = project.path {
-            selection = .project(path)
-            viewModel.recordRecentProject(project)
+            self.selection = .project(path)
+            self.viewModel.recordRecentProject(project)
         }
-        viewModel.isQuickSwitcherPresented = false
+        self.viewModel.isQuickSwitcherPresented = false
     }
 }
 
@@ -388,10 +388,10 @@ struct QuickSwitcherRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(project.name ?? "Unknown")
+                    Text(self.project.name ?? "Unknown")
                         .font(.body)
 
-                    if isFavorite {
+                    if self.isFavorite {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption2)
@@ -399,7 +399,7 @@ struct QuickSwitcherRow: View {
                 }
 
                 if let path = project.path {
-                    Text(abbreviatePath(path))
+                    Text(self.abbreviatePath(path))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -409,7 +409,7 @@ struct QuickSwitcherRow: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .background(self.isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
     }
 
     // MARK: Private
@@ -432,14 +432,14 @@ struct KeyboardHint: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(key)
+            Text(self.key)
                 .font(.caption)
                 .fontWeight(.medium)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
 
-            Text(label)
+            Text(self.label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -7,10 +7,10 @@ struct ConfigFileManagerTests {
     // MARK: Lifecycle
 
     init() throws {
-        tempDirectory = FileManager.default.temporaryDirectory
+        self.tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("FigTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(
-            at: tempDirectory,
+            at: self.tempDirectory,
             withIntermediateDirectories: true
         )
     }
