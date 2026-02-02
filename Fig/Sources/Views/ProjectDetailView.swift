@@ -15,7 +15,7 @@ struct ProjectDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            ProjectHeaderView(viewModel: self.viewModel)
+            ProjectHeaderView(viewModel: self.viewModel, showingEditor: self.$showingEditor)
 
             Divider()
 
@@ -46,11 +46,24 @@ struct ProjectDetailView: View {
         .task {
             await self.viewModel.loadConfiguration()
         }
+        .sheet(isPresented: $showingEditor) {
+            ProjectSettingsEditorView(projectPath: viewModel.projectPath)
+                .frame(minWidth: 700, minHeight: 600)
+        }
+        .onChange(of: showingEditor) { _, isShowing in
+            // Reload configuration when editor closes in case settings changed
+            if !isShowing {
+                Task {
+                    await viewModel.loadConfiguration()
+                }
+            }
+        }
     }
 
     // MARK: Private
 
     @State private var viewModel: ProjectDetailViewModel
+    @State private var showingEditor = false
 
     @ViewBuilder
     private func tabContent(for tab: ProjectDetailTab) -> some View {
@@ -89,6 +102,7 @@ struct ProjectHeaderView: View {
     // MARK: Internal
 
     @Bindable var viewModel: ProjectDetailViewModel
+    @Binding var showingEditor: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -125,6 +139,14 @@ struct ProjectHeaderView: View {
 
                 // Action buttons
                 HStack(spacing: 8) {
+                    Button {
+                        self.showingEditor = true
+                    } label: {
+                        Label("Edit Settings", systemImage: "pencil")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!self.viewModel.projectExists)
+
                     Button {
                         self.viewModel.revealInFinder()
                     } label: {
