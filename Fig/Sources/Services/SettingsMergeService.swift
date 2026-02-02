@@ -49,7 +49,7 @@ actor SettingsMergeService {
             (projectLocal, .projectLocal),
         ]
 
-        return merge(settingsWithSources)
+        return self.merge(settingsWithSources)
     }
 
     /// Merges settings from pre-loaded settings objects.
@@ -72,7 +72,7 @@ actor SettingsMergeService {
             (projectLocal, .projectLocal),
         ]
 
-        return merge(settingsWithSources)
+        return self.merge(settingsWithSources)
     }
 
     // MARK: Private
@@ -81,11 +81,11 @@ actor SettingsMergeService {
 
     /// Core merge logic.
     private func merge(_ settingsWithSources: [(ClaudeSettings?, ConfigSource)]) -> MergedSettings {
-        let permissions = mergePermissions(from: settingsWithSources)
-        let env = mergeEnv(from: settingsWithSources)
-        let hooks = mergeHooks(from: settingsWithSources)
-        let disallowedTools = mergeDisallowedTools(from: settingsWithSources)
-        let attribution = mergeAttribution(from: settingsWithSources)
+        let permissions = self.mergePermissions(from: settingsWithSources)
+        let env = self.mergeEnv(from: settingsWithSources)
+        let hooks = self.mergeHooks(from: settingsWithSources)
+        let disallowedTools = self.mergeDisallowedTools(from: settingsWithSources)
+        let attribution = self.mergeAttribution(from: settingsWithSources)
 
         return MergedSettings(
             permissions: permissions,

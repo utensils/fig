@@ -46,11 +46,11 @@ public struct ClaudeSettings: Codable, Equatable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        permissions = try container.decodeIfPresent(Permissions.self, forKey: .permissions)
-        env = try container.decodeIfPresent([String: String].self, forKey: .env)
-        hooks = try container.decodeIfPresent([String: [HookGroup]].self, forKey: .hooks)
-        disallowedTools = try container.decodeIfPresent([String].self, forKey: .disallowedTools)
-        attribution = try container.decodeIfPresent(Attribution.self, forKey: .attribution)
+        self.permissions = try container.decodeIfPresent(Permissions.self, forKey: .permissions)
+        self.env = try container.decodeIfPresent([String: String].self, forKey: .env)
+        self.hooks = try container.decodeIfPresent([String: [HookGroup]].self, forKey: .hooks)
+        self.disallowedTools = try container.decodeIfPresent([String].self, forKey: .disallowedTools)
+        self.attribution = try container.decodeIfPresent(Attribution.self, forKey: .attribution)
 
         // Capture unknown keys
         let allKeysContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -62,7 +62,7 @@ public struct ClaudeSettings: Codable, Equatable, Hashable, Sendable {
             }
         }
 
-        additionalProperties = additional.isEmpty ? nil : additional
+        self.additionalProperties = additional.isEmpty ? nil : additional
     }
 
     // MARK: Public
@@ -87,21 +87,21 @@ public struct ClaudeSettings: Codable, Equatable, Hashable, Sendable {
 
     /// Returns hooks for the specified event.
     public func hooks(for event: String) -> [HookGroup]? {
-        hooks?[event]
+        self.hooks?[event]
     }
 
     /// Checks if a specific tool is disallowed.
     public func isToolDisallowed(_ toolName: String) -> Bool {
-        disallowedTools?.contains(toolName) ?? false
+        self.disallowedTools?.contains(toolName) ?? false
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(permissions, forKey: .permissions)
-        try container.encodeIfPresent(env, forKey: .env)
-        try container.encodeIfPresent(hooks, forKey: .hooks)
-        try container.encodeIfPresent(disallowedTools, forKey: .disallowedTools)
-        try container.encodeIfPresent(attribution, forKey: .attribution)
+        try container.encodeIfPresent(self.permissions, forKey: .permissions)
+        try container.encodeIfPresent(self.env, forKey: .env)
+        try container.encodeIfPresent(self.hooks, forKey: .hooks)
+        try container.encodeIfPresent(self.disallowedTools, forKey: .disallowedTools)
+        try container.encodeIfPresent(self.attribution, forKey: .attribution)
 
         // Encode additional properties
         if let additionalProperties {

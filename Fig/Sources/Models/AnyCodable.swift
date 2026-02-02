@@ -22,19 +22,19 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
         let container = try decoder.singleValueContainer()
 
         if container.decodeNil() {
-            value = NSNull()
+            self.value = NSNull()
         } else if let bool = try? container.decode(Bool.self) {
-            value = bool
+            self.value = bool
         } else if let double = try? container.decode(Double.self) {
-            value = double
+            self.value = double
         } else if let int = try? container.decode(Int.self) {
-            value = int
+            self.value = int
         } else if let string = try? container.decode(String.self) {
-            value = string
+            self.value = string
         } else if let array = try? container.decode([AnyCodable].self) {
-            value = array.map(\.value)
+            self.value = array.map(\.value)
         } else if let dictionary = try? container.decode([String: AnyCodable].self) {
-            value = dictionary.mapValues(\.value)
+            self.value = dictionary.mapValues(\.value)
         } else {
             throw DecodingError.dataCorruptedError(
                 in: container,
@@ -50,13 +50,13 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
     // MARK: - Equatable
 
     public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
-        areEqual(lhs.value, rhs.value)
+        self.areEqual(lhs.value, rhs.value)
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
 
-        switch value {
+        switch self.value {
         case is NSNull:
             try container.encodeNil()
         case let bool as Bool:
@@ -73,10 +73,10 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
             try container.encode(dictionary.mapValues { AnyCodable($0) })
         default:
             throw EncodingError.invalidValue(
-                value,
+                self.value,
                 EncodingError.Context(
                     codingPath: container.codingPath,
-                    debugDescription: "AnyCodable cannot encode value of type \(type(of: value))"
+                    debugDescription: "AnyCodable cannot encode value of type \(type(of: self.value))"
                 )
             )
         }
@@ -85,7 +85,7 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
     // MARK: - Hashable
 
     public func hash(into hasher: inout Hasher) {
-        Self.hashValue(value, into: &hasher)
+        Self.hashValue(self.value, into: &hasher)
     }
 
     // MARK: Private
@@ -107,7 +107,7 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
             guard lhs.count == rhs.count else {
                 return false
             }
-            return zip(lhs, rhs).allSatisfy { areEqual($0, $1) }
+            return zip(lhs, rhs).allSatisfy { self.areEqual($0, $1) }
         case let (lhs as [String: Any], rhs as [String: Any]):
             guard lhs.count == rhs.count else {
                 return false
@@ -116,7 +116,7 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
                 guard let rhsValue = rhs[key] else {
                     return false
                 }
-                return areEqual(value, rhsValue)
+                return self.areEqual(value, rhsValue)
             }
         default:
             return false
@@ -144,14 +144,14 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
             hasher.combine(5)
             hasher.combine(array.count)
             for element in array {
-                hashValue(element, into: &hasher)
+                self.hashValue(element, into: &hasher)
             }
         case let dictionary as [String: Any]:
             hasher.combine(6)
             hasher.combine(dictionary.count)
             for key in dictionary.keys.sorted() {
                 hasher.combine(key)
-                hashValue(dictionary[key]!, into: &hasher)
+                self.hashValue(dictionary[key]!, into: &hasher)
             }
         default:
             // Hash the type to ensure different unsupported types don't collide
@@ -164,9 +164,9 @@ public struct AnyCodable: Codable, Equatable, Hashable, @unchecked Sendable {
     private static func sanitize(_ value: Any) -> Any {
         switch value {
         case let array as [Any]:
-            array.map { sanitize($0) }
+            array.map { self.sanitize($0) }
         case let dictionary as [String: Any]:
-            dictionary.mapValues { sanitize($0) }
+            dictionary.mapValues { self.sanitize($0) }
         default:
             value
         }

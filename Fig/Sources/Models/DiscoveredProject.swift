@@ -63,16 +63,16 @@ public struct DiscoveredProject: Sendable, Identifiable, Equatable, Hashable {
 
     /// Unique identifier based on the path.
     public var id: String {
-        path
+        self.path
     }
 
     /// URL representation of the project path.
     public var url: URL {
-        URL(fileURLWithPath: path)
+        URL(fileURLWithPath: self.path)
     }
 
     /// Returns true if the project has any configuration files.
     public var hasAnyConfig: Bool {
-        hasSettings || hasLocalSettings || hasMCPConfig
+        self.hasSettings || self.hasLocalSettings || self.hasMCPConfig
     }
 }

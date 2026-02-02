@@ -111,7 +111,7 @@ actor ProjectDiscoveryService {
         }
 
         return config.projectPaths.compactMap { path in
-            canonicalizePath(path)
+            self.canonicalizePath(path)
         }
     }
 
@@ -123,7 +123,7 @@ actor ProjectDiscoveryService {
         var discoveredPaths = Set<String>()
 
         for directory in directories {
-            let expandedPath = expandPath(directory)
+            let expandedPath = self.expandPath(directory)
             guard let canonicalPath = canonicalizePath(expandedPath) else {
                 continue
             }
@@ -140,10 +140,30 @@ actor ProjectDiscoveryService {
     /// - Parameter path: The project path to refresh.
     /// - Returns: Updated discovered project, or nil if the path is invalid.
     func refreshProject(at path: String) async -> DiscoveredProject? {
-        await buildDiscoveredProject(from: path)
+        await self.buildDiscoveredProject(from: path)
     }
 
     // MARK: Private
+
+    /// Directories to skip during scanning.
+    private static let skipDirectories: Set<String> = [
+        "node_modules",
+        ".git",
+        ".svn",
+        ".hg",
+        "vendor",
+        "Pods",
+        ".build",
+        "build",
+        "dist",
+        "target",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".cache",
+        "Library",
+        "Applications",
+    ]
 
     private let configManager: ConfigFileManager
     private let fileManager: FileManager
@@ -155,7 +175,7 @@ actor ProjectDiscoveryService {
         }
 
         let url = URL(fileURLWithPath: canonicalPath)
-        let exists = fileManager.fileExists(atPath: canonicalPath)
+        let exists = self.fileManager.fileExists(atPath: canonicalPath)
         let displayName = url.lastPathComponent
 
         // Check for config files
@@ -164,12 +184,12 @@ actor ProjectDiscoveryService {
         let localSettingsPath = claudeDir.appendingPathComponent("settings.local.json").path
         let mcpConfigPath = url.appendingPathComponent(".mcp.json").path
 
-        let hasSettings = isFile(atPath: settingsPath)
-        let hasLocalSettings = isFile(atPath: localSettingsPath)
-        let hasMCPConfig = isFile(atPath: mcpConfigPath)
+        let hasSettings = self.isFile(atPath: settingsPath)
+        let hasLocalSettings = self.isFile(atPath: localSettingsPath)
+        let hasMCPConfig = self.isFile(atPath: mcpConfigPath)
 
         // Get last modified date
-        let lastModified = getLastModifiedDate(for: url)
+        let lastModified = self.getLastModifiedDate(for: url)
 
         return DiscoveredProject(
             path: canonicalPath,
@@ -193,7 +213,7 @@ actor ProjectDiscoveryService {
 
         // Check if this directory itself is a Claude project
         let claudeDir = url.appendingPathComponent(".claude")
-        if isDirectory(atPath: claudeDir.path) {
+        if self.isDirectory(atPath: claudeDir.path) {
             discoveredPaths.append(path)
         }
 
@@ -227,44 +247,24 @@ actor ProjectDiscoveryService {
         return discoveredPaths
     }
 
-    /// Directories to skip during scanning.
-    private static let skipDirectories: Set<String> = [
-        "node_modules",
-        ".git",
-        ".svn",
-        ".hg",
-        "vendor",
-        "Pods",
-        ".build",
-        "build",
-        "dist",
-        "target",
-        "__pycache__",
-        ".venv",
-        "venv",
-        ".cache",
-        "Library",
-        "Applications",
-    ]
-
     /// Checks if a path exists and is a regular file (not a directory).
     private func isFile(atPath path: String) -> Bool {
         var isDirectory: ObjCBool = false
-        let exists = fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+        let exists = self.fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
         return exists && !isDirectory.boolValue
     }
 
     /// Checks if a path exists and is a directory.
     private func isDirectory(atPath path: String) -> Bool {
         var isDirectory: ObjCBool = false
-        let exists = fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+        let exists = self.fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
         return exists && isDirectory.boolValue
     }
 
     /// Expands tilde in path.
     private func expandPath(_ path: String) -> String {
         if path.hasPrefix("~") {
-            let homeDir = fileManager.homeDirectoryForCurrentUser.path
+            let homeDir = self.fileManager.homeDirectoryForCurrentUser.path
             return path.replacingOccurrences(of: "~", with: homeDir, options: .anchored)
         }
         return path
@@ -272,7 +272,7 @@ actor ProjectDiscoveryService {
 
     /// Canonicalizes a path by expanding tilde and standardizing.
     private func canonicalizePath(_ path: String) -> String? {
-        let expandedPath = expandPath(path)
+        let expandedPath = self.expandPath(path)
         let url = URL(fileURLWithPath: expandedPath)
         let standardized = url.standardized
 

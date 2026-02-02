@@ -40,36 +40,36 @@ final class GlobalSettingsViewModel {
 
     /// Global MCP servers from the legacy config.
     var globalMCPServers: [(name: String, server: MCPServer)] {
-        legacyConfig?.mcpServers?.map { ($0.key, $0.value) }.sorted { $0.0 < $1.0 } ?? []
+        self.legacyConfig?.mcpServers?.map { ($0.key, $0.value) }.sorted { $0.0 < $1.0 } ?? []
     }
 
     /// Loads global settings.
     func load() async {
-        isLoading = true
+        self.isLoading = true
 
         do {
-            settings = try await configManager.readGlobalSettings()
-            legacyConfig = try await configManager.readGlobalConfig()
+            self.settings = try await self.configManager.readGlobalSettings()
+            self.legacyConfig = try await self.configManager.readGlobalConfig()
 
             // Load file statuses
             let settingsURL = await configManager.globalSettingsURL
-            settingsFileStatus = await ConfigFileStatus(
-                exists: configManager.fileExists(at: settingsURL),
+            self.settingsFileStatus = await ConfigFileStatus(
+                exists: self.configManager.fileExists(at: settingsURL),
                 url: settingsURL
             )
-            globalSettingsPath = settingsURL.path
-            globalSettingsDirectoryPath = await configManager.globalSettingsDirectory.path
+            self.globalSettingsPath = settingsURL.path
+            self.globalSettingsDirectoryPath = await self.configManager.globalSettingsDirectory.path
 
             let configURL = await configManager.globalConfigURL
-            configFileStatus = await ConfigFileStatus(
-                exists: configManager.fileExists(at: configURL),
+            self.configFileStatus = await ConfigFileStatus(
+                exists: self.configManager.fileExists(at: configURL),
                 url: configURL
             )
         } catch {
             Log.general.error("Failed to load global settings: \(error.localizedDescription)")
         }
 
-        isLoading = false
+        self.isLoading = false
     }
 
     /// Reveals the settings file in Finder.
@@ -138,18 +138,18 @@ struct GlobalSettingsDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            GlobalSettingsHeaderView(viewModel: viewModel)
+            GlobalSettingsHeaderView(viewModel: self.viewModel)
 
             Divider()
 
             // Tab content
-            if viewModel.isLoading {
+            if self.viewModel.isLoading {
                 ProgressView("Loading settings...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                TabView(selection: $viewModel.selectedTab) {
+                TabView(selection: self.$viewModel.selectedTab) {
                     ForEach(GlobalSettingsTab.allCases) { tab in
-                        globalTabContent(for: tab)
+                        self.globalTabContent(for: tab)
                             .tabItem {
                                 Label(tab.title, systemImage: tab.icon)
                             }
@@ -161,7 +161,7 @@ struct GlobalSettingsDetailView: View {
         }
         .frame(minWidth: 500)
         .task {
-            await viewModel.load()
+            await self.viewModel.load()
         }
     }
 
@@ -174,23 +174,23 @@ struct GlobalSettingsDetailView: View {
         switch tab {
         case .permissions:
             PermissionsTabView(
-                permissions: viewModel.settings?.permissions,
+                permissions: self.viewModel.settings?.permissions,
                 source: .global
             )
         case .environment:
             EnvironmentTabView(
-                envVars: viewModel.settings?.env?.map { ($0.key, $0.value, ConfigSource.global) } ?? [],
+                envVars: self.viewModel.settings?.env?.map { ($0.key, $0.value, ConfigSource.global) } ?? [],
                 emptyMessage: "No global environment variables configured."
             )
         case .mcpServers:
             MCPServersTabView(
-                servers: viewModel.globalMCPServers.map { ($0.name, $0.server, ConfigSource.global) },
+                servers: self.viewModel.globalMCPServers.map { ($0.name, $0.server, ConfigSource.global) },
                 emptyMessage: "No global MCP servers configured."
             )
         case .advanced:
             GlobalAdvancedTabView(
-                settings: viewModel.settings,
-                legacyConfig: viewModel.legacyConfig
+                settings: self.viewModel.settings,
+                legacyConfig: self.viewModel.legacyConfig
             )
         }
     }
@@ -215,7 +215,7 @@ struct GlobalSettingsHeaderView: View {
                         .fontWeight(.semibold)
 
                     Button {
-                        viewModel.revealSettingsInFinder()
+                        self.viewModel.revealSettingsInFinder()
                     } label: {
                         Text("~/.claude/settings.json")
                             .font(.caption)
@@ -310,12 +310,12 @@ struct GlobalAdvancedTabView: View {
                 GroupBox("Statistics") {
                     HStack {
                         Label(
-                            "\(legacyConfig?.projects?.count ?? 0) projects",
+                            "\(self.legacyConfig?.projects?.count ?? 0) projects",
                             systemImage: "folder"
                         )
                         Spacer()
                         Label(
-                            "\(legacyConfig?.mcpServers?.count ?? 0) global MCP servers",
+                            "\(self.legacyConfig?.mcpServers?.count ?? 0) global MCP servers",
                             systemImage: "server.rack"
                         )
                     }
@@ -338,11 +338,11 @@ struct AttributionRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: enabled ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(enabled ? .green : .secondary)
-            Text(label)
+            Image(systemName: self.enabled ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(self.enabled ? .green : .secondary)
+            Text(self.label)
             Spacer()
-            Text(enabled ? "Enabled" : "Disabled")
+            Text(self.enabled ? "Enabled" : "Disabled")
                 .foregroundStyle(.secondary)
         }
     }
@@ -357,10 +357,10 @@ struct FileStatusBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: exists ? "checkmark.circle.fill" : "xmark.circle")
-                .foregroundStyle(exists ? .green : .orange)
+            Image(systemName: self.exists ? "checkmark.circle.fill" : "xmark.circle")
+                .foregroundStyle(self.exists ? .green : .orange)
                 .font(.caption)
-            Text(label)
+            Text(self.label)
                 .font(.caption)
         }
         .padding(.horizontal, 8)

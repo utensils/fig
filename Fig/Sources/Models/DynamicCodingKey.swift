@@ -8,12 +8,12 @@ struct DynamicCodingKey: CodingKey {
 
     init(stringValue: String) {
         self.stringValue = stringValue
-        intValue = nil
+        self.intValue = nil
     }
 
     init?(intValue: Int) {
         self.intValue = intValue
-        stringValue = String(intValue)
+        self.stringValue = String(intValue)
     }
 
     // MARK: Internal

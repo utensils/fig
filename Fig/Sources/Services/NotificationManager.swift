@@ -130,28 +130,28 @@ final class NotificationManager {
 
     /// Shows a success toast notification.
     func showSuccess(_ title: String, message: String? = nil) {
-        showToast(type: .success, title: title, message: message, dismissAfter: 3.0)
+        self.showToast(type: .success, title: title, message: message, dismissAfter: 3.0)
     }
 
     /// Shows an info toast notification.
     func showInfo(_ title: String, message: String? = nil) {
-        showToast(type: .info, title: title, message: message, dismissAfter: 4.0)
+        self.showToast(type: .info, title: title, message: message, dismissAfter: 4.0)
     }
 
     /// Shows a warning toast notification.
     func showWarning(_ title: String, message: String? = nil) {
-        showToast(type: .warning, title: title, message: message, dismissAfter: 5.0)
+        self.showToast(type: .warning, title: title, message: message, dismissAfter: 5.0)
     }
 
     /// Shows an error toast notification.
     func showError(_ title: String, message: String? = nil) {
-        showToast(type: .error, title: title, message: message, dismissAfter: 6.0)
+        self.showToast(type: .error, title: title, message: message, dismissAfter: 6.0)
     }
 
     /// Shows an error from a FigError.
     func showError(_ error: FigError) {
         Log.general.error("Error: \(error.localizedDescription)")
-        showToast(
+        self.showToast(
             type: .error,
             title: error.localizedDescription,
             message: error.recoverySuggestion,
@@ -162,12 +162,12 @@ final class NotificationManager {
     /// Shows an error from any Error type.
     func showError(_ error: Error) {
         if let figError = error as? FigError {
-            showError(figError)
+            self.showError(figError)
         } else if let configError = error as? ConfigFileError {
-            showError(FigError(from: configError))
+            self.showError(FigError(from: configError))
         } else {
             Log.general.error("Error: \(error.localizedDescription)")
-            showToast(
+            self.showToast(
                 type: .error,
                 title: "Error",
                 message: error.localizedDescription,
@@ -178,23 +178,23 @@ final class NotificationManager {
 
     /// Dismisses a specific toast notification.
     func dismissToast(id: UUID) {
-        dismissTimers[id]?.cancel()
-        dismissTimers.removeValue(forKey: id)
+        self.dismissTimers[id]?.cancel()
+        self.dismissTimers.removeValue(forKey: id)
 
         withAnimation(.easeInOut(duration: 0.2)) {
-            toasts.removeAll { $0.id == id }
+            self.toasts.removeAll { $0.id == id }
         }
     }
 
     /// Dismisses all toast notifications.
     func dismissAllToasts() {
-        for timer in dismissTimers.values {
+        for timer in self.dismissTimers.values {
             timer.cancel()
         }
-        dismissTimers.removeAll()
+        self.dismissTimers.removeAll()
 
         withAnimation(.easeInOut(duration: 0.2)) {
-            toasts.removeAll()
+            self.toasts.removeAll()
         }
     }
 
@@ -206,7 +206,7 @@ final class NotificationManager {
         secondaryButton: AlertInfo.AlertButton? = nil
     ) {
         Log.general.info("Alert shown: \(title)")
-        currentAlert = AlertInfo(
+        self.currentAlert = AlertInfo(
             title: title,
             message: message,
             primaryButton: primaryButton,
@@ -217,7 +217,7 @@ final class NotificationManager {
     /// Shows an error alert dialog.
     func showErrorAlert(_ error: FigError) {
         Log.general.error("Error alert: \(error.localizedDescription)")
-        showAlert(
+        self.showAlert(
             title: "Error",
             message: [error.localizedDescription, error.recoverySuggestion]
                 .compactMap(\.self)
@@ -228,12 +228,12 @@ final class NotificationManager {
     /// Shows an error alert for any Error type.
     func showErrorAlert(_ error: Error) {
         if let figError = error as? FigError {
-            showErrorAlert(figError)
+            self.showErrorAlert(figError)
         } else if let configError = error as? ConfigFileError {
-            showErrorAlert(FigError(from: configError))
+            self.showErrorAlert(FigError(from: configError))
         } else {
             Log.general.error("Error alert: \(error.localizedDescription)")
-            showAlert(title: "Error", message: error.localizedDescription)
+            self.showAlert(title: "Error", message: error.localizedDescription)
         }
     }
 
@@ -246,7 +246,7 @@ final class NotificationManager {
         onConfirm: @escaping @Sendable () -> Void,
         onCancel: (@Sendable () -> Void)? = nil
     ) {
-        showAlert(
+        self.showAlert(
             title: title,
             message: message,
             primaryButton: AlertInfo.AlertButton(title: confirmTitle, role: confirmRole, action: onConfirm),
@@ -256,7 +256,7 @@ final class NotificationManager {
 
     /// Dismisses the current alert.
     func dismissAlert() {
-        currentAlert = nil
+        self.currentAlert = nil
     }
 
     // MARK: Private
@@ -291,16 +291,16 @@ final class NotificationManager {
         }
 
         withAnimation(.easeInOut(duration: 0.2)) {
-            toasts.append(notification)
+            self.toasts.append(notification)
         }
 
         // Set up auto-dismiss if specified
         if let dismissAfter {
             let id = notification.id
-            dismissTimers[id] = Task {
+            self.dismissTimers[id] = Task {
                 try? await Task.sleep(for: .seconds(dismissAfter))
                 if !Task.isCancelled {
-                    dismissToast(id: id)
+                    self.dismissToast(id: id)
                 }
             }
         }
