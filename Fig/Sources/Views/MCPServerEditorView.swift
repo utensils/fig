@@ -6,8 +6,15 @@ import SwiftUI
 struct MCPServerEditorView: View {
     // MARK: Internal
 
+    enum Field: Hashable {
+        case name
+        case command
+        case url
+    }
+
     @Bindable var viewModel: MCPServerEditorViewModel
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,7 +55,10 @@ struct MCPServerEditorView: View {
         .onChange(of: viewModel.formData.command) { _, _ in viewModel.validate() }
         .onChange(of: viewModel.formData.url) { _, _ in viewModel.validate() }
         .onChange(of: viewModel.formData.scope) { _, _ in viewModel.validate() }
-        .onAppear { viewModel.validate() }
+        .onAppear {
+            viewModel.validate()
+            focusedField = .name
+        }
     }
 
     // MARK: Private
@@ -89,6 +99,8 @@ struct MCPServerEditorView: View {
 
                     TextField("my-server", text: $viewModel.formData.name)
                         .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .name)
+                        .accessibilityLabel("Server name")
 
                     if let error = viewModel.error(for: "name") {
                         Text(error.message)
@@ -152,6 +164,8 @@ struct MCPServerEditorView: View {
                     TextField("npx", text: $viewModel.formData.command)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
+                        .focused($focusedField, equals: .command)
+                        .accessibilityLabel("Command")
 
                     if let error = viewModel.error(for: "command") {
                         Text(error.message)
@@ -188,6 +202,7 @@ struct MCPServerEditorView: View {
                             Image(systemName: "plus.circle")
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Add environment variable")
                     }
 
                     if viewModel.formData.envVars.isEmpty {
@@ -227,6 +242,8 @@ struct MCPServerEditorView: View {
                     TextField("https://mcp.example.com/api", text: $viewModel.formData.url)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
+                        .focused($focusedField, equals: .url)
+                        .accessibilityLabel("Server URL")
 
                     if let error = viewModel.error(for: "url") {
                         Text(error.message)
@@ -248,6 +265,7 @@ struct MCPServerEditorView: View {
                             Image(systemName: "plus.circle")
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Add header")
                     }
 
                     if viewModel.formData.headers.isEmpty {
@@ -406,6 +424,7 @@ struct TagChip: View {
                     .font(.caption2)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Remove \(text)")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
@@ -444,6 +463,7 @@ struct KeyValueRow: View {
                     .foregroundStyle(.red)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Remove entry")
         }
     }
 }
