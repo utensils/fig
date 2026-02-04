@@ -11,6 +11,7 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
     case mcpServers
     case hooks
     case effectiveConfig
+    case healthCheck
     case advanced
 
     // MARK: Internal
@@ -31,6 +32,8 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
             "Hooks"
         case .effectiveConfig:
             "Effective Config"
+        case .healthCheck:
+            "Health"
         case .advanced:
             "Advanced"
         }
@@ -48,6 +51,8 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
             "arrow.triangle.branch"
         case .effectiveConfig:
             "checkmark.rectangle.stack"
+        case .healthCheck:
+            "stethoscope"
         case .advanced:
             "gearshape.2"
         }
@@ -92,6 +97,9 @@ final class ProjectDetailViewModel {
 
     /// The project entry from the global config.
     private(set) var projectEntry: ProjectEntry?
+
+    /// The full global legacy config (~/.claude.json).
+    private(set) var legacyConfig: LegacyConfig?
 
     /// Global settings.
     private(set) var globalSettings: ClaudeSettings?
@@ -267,6 +275,7 @@ final class ProjectDetailViewModel {
         do {
             // Load global config to get project entry
             let globalConfig = try await configManager.readGlobalConfig()
+            self.legacyConfig = globalConfig
             self.projectEntry = globalConfig?.project(at: self.projectPath)
 
             // Load global settings
