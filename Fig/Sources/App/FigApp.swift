@@ -1,9 +1,24 @@
+import AppKit
 import SwiftUI
+
+/// App delegate to configure the application before UI loads.
+final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
+    func applicationDidFinishLaunching(_: Notification) {
+        // Ensure the app activates and shows its window when running from Xcode/SPM
+        DispatchQueue.main.async {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows.first?.makeKeyAndOrderFront(nil)
+        }
+    }
+}
 
 /// The main entry point for the Fig application.
 @main
 struct FigApp: App {
     // MARK: Internal
+
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
         WindowGroup {
