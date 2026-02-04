@@ -230,6 +230,8 @@ struct ProjectDetailView: View {
                 projectHooks: viewModel.projectSettings?.hooks,
                 localHooks: viewModel.projectLocalSettings?.hooks
             )
+        case .claudeMD:
+            ClaudeMDView(projectPath: viewModel.projectPath)
         case .effectiveConfig:
             if let merged = viewModel.mergedSettings {
                 EffectiveConfigView(
