@@ -1,0 +1,292 @@
+import MarkdownUI
+import SwiftUI
+
+// MARK: - ClaudeMDView
+
+/// Tab view for previewing and editing CLAUDE.md files in the project hierarchy.
+struct ClaudeMDView: View {
+    // MARK: Lifecycle
+
+    init(projectPath: String) {
+        _viewModel = State(initialValue: ClaudeMDViewModel(projectPath: projectPath))
+    }
+
+    // MARK: Internal
+
+    var body: some View {
+        HSplitView {
+            // File hierarchy sidebar
+            claudeMDSidebar
+                .frame(minWidth: 180, idealWidth: 220, maxWidth: 280)
+
+            // Content area
+            contentArea
+                .frame(minWidth: 300)
+        }
+        .task {
+            await viewModel.loadFiles()
+        }
+    }
+
+    // MARK: Private
+
+    @State private var viewModel: ClaudeMDViewModel
+
+    // MARK: - Sidebar
+
+    private var claudeMDSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("Hierarchy")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    Task {
+                        await viewModel.loadFiles()
+                    }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .help("Refresh")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            Divider()
+
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(selection: $viewModel.selectedFileID) {
+                    // Global section
+                    Section("Global") {
+                        ForEach(viewModel.files.filter { $0.level == .global }) { file in
+                            ClaudeMDFileRow(file: file)
+                                .tag(file.id)
+                        }
+                    }
+
+                    // Project section
+                    Section("Project") {
+                        ForEach(
+                            viewModel.files.filter {
+                                $0.level == .projectRoot
+                                    || isSubdirectory($0.level)
+                            }
+                        ) { file in
+                            ClaudeMDFileRow(file: file)
+                                .tag(file.id)
+                        }
+                    }
+                }
+                .listStyle(.sidebar)
+                .onChange(of: viewModel.selectedFileID) {
+                    viewModel.cancelEditing()
+                }
+            }
+        }
+    }
+
+    // MARK: - Content Area
+
+    private var contentArea: some View {
+        VStack(spacing: 0) {
+            if let file = viewModel.selectedFile {
+                // Toolbar
+                contentToolbar(for: file)
+
+                Divider()
+
+                // Content
+                if viewModel.isEditing {
+                    editorView
+                } else if file.exists {
+                    previewView(for: file)
+                } else {
+                    emptyFileView(for: file)
+                }
+            } else {
+                ContentUnavailableView(
+                    "Select a File",
+                    systemImage: "doc.text",
+                    description: Text("Choose a CLAUDE.md file from the hierarchy to view or edit.")
+                )
+            }
+        }
+    }
+
+    private func contentToolbar(for file: ClaudeMDFile) -> some View {
+        HStack {
+            // File path
+            HStack(spacing: 4) {
+                Image(systemName: file.level.icon)
+                    .foregroundStyle(.secondary)
+                Text(file.displayPath)
+                    .font(.system(.body, design: .monospaced))
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Git status badge
+            if file.exists {
+                GitStatusBadge(isTracked: file.isTrackedByGit)
+            }
+
+            // Action buttons
+            if viewModel.isEditing {
+                Button("Cancel") {
+                    viewModel.cancelEditing()
+                }
+
+                Button("Save") {
+                    Task {
+                        await viewModel.saveSelectedFile()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.editContent == file.content)
+            } else if file.exists {
+                Button {
+                    viewModel.startEditing()
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+            } else {
+                Button {
+                    Task {
+                        await viewModel.createFile(at: file.level)
+                    }
+                } label: {
+                    Label("Create", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Preview
+
+    private func previewView(for file: ClaudeMDFile) -> some View {
+        ScrollView {
+            Markdown(file.content)
+                .markdownTheme(.gitHub)
+                .textSelection(.enabled)
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: - Editor
+
+    private var editorView: some View {
+        TextEditor(text: $viewModel.editContent)
+            .font(.system(.body, design: .monospaced))
+            .scrollContentBackground(.hidden)
+            .padding(4)
+    }
+
+    // MARK: - Empty State
+
+    private func emptyFileView(for file: ClaudeMDFile) -> some View {
+        ContentUnavailableView {
+            Label("No CLAUDE.md", systemImage: "doc.badge.plus")
+        } description: {
+            Text("No CLAUDE.md file exists at \(file.displayPath).")
+        } actions: {
+            Button("Create File") {
+                Task {
+                    await viewModel.createFile(at: file.level)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private func isSubdirectory(_ level: ClaudeMDLevel) -> Bool {
+        switch level {
+        case .subdirectory:
+            true
+        default:
+            false
+        }
+    }
+}
+
+// MARK: - ClaudeMDFileRow
+
+/// A row in the CLAUDE.md hierarchy sidebar.
+struct ClaudeMDFileRow: View {
+    let file: ClaudeMDFile
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: file.exists ? "doc.text.fill" : "doc.badge.plus")
+                .foregroundStyle(file.exists ? .blue : .secondary)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(file.level.displayName)
+                    .font(.body)
+                    .lineLimit(1)
+
+                if case let .subdirectory(path) = file.level {
+                    Text(path)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            if file.exists {
+                if file.isTrackedByGit {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                        .help("Tracked by git")
+                } else {
+                    Image(systemName: "circle.dashed")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .help("Not tracked by git")
+                }
+            }
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+// MARK: - GitStatusBadge
+
+/// Badge showing git tracking status.
+struct GitStatusBadge: View {
+    let isTracked: Bool
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: isTracked ? "checkmark.circle.fill" : "circle.dashed")
+                .foregroundStyle(isTracked ? .green : .orange)
+                .font(.caption)
+            Text(isTracked ? "In git" : "Untracked")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+#Preview {
+    ClaudeMDView(projectPath: "/Users/test/project")
+        .frame(width: 700, height: 500)
+}

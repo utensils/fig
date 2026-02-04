@@ -10,6 +10,7 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
     case environment
     case mcpServers
     case hooks
+    case claudeMD
     case effectiveConfig
     case advanced
 
@@ -29,6 +30,8 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
             "MCP Servers"
         case .hooks:
             "Hooks"
+        case .claudeMD:
+            "CLAUDE.md"
         case .effectiveConfig:
             "Effective Config"
         case .advanced:
@@ -46,6 +49,8 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
             "server.rack"
         case .hooks:
             "arrow.triangle.branch"
+        case .claudeMD:
+            "doc.text"
         case .effectiveConfig:
             "checkmark.rectangle.stack"
         case .advanced:
