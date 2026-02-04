@@ -82,7 +82,7 @@ struct ClaudeMDView: View {
                     }
                 }
                 .listStyle(.sidebar)
-                .onChange(of: viewModel.selectedFileID) {
+                .onChange(of: viewModel.selectedFileID) { _, _ in
                     viewModel.cancelEditing()
                 }
             }
