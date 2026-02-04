@@ -243,6 +243,8 @@ struct ProjectDetailView: View {
                     description: Text("No merged configuration available.")
                 )
             }
+        case .healthCheck:
+            ConfigHealthCheckView(viewModel: viewModel)
         case .advanced:
             AdvancedTabView(viewModel: viewModel)
         }
