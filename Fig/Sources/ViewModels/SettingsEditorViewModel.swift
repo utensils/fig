@@ -122,12 +122,16 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
     /// Disallowed tools being edited.
     var disallowedTools: [String] = []
 
+    /// Hook groups being edited, keyed by event name.
+    var hookGroups: [String: [EditableHookGroup]] = [:]
+
     // MARK: - Original Data (for dirty checking)
 
     private(set) var originalPermissionRules: [EditablePermissionRule] = []
     private(set) var originalEnvironmentVariables: [EditableEnvironmentVariable] = []
     private(set) var originalAttribution: Attribution?
     private(set) var originalDisallowedTools: [String] = []
+    private(set) var originalHookGroups: [String: [EditableHookGroup]] = [:]
 
     // MARK: - Loaded Settings
 
@@ -503,6 +507,228 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
         }
     }
 
+    // MARK: - Hook Group Editing
+
+    /// Adds a new hook group for a specific event.
+    func addHookGroup(event: String, matcher: String, commands: [String]) {
+        let hooks = commands.map { EditableHookDefinition(type: "command", command: $0) }
+        let newGroup = EditableHookGroup(matcher: matcher, hooks: hooks)
+
+        var groups = hookGroups[event] ?? []
+        groups.append(newGroup)
+        hookGroups[event] = groups
+        markDirty()
+
+        registerUndo(actionName: "Add Hook Group") { [weak self] in
+            guard let self else { return }
+            self.hookGroups[event]?.removeAll { $0.id == newGroup.id }
+            if self.hookGroups[event]?.isEmpty == true { self.hookGroups[event] = nil }
+            self.markDirty()
+            self.registerUndo(actionName: "Add Hook Group") { [weak self] in
+                var groups = self?.hookGroups[event] ?? []
+                groups.append(newGroup)
+                self?.hookGroups[event] = groups
+                self?.markDirty()
+            }
+        }
+    }
+
+    /// Removes a hook group from a specific event.
+    func removeHookGroup(event: String, group: EditableHookGroup) {
+        guard let index = hookGroups[event]?.firstIndex(of: group) else { return }
+
+        hookGroups[event]?.remove(at: index)
+        if hookGroups[event]?.isEmpty == true { hookGroups[event] = nil }
+        markDirty()
+
+        registerUndo(actionName: "Remove Hook Group") { [weak self] in
+            guard let self else { return }
+            var groups = self.hookGroups[event] ?? []
+            let insertIndex = min(index, groups.count)
+            groups.insert(group, at: insertIndex)
+            self.hookGroups[event] = groups
+            self.markDirty()
+            self.registerUndo(actionName: "Remove Hook Group") { [weak self] in
+                self?.hookGroups[event]?.removeAll { $0.id == group.id }
+                if self?.hookGroups[event]?.isEmpty == true { self?.hookGroups[event] = nil }
+                self?.markDirty()
+            }
+        }
+    }
+
+    /// Updates a hook group's matcher pattern.
+    func updateHookGroupMatcher(event: String, group: EditableHookGroup, newMatcher: String) {
+        guard let index = hookGroups[event]?.firstIndex(where: { $0.id == group.id }) else { return }
+
+        let oldMatcher = group.matcher
+        hookGroups[event]?[index].matcher = newMatcher
+        markDirty()
+
+        registerUndo(actionName: "Update Matcher") { [weak self] in
+            guard let self,
+                  let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == group.id })
+            else { return }
+            self.hookGroups[event]?[idx].matcher = oldMatcher
+            self.markDirty()
+            self.registerUndo(actionName: "Update Matcher") { [weak self] in
+                guard let self,
+                      let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == group.id })
+                else { return }
+                self.hookGroups[event]?[idx].matcher = newMatcher
+                self.markDirty()
+            }
+        }
+    }
+
+    /// Adds a hook definition to a group.
+    func addHookDefinition(event: String, groupID: UUID, command: String) {
+        guard let groupIndex = hookGroups[event]?.firstIndex(where: { $0.id == groupID }) else { return }
+
+        let newHook = EditableHookDefinition(type: "command", command: command)
+        hookGroups[event]?[groupIndex].hooks.append(newHook)
+        markDirty()
+
+        registerUndo(actionName: "Add Hook") { [weak self] in
+            guard let self,
+                  let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID })
+            else { return }
+            self.hookGroups[event]?[idx].hooks.removeAll { $0.id == newHook.id }
+            self.markDirty()
+            self.registerUndo(actionName: "Add Hook") { [weak self] in
+                guard let self,
+                      let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID })
+                else { return }
+                self.hookGroups[event]?[idx].hooks.append(newHook)
+                self.markDirty()
+            }
+        }
+    }
+
+    /// Removes a hook definition from a group.
+    func removeHookDefinition(event: String, groupID: UUID, hook: EditableHookDefinition) {
+        guard let groupIndex = hookGroups[event]?.firstIndex(where: { $0.id == groupID }),
+              let hookIndex = hookGroups[event]?[groupIndex].hooks.firstIndex(of: hook)
+        else { return }
+
+        hookGroups[event]?[groupIndex].hooks.remove(at: hookIndex)
+        markDirty()
+
+        registerUndo(actionName: "Remove Hook") { [weak self] in
+            guard let self,
+                  let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID })
+            else { return }
+            let insertIndex = min(hookIndex, self.hookGroups[event]![idx].hooks.count)
+            self.hookGroups[event]?[idx].hooks.insert(hook, at: insertIndex)
+            self.markDirty()
+            self.registerUndo(actionName: "Remove Hook") { [weak self] in
+                guard let self,
+                      let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID })
+                else { return }
+                self.hookGroups[event]?[idx].hooks.removeAll { $0.id == hook.id }
+                self.markDirty()
+            }
+        }
+    }
+
+    /// Updates a hook definition's command.
+    func updateHookDefinition(
+        event: String,
+        groupID: UUID,
+        hook: EditableHookDefinition,
+        newCommand: String
+    ) {
+        guard let groupIndex = hookGroups[event]?.firstIndex(where: { $0.id == groupID }),
+              let hookIndex = hookGroups[event]?[groupIndex].hooks
+              .firstIndex(where: { $0.id == hook.id })
+        else { return }
+
+        let oldCommand = hook.command
+        hookGroups[event]?[groupIndex].hooks[hookIndex].command = newCommand
+        markDirty()
+
+        registerUndo(actionName: "Update Hook") { [weak self] in
+            guard let self,
+                  let gIdx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID }),
+                  let hIdx = self.hookGroups[event]?[gIdx].hooks
+                  .firstIndex(where: { $0.id == hook.id })
+            else { return }
+            self.hookGroups[event]?[gIdx].hooks[hIdx].command = oldCommand
+            self.markDirty()
+            self.registerUndo(actionName: "Update Hook") { [weak self] in
+                guard let self,
+                      let gIdx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID }),
+                      let hIdx = self.hookGroups[event]?[gIdx].hooks
+                      .firstIndex(where: { $0.id == hook.id })
+                else { return }
+                self.hookGroups[event]?[gIdx].hooks[hIdx].command = newCommand
+                self.markDirty()
+            }
+        }
+    }
+
+    /// Moves hook definitions within a group for reordering.
+    func moveHookDefinition(event: String, groupID: UUID, from source: Int, direction: Int) {
+        guard let groupIndex = hookGroups[event]?.firstIndex(where: { $0.id == groupID })
+        else { return }
+
+        let destination = source + direction
+        let hooks = hookGroups[event]![groupIndex].hooks
+        guard destination >= 0, destination < hooks.count else { return }
+
+        let previousHooks = hooks
+        hookGroups[event]?[groupIndex].hooks.swapAt(source, destination)
+        let newHooks = hookGroups[event]![groupIndex].hooks
+        markDirty()
+
+        registerUndo(actionName: "Reorder Hooks") { [weak self] in
+            guard let self,
+                  let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID })
+            else { return }
+            self.hookGroups[event]?[idx].hooks = previousHooks
+            self.markDirty()
+            self.registerUndo(actionName: "Reorder Hooks") { [weak self] in
+                guard let self,
+                      let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID })
+                else { return }
+                self.hookGroups[event]?[idx].hooks = newHooks
+                self.markDirty()
+            }
+        }
+    }
+
+    /// Moves a hook group within an event for reordering.
+    func moveHookGroup(event: String, from source: Int, direction: Int) {
+        guard let groups = hookGroups[event] else { return }
+
+        let destination = source + direction
+        guard destination >= 0, destination < groups.count else { return }
+
+        let previousGroups = groups
+        hookGroups[event]?.swapAt(source, destination)
+        let newGroups = hookGroups[event]!
+        markDirty()
+
+        registerUndo(actionName: "Reorder Hook Groups") { [weak self] in
+            guard let self else { return }
+            self.hookGroups[event] = previousGroups
+            self.markDirty()
+            self.registerUndo(actionName: "Reorder Hook Groups") { [weak self] in
+                self?.hookGroups[event] = newGroups
+                self?.markDirty()
+            }
+        }
+    }
+
+    /// Applies a hook template.
+    func applyHookTemplate(_ template: HookTemplate) {
+        addHookGroup(
+            event: template.event.rawValue,
+            matcher: template.matcher ?? "",
+            commands: template.commands
+        )
+        undoManager?.setActionName("Apply Template")
+    }
+
     // MARK: - Conflict Resolution
 
     /// Acknowledges external changes and chooses resolution.
@@ -598,6 +824,16 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
         disallowedTools = settings?.disallowedTools ?? []
         originalDisallowedTools = disallowedTools
 
+        // Load hook groups
+        var loadedHookGroups: [String: [EditableHookGroup]] = [:]
+        if let hooks = settings?.hooks {
+            for (event, groups) in hooks {
+                loadedHookGroups[event] = groups.map { EditableHookGroup(from: $0) }
+            }
+        }
+        hookGroups = loadedHookGroups
+        originalHookGroups = loadedHookGroups
+
         isDirty = false
     }
 
@@ -606,6 +842,7 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
         originalEnvironmentVariables = environmentVariables
         originalAttribution = attribution
         originalDisallowedTools = disallowedTools
+        originalHookGroups = hookGroups
     }
 
     private func buildSettings() -> ClaudeSettings {
@@ -631,10 +868,25 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
             ? nil
             : Dictionary(uniqueKeysWithValues: environmentVariables.map { ($0.key, $0.value) })
 
+        // Build hooks dictionary from editable data
+        let builtHooks: [String: [HookGroup]]?
+        if hookGroups.isEmpty {
+            builtHooks = nil
+        } else {
+            var result: [String: [HookGroup]] = [:]
+            for (event, editableGroups) in hookGroups {
+                let groups = editableGroups.map { $0.toHookGroup() }
+                if !groups.isEmpty {
+                    result[event] = groups
+                }
+            }
+            builtHooks = result.isEmpty ? nil : result
+        }
+
         return ClaudeSettings(
             permissions: permissions,
             env: env,
-            hooks: existingSettings?.hooks,
+            hooks: builtHooks,
             disallowedTools: disallowedTools.isEmpty ? nil : disallowedTools,
             attribution: attribution,
             additionalProperties: existingSettings?.additionalProperties
@@ -649,7 +901,8 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
         permissionRules != originalPermissionRules ||
             environmentVariables != originalEnvironmentVariables ||
             attribution != originalAttribution ||
-            disallowedTools != originalDisallowedTools
+            disallowedTools != originalDisallowedTools ||
+            hookGroups != originalHookGroups
     }
 
     private func registerUndo(actionName: String, handler: @escaping () -> Void) {
