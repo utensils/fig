@@ -4,6 +4,15 @@ import SwiftUI
 
 /// View for displaying project config health check results.
 struct ConfigHealthCheckView: View {
+    // MARK: Lifecycle
+
+    init(viewModel: ProjectDetailViewModel) {
+        self.viewModel = viewModel
+        self._healthCheckVM = State(
+            initialValue: ConfigHealthCheckViewModel(projectPath: viewModel.projectURL)
+        )
+    }
+
     // MARK: Internal
 
     @Bindable var viewModel: ProjectDetailViewModel
@@ -14,7 +23,7 @@ struct ConfigHealthCheckView: View {
                 // Summary header
                 HealthCheckHeaderView(
                     healthVM: healthCheckVM,
-                    onRunChecks: { Task { await runChecks() } }
+                    onRunChecks: { runChecks() }
                 )
 
                 if healthCheckVM.isRunning {
@@ -45,17 +54,16 @@ struct ConfigHealthCheckView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .task {
-            await runChecks()
+            runChecks()
         }
     }
 
     // MARK: Private
 
-    @State private var healthCheckVM = ConfigHealthCheckViewState()
+    @State private var healthCheckVM: ConfigHealthCheckViewModel
 
-    private func runChecks() async {
-        let vm = ConfigHealthCheckViewModel(projectPath: viewModel.projectURL)
-        await vm.runChecks(
+    private func runChecks() {
+        healthCheckVM.runChecks(
             globalSettings: viewModel.globalSettings,
             projectSettings: viewModel.projectSettings,
             projectLocalSettings: viewModel.projectLocalSettings,
@@ -64,53 +72,16 @@ struct ConfigHealthCheckView: View {
             localSettingsExists: viewModel.projectLocalSettingsStatus?.exists ?? false,
             mcpConfigExists: viewModel.mcpConfigStatus?.exists ?? false
         )
-        healthCheckVM.findings = vm.findings
-        healthCheckVM.lastRunDate = vm.lastRunDate
-        healthCheckVM.isRunning = false
     }
 
     private func executeAutoFix(_ finding: Finding) async {
-        let vm = ConfigHealthCheckViewModel(projectPath: viewModel.projectURL)
-        await vm.executeAutoFix(
+        await healthCheckVM.executeAutoFix(
             finding,
-            globalSettings: viewModel.globalSettings,
-            projectSettings: viewModel.projectSettings,
-            projectLocalSettings: viewModel.projectLocalSettings,
-            mcpConfig: viewModel.mcpConfig,
-            legacyConfig: viewModel.legacyConfig,
-            localSettingsExists: viewModel.projectLocalSettingsStatus?.exists ?? false,
-            mcpConfigExists: viewModel.mcpConfigStatus?.exists ?? false
+            legacyConfig: viewModel.legacyConfig
         )
-        healthCheckVM.findings = vm.findings
-        healthCheckVM.lastRunDate = vm.lastRunDate
 
         // Reload project config to reflect changes
         await viewModel.loadConfiguration()
-    }
-}
-
-// MARK: - ConfigHealthCheckViewState
-
-/// Local state for the health check view.
-@Observable
-final class ConfigHealthCheckViewState {
-    var findings: [Finding] = []
-    var isRunning = false
-    var lastRunDate: Date?
-
-    var severityCounts: [Severity: Int] {
-        Dictionary(grouping: findings, by: \.severity)
-            .mapValues(\.count)
-    }
-
-    var groupedFindings: [(severity: Severity, findings: [Finding])] {
-        let grouped = Dictionary(grouping: findings, by: \.severity)
-        return Severity.allCases.compactMap { severity in
-            guard let items = grouped[severity], !items.isEmpty else {
-                return nil
-            }
-            return (severity, items)
-        }
     }
 }
 
@@ -118,7 +89,7 @@ final class ConfigHealthCheckViewState {
 
 /// Summary header showing check status and severity counts.
 struct HealthCheckHeaderView: View {
-    let healthVM: ConfigHealthCheckViewState
+    let healthVM: ConfigHealthCheckViewModel
     let onRunChecks: () -> Void
 
     var body: some View {

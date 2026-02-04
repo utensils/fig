@@ -331,14 +331,9 @@ struct GoodPracticesCheck: HealthCheck {
 // MARK: - ConfigHealthCheckService
 
 /// Service that runs all health checks and returns aggregated findings.
-actor ConfigHealthCheckService {
-    // MARK: Internal
-
-    /// Shared instance for app-wide health checks.
-    static let shared = ConfigHealthCheckService()
-
+enum ConfigHealthCheckService {
     /// All registered health checks, run in order.
-    let checks: [any HealthCheck] = [
+    static let checks: [any HealthCheck] = [
         DenyListSecurityCheck(),
         BroadAllowRulesCheck(),
         GlobalConfigSizeCheck(),
@@ -350,7 +345,7 @@ actor ConfigHealthCheckService {
     ]
 
     /// Runs all health checks and returns findings sorted by severity.
-    func runAllChecks(context: HealthCheckContext) -> [Finding] {
+    static func runAllChecks(context: HealthCheckContext) -> [Finding] {
         var findings: [Finding] = []
 
         for check in checks {

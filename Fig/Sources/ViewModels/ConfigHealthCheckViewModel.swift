@@ -11,12 +11,10 @@ final class ConfigHealthCheckViewModel {
 
     init(
         projectPath: URL,
-        configManager: ConfigFileManager = .shared,
-        healthCheckService: ConfigHealthCheckService = .shared
+        configManager: ConfigFileManager = .shared
     ) {
         self.projectPath = projectPath
         self.configManager = configManager
-        self.healthCheckService = healthCheckService
     }
 
     // MARK: Internal
@@ -59,11 +57,8 @@ final class ConfigHealthCheckViewModel {
         legacyConfig: LegacyConfig?,
         localSettingsExists: Bool,
         mcpConfigExists: Bool
-    ) async {
+    ) {
         self.isRunning = true
-
-        // Get global config file size
-        let globalConfigSize = self.getGlobalConfigFileSize()
 
         let context = HealthCheckContext(
             projectPath: self.projectPath,
@@ -74,10 +69,10 @@ final class ConfigHealthCheckViewModel {
             legacyConfig: legacyConfig,
             localSettingsExists: localSettingsExists,
             mcpConfigExists: mcpConfigExists,
-            globalConfigFileSize: globalConfigSize
+            globalConfigFileSize: self.getGlobalConfigFileSize()
         )
 
-        self.findings = await healthCheckService.runAllChecks(context: context)
+        self.findings = ConfigHealthCheckService.runAllChecks(context: context)
         self.lastRunDate = Date()
         self.isRunning = false
     }
@@ -85,13 +80,7 @@ final class ConfigHealthCheckViewModel {
     /// Executes the auto-fix for a finding and re-runs checks.
     func executeAutoFix(
         _ finding: Finding,
-        globalSettings: ClaudeSettings?,
-        projectSettings: ClaudeSettings?,
-        projectLocalSettings: ClaudeSettings?,
-        mcpConfig: MCPConfig?,
-        legacyConfig: LegacyConfig?,
-        localSettingsExists: Bool,
-        mcpConfigExists: Bool
+        legacyConfig: LegacyConfig?
     ) async {
         guard let autoFix = finding.autoFix else { return }
 
@@ -109,17 +98,19 @@ final class ConfigHealthCheckViewModel {
                 message: autoFix.label
             )
 
-            // Re-run checks to reflect the change
-            await runChecks(
+            // Re-run checks with freshly-read config to reflect the change
+            runChecks(
                 globalSettings: try? await configManager.readGlobalSettings(),
                 projectSettings: try? await configManager.readProjectSettings(for: projectPath),
                 projectLocalSettings: try? await configManager.readProjectLocalSettings(for: projectPath),
-                mcpConfig: mcpConfig,
+                mcpConfig: try? await configManager.readMCPConfig(for: projectPath),
                 legacyConfig: legacyConfig,
                 localSettingsExists: await configManager.fileExists(
                     at: configManager.projectLocalSettingsURL(for: projectPath)
                 ),
-                mcpConfigExists: mcpConfigExists
+                mcpConfigExists: await configManager.fileExists(
+                    at: configManager.mcpConfigURL(for: projectPath)
+                )
             )
         } catch {
             Log.general.error("Auto-fix failed: \(error.localizedDescription)")
@@ -133,7 +124,6 @@ final class ConfigHealthCheckViewModel {
     // MARK: Private
 
     private let configManager: ConfigFileManager
-    private let healthCheckService: ConfigHealthCheckService
 
     /// Gets the file size of `~/.claude.json`.
     private func getGlobalConfigFileSize() -> Int64? {
