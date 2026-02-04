@@ -274,6 +274,47 @@ final class ProjectExplorerViewModel {
         }
     }
 
+    /// Removes multiple projects from the global configuration in a single operation.
+    ///
+    /// This removes the project entries from `~/.claude.json` and cleans up
+    /// favorites and recents. The project directories themselves are not affected.
+    ///
+    /// - Note: Callers are responsible for clearing any active selection
+    ///   referencing these projects before invoking this method.
+    func deleteProjects(_ projects: [ProjectEntry]) async {
+        let paths = projects.compactMap(\.path)
+        guard !paths.isEmpty else {
+            return
+        }
+
+        do {
+            guard var config = try await configManager.readGlobalConfig() else {
+                return
+            }
+
+            for path in paths {
+                config.projects?.removeValue(forKey: path)
+            }
+
+            try await configManager.writeGlobalConfig(config)
+
+            for path in paths {
+                self.projects.removeAll { $0.path == path }
+                self.favoritesStorage.removeProject(path)
+            }
+
+            let count = paths.count
+            NotificationManager.shared.showSuccess(
+                "\(count) project\(count == 1 ? "" : "s") removed",
+                message: "Removed from configuration"
+            )
+            Log.general.info("Removed \(count) projects from config")
+        } catch {
+            Log.general.error("Failed to remove projects: \(error.localizedDescription)")
+            NotificationManager.shared.showError(error)
+        }
+    }
+
     /// Opens a project in Terminal.
     func openInTerminal(_ project: ProjectEntry) {
         guard let path = project.path else {
