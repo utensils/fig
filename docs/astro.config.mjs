@@ -9,6 +9,9 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Fig',
+			logo: {
+				src: './public/favicon.svg',
+			},
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/utensils/fig' },
 			],
