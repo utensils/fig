@@ -59,6 +59,14 @@ struct ProjectDetailView: View {
             }
         }
         .frame(minWidth: 500)
+        .focusedSceneValue(\.projectDetailTab, $viewModel.selectedTab)
+        .focusedSceneValue(\.addMCPServerAction) {
+            mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
+                projectPath: viewModel.projectURL,
+                defaultScope: .project
+            )
+            showMCPServerEditor = true
+        }
         .task {
             await viewModel.loadConfiguration()
         }
