@@ -10,6 +10,7 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
     case environment
     case mcpServers
     case hooks
+    case effectiveConfig
     case advanced
 
     // MARK: Internal
@@ -28,6 +29,8 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
             "MCP Servers"
         case .hooks:
             "Hooks"
+        case .effectiveConfig:
+            "Effective Config"
         case .advanced:
             "Advanced"
         }
@@ -43,6 +46,8 @@ enum ProjectDetailTab: String, CaseIterable, Identifiable, Sendable {
             "server.rack"
         case .hooks:
             "arrow.triangle.branch"
+        case .effectiveConfig:
+            "checkmark.rectangle.stack"
         case .advanced:
             "gearshape.2"
         }
@@ -108,6 +113,13 @@ final class ProjectDetailViewModel {
 
     /// Status of the MCP config file.
     private(set) var mcpConfigStatus: ConfigFileStatus?
+
+    /// The fully merged settings with provenance tracking.
+    private(set) var mergedSettings: MergedSettings?
+
+    /// Environment variable overrides: keys that appear in multiple sources.
+    /// Maps key -> array of (value, source) for all sources, ordered by precedence (lowest first).
+    private(set) var envOverrides: [String: [(value: String, source: ConfigSource)]] = [:]
 
     /// The project name derived from the path.
     var projectName: String {
@@ -288,6 +300,17 @@ final class ProjectDetailViewModel {
                 url: mcpURL
             )
 
+            // Compute merged settings
+            let mergeService = SettingsMergeService(configManager: self.configManager)
+            self.mergedSettings = await mergeService.mergeSettings(
+                global: self.globalSettings,
+                projectShared: self.projectSettings,
+                projectLocal: self.projectLocalSettings
+            )
+
+            // Compute env var overrides (keys set in multiple sources)
+            self.envOverrides = self.computeEnvOverrides()
+
             Log.general.info("Loaded configuration for project: \(self.projectName)")
         } catch {
             Log.general.error("Failed to load project configuration: \(error.localizedDescription)")
@@ -356,6 +379,27 @@ final class ProjectDetailViewModel {
     // MARK: Private
 
     private let configManager: ConfigFileManager
+
+    /// Computes which env var keys have values in multiple sources (for override display).
+    private func computeEnvOverrides() -> [String: [(value: String, source: ConfigSource)]] {
+        var allValues: [String: [(value: String, source: ConfigSource)]] = [:]
+
+        let sources: [(settings: ClaudeSettings?, source: ConfigSource)] = [
+            (globalSettings, .global),
+            (projectSettings, .projectShared),
+            (projectLocalSettings, .projectLocal),
+        ]
+
+        for (settings, source) in sources {
+            guard let env = settings?.env else { continue }
+            for (key, value) in env {
+                allValues[key, default: []].append((value, source))
+            }
+        }
+
+        // Only keep keys that appear in more than one source
+        return allValues.filter { $0.value.count > 1 }
+    }
 }
 
 // MARK: - PermissionType
