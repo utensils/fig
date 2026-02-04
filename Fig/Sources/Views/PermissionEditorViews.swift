@@ -8,12 +8,17 @@ struct PermissionRuleEditorView: View {
 
     @Bindable var viewModel: SettingsEditorViewModel
 
+    /// Callback when a rule should be promoted to global settings (only in project mode).
+    var onPromoteToGlobal: ((String, PermissionType) -> Void)?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Target selector and quick-add
                 HStack {
-                    EditingTargetPicker(selection: $viewModel.editingTarget)
+                    if !viewModel.isGlobalMode {
+                        EditingTargetPicker(selection: $viewModel.editingTarget)
+                    }
 
                     Spacer()
 
@@ -70,7 +75,10 @@ struct PermissionRuleEditorView: View {
                                     validateRule: viewModel.validatePermissionRule,
                                     isDuplicate: { ruleStr, type in
                                         viewModel.isRuleDuplicate(ruleStr, type: type, excluding: rule)
-                                    }
+                                    },
+                                    onPromoteToGlobal: onPromoteToGlobal != nil ? {
+                                        onPromoteToGlobal?(rule.rule, .allow)
+                                    } : nil
                                 )
                             }
                         }
@@ -113,7 +121,10 @@ struct PermissionRuleEditorView: View {
                                     validateRule: viewModel.validatePermissionRule,
                                     isDuplicate: { ruleStr, type in
                                         viewModel.isRuleDuplicate(ruleStr, type: type, excluding: rule)
-                                    }
+                                    },
+                                    onPromoteToGlobal: onPromoteToGlobal != nil ? {
+                                        onPromoteToGlobal?(rule.rule, .deny)
+                                    } : nil
                                 )
                             }
                         }
@@ -162,6 +173,7 @@ struct EditablePermissionRuleRow: View {
     let onDelete: () -> Void
     let validateRule: (String) -> (isValid: Bool, error: String?)
     let isDuplicate: (String, PermissionType) -> Bool
+    var onPromoteToGlobal: (() -> Void)?
 
     var body: some View {
         HStack {
@@ -230,6 +242,32 @@ struct EditablePermissionRuleRow: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete this rule?\n\(rule.rule)")
+        }
+        .contextMenu {
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(rule.rule, forType: .string)
+            } label: {
+                Label("Copy Rule", systemImage: "doc.on.doc")
+            }
+
+            if let onPromoteToGlobal {
+                Divider()
+
+                Button {
+                    onPromoteToGlobal()
+                } label: {
+                    Label("Promote to Global", systemImage: "arrow.up.to.line")
+                }
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                showingDeleteConfirmation = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 
@@ -406,6 +444,80 @@ struct AddPermissionRuleSheet: View {
 
     private var isValid: Bool {
         validationError == nil && !toolName.isEmpty
+    }
+}
+
+// MARK: - RulePromotionInfo
+
+/// Info about a rule being promoted, used by the shared promote-to-global modifier.
+struct RulePromotionInfo {
+    let rule: String
+    let type: PermissionType
+}
+
+// MARK: - PromoteToGlobalModifier
+
+/// Shared view modifier that provides the promote-to-global confirmation alert and action.
+struct PromoteToGlobalModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    @Binding var ruleToPromote: RulePromotionInfo?
+    let projectURL: URL?
+    var onComplete: (() async -> Void)?
+
+    func body(content: Content) -> some View {
+        content
+            .alert(
+                "Promote to Global",
+                isPresented: $isPresented,
+                presenting: ruleToPromote
+            ) { ruleInfo in
+                Button("Cancel", role: .cancel) {}
+                Button("Promote") {
+                    Task {
+                        do {
+                            let added = try await PermissionRuleCopyService.shared.copyRule(
+                                rule: ruleInfo.rule,
+                                type: ruleInfo.type,
+                                to: .global,
+                                projectPath: projectURL
+                            )
+                            if added {
+                                NotificationManager.shared.showSuccess(
+                                    "Rule Promoted",
+                                    message: "Rule added to global settings"
+                                )
+                            } else {
+                                NotificationManager.shared.showInfo(
+                                    "Rule Already Exists",
+                                    message: "This rule already exists in global settings"
+                                )
+                            }
+                            await onComplete?()
+                        } catch {
+                            NotificationManager.shared.showError(error)
+                        }
+                    }
+                }
+            } message: { ruleInfo in
+                Text("Copy '\(ruleInfo.rule)' to global settings?\nThis will make it apply to all projects.")
+            }
+    }
+}
+
+extension View {
+    /// Adds promote-to-global alert handling for permission rules.
+    func promoteToGlobalAlert(
+        isPresented: Binding<Bool>,
+        ruleToPromote: Binding<RulePromotionInfo?>,
+        projectURL: URL?,
+        onComplete: (() async -> Void)? = nil
+    ) -> some View {
+        modifier(PromoteToGlobalModifier(
+            isPresented: isPresented,
+            ruleToPromote: ruleToPromote,
+            projectURL: projectURL,
+            onComplete: onComplete
+        ))
     }
 }
 

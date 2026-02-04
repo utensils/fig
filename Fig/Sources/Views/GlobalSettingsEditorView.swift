@@ -1,15 +1,9 @@
 import SwiftUI
 
-// MARK: - ProjectSettingsEditorView
+// MARK: - GlobalSettingsEditorView
 
-/// Full-featured settings editor view for a project with editing, saving, undo/redo, and conflict handling.
-struct ProjectSettingsEditorView: View {
-    // MARK: Lifecycle
-
-    init(projectPath: String) {
-        _viewModel = State(initialValue: SettingsEditorViewModel(projectPath: projectPath))
-    }
-
+/// Full-featured settings editor for global settings with editing, saving, undo/redo, and conflict handling.
+struct GlobalSettingsEditorView: View {
     // MARK: Internal
 
     var body: some View {
@@ -21,17 +15,11 @@ struct ProjectSettingsEditorView: View {
 
             // Tab content
             if viewModel.isLoading {
-                ProgressView("Loading configuration...")
+                ProgressView("Loading settings...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 TabView(selection: $selectedTab) {
-                    PermissionRuleEditorView(
-                        viewModel: viewModel,
-                        onPromoteToGlobal: { rule, type in
-                            ruleToPromote = RulePromotionInfo(rule: rule, type: type)
-                            showPromoteConfirmation = true
-                        }
-                    )
+                    PermissionRuleEditorView(viewModel: viewModel)
                         .tabItem {
                             Label("Permissions", systemImage: "lock.shield")
                         }
@@ -54,15 +42,14 @@ struct ProjectSettingsEditorView: View {
         }
         .frame(minWidth: 600, minHeight: 500)
         .interactiveDismissDisabled(viewModel.isDirty)
-        .navigationTitle(windowTitle)
         .task {
             await viewModel.loadSettings()
         }
         .onDisappear {
             if viewModel.isDirty {
-                // The confirmation dialog should have been shown before navigation
-                Log.general.warning("Editor closed with unsaved changes")
+                Log.general.warning("Global editor closed with unsaved changes")
             }
+            onDismiss?()
         }
         .confirmationDialog(
             "Unsaved Changes",
@@ -73,14 +60,14 @@ struct ProjectSettingsEditorView: View {
                 Task {
                     do {
                         try await viewModel.save()
-                        closeAction?()
+                        dismiss()
                     } catch {
                         NotificationManager.shared.showError(error)
                     }
                 }
             }
             Button("Discard Changes", role: .destructive) {
-                closeAction?()
+                dismiss()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -104,12 +91,10 @@ struct ProjectSettingsEditorView: View {
         .onAppear {
             viewModel.undoManager = undoManager
         }
-        .promoteToGlobalAlert(
-            isPresented: $showPromoteConfirmation,
-            ruleToPromote: $ruleToPromote,
-            projectURL: viewModel.projectURL
-        )
     }
+
+    /// Callback when editor is dismissed (for parent to reload data).
+    var onDismiss: (() -> Void)?
 
     // MARK: Private
 
@@ -121,43 +106,35 @@ struct ProjectSettingsEditorView: View {
         var id: String { rawValue }
     }
 
-    @State private var viewModel: SettingsEditorViewModel
+    @State private var viewModel = SettingsEditorViewModel.forGlobal()
     @State private var selectedTab: EditorTab = .permissions
     @State private var showingCloseConfirmation = false
     @State private var showingConflictSheet = false
-    @State private var closeAction: (() -> Void)?
-    @State private var showPromoteConfirmation = false
-    @State private var ruleToPromote: RulePromotionInfo?
+
+    @Environment(\.dismiss)
+    private var dismiss
 
     @Environment(\.undoManager)
     private var undoManager
 
-    private var windowTitle: String {
-        var title = viewModel.displayName
-        if viewModel.isDirty {
-            title += " \u{2022}" // bullet point
-        }
-        return title
-    }
-
     private var editorHeader: some View {
         HStack {
-            // Project info
+            // Global settings info
             HStack(spacing: 8) {
-                Image(systemName: "folder.fill")
+                Image(systemName: "globe")
                     .font(.title2)
                     .foregroundStyle(.blue)
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(viewModel.displayName)
+                        Text("Global Settings")
                             .font(.title3)
                             .fontWeight(.semibold)
 
                         DirtyStateIndicator(isDirty: viewModel.isDirty)
                     }
 
-                    Text(abbreviatePath(viewModel.projectPath ?? ""))
+                    Text("~/.claude/settings.json")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -198,7 +175,7 @@ struct ProjectSettingsEditorView: View {
                 Task {
                     do {
                         try await viewModel.save()
-                        NotificationManager.shared.showSuccess("Settings Saved")
+                        NotificationManager.shared.showSuccess("Global Settings Saved")
                     } catch {
                         NotificationManager.shared.showError(error)
                     }
@@ -207,18 +184,10 @@ struct ProjectSettingsEditorView: View {
         }
         .padding()
     }
-
-    private func abbreviatePath(_ path: String) -> String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        if path.hasPrefix(home) {
-            return "~" + path.dropFirst(home.count)
-        }
-        return path
-    }
 }
 
 // MARK: - Preview
 
-#Preview("Settings Editor") {
-    ProjectSettingsEditorView(projectPath: "/Users/test/project")
+#Preview("Global Settings Editor") {
+    GlobalSettingsEditorView()
 }

@@ -5,12 +5,13 @@ import SwiftUI
 /// Picker for selecting the editing target file.
 struct EditingTargetPicker: View {
     @Binding var selection: EditingTarget
+    var targets: [EditingTarget] = EditingTarget.projectTargets
 
     var body: some View {
         Picker("Save to:", selection: $selection) {
-            ForEach(EditingTarget.allCases) { target in
+            ForEach(targets) { target in
                 HStack {
-                    Image(systemName: target == .projectShared ? "person.2" : "person")
+                    Image(systemName: target.source.icon)
                     Text(target.label)
                 }
                 .tag(target)

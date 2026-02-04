@@ -13,7 +13,9 @@ struct EnvironmentVariableEditorView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Target selector and add button
                 HStack {
-                    EditingTargetPicker(selection: $viewModel.editingTarget)
+                    if !viewModel.isGlobalMode {
+                        EditingTargetPicker(selection: $viewModel.editingTarget)
+                    }
 
                     Spacer()
 
