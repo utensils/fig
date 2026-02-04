@@ -9,6 +9,7 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Fig',
+			favicon: '/favicon.png',
 			logo: {
 				src: './src/assets/fig-logo.png',
 			},
