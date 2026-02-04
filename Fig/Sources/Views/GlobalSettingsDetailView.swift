@@ -234,6 +234,7 @@ struct GlobalSettingsHeaderView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Reveal settings file in Finder")
                     .onHover { isHovered in
                         if isHovered {
                             NSCursor.pointingHand.push()
@@ -388,6 +389,8 @@ struct FileStatusBadge: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label), \(exists ? "file exists" : "file not found")")
     }
 }
 

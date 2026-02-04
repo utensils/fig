@@ -312,6 +312,8 @@ struct ProjectHeaderView: View {
                         Label("Reveal", systemImage: "folder")
                     }
                     .disabled(!viewModel.projectExists)
+                    .accessibilityLabel("Reveal in Finder")
+                    .accessibilityHint("Opens the project directory in Finder")
 
                     Button {
                         viewModel.openInTerminal()
@@ -319,6 +321,8 @@ struct ProjectHeaderView: View {
                         Label("Terminal", systemImage: "terminal")
                     }
                     .disabled(!viewModel.projectExists)
+                    .accessibilityLabel("Open in Terminal")
+                    .accessibilityHint("Opens a Terminal window at the project directory")
 
                     // Export/Import menu
                     Menu {
@@ -404,6 +408,8 @@ struct ConfigFileBadge: View {
         .padding(.vertical, 4)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
         .help(status.exists ? "File exists" : "File not created yet")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label), \(status.exists ? "file exists" : "file not created yet")")
     }
 
     // MARK: Private
