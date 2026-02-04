@@ -138,44 +138,48 @@ struct ProjectDetailView: View {
     @State private var showPromoteConfirmation = false
     @State private var ruleToPromote: RulePromotionInfo?
 
+    private var permissionsTabContent: some View {
+        PermissionsTabView(
+            allPermissions: viewModel.allPermissions,
+            emptyMessage: "No permission rules configured for this project.",
+            onPromoteToGlobal: { rule, type in
+                ruleToPromote = RulePromotionInfo(rule: rule, type: type)
+                showPromoteConfirmation = true
+            },
+            onCopyToScope: { rule, type, targetScope in
+                Task {
+                    do {
+                        let added = try await PermissionRuleCopyService.shared.copyRule(
+                            rule: rule,
+                            type: type,
+                            to: targetScope,
+                            projectPath: viewModel.projectURL
+                        )
+                        if added {
+                            NotificationManager.shared.showSuccess(
+                                "Rule Copied",
+                                message: "Copied to \(targetScope.label)"
+                            )
+                        } else {
+                            NotificationManager.shared.showInfo(
+                                "Rule Already Exists",
+                                message: "This rule already exists in \(targetScope.label)"
+                            )
+                        }
+                        await viewModel.loadConfiguration()
+                    } catch {
+                        NotificationManager.shared.showError(error)
+                    }
+                }
+            }
+        )
+    }
+
     @ViewBuilder
     private func tabContent(for tab: ProjectDetailTab) -> some View {
         switch tab {
         case .permissions:
-            PermissionsTabView(
-                allPermissions: viewModel.allPermissions,
-                emptyMessage: "No permission rules configured for this project.",
-                onPromoteToGlobal: { rule, type in
-                    ruleToPromote = RulePromotionInfo(rule: rule, type: type)
-                    showPromoteConfirmation = true
-                },
-                onCopyToScope: { rule, type, targetScope in
-                    Task {
-                        do {
-                            let added = try await PermissionRuleCopyService.shared.copyRule(
-                                rule: rule,
-                                type: type,
-                                to: targetScope,
-                                projectPath: viewModel.projectURL
-                            )
-                            if added {
-                                NotificationManager.shared.showSuccess(
-                                    "Rule Copied",
-                                    message: "Copied to \(targetScope.label)"
-                                )
-                            } else {
-                                NotificationManager.shared.showInfo(
-                                    "Rule Already Exists",
-                                    message: "This rule already exists in \(targetScope.label)"
-                                )
-                            }
-                            await viewModel.loadConfiguration()
-                        } catch {
-                            NotificationManager.shared.showError(error)
-                        }
-                    }
-                }
-            )
+            permissionsTabContent
         case .environment:
             EnvironmentTabView(
                 envVars: viewModel.allEnvironmentVariables,
@@ -226,6 +230,19 @@ struct ProjectDetailView: View {
                 projectHooks: viewModel.projectSettings?.hooks,
                 localHooks: viewModel.projectLocalSettings?.hooks
             )
+        case .effectiveConfig:
+            if let merged = viewModel.mergedSettings {
+                EffectiveConfigView(
+                    mergedSettings: merged,
+                    envOverrides: viewModel.envOverrides
+                )
+            } else {
+                ContentUnavailableView(
+                    "No Configuration",
+                    systemImage: "checkmark.rectangle.stack",
+                    description: Text("No merged configuration available.")
+                )
+            }
         case .advanced:
             AdvancedTabView(viewModel: viewModel)
         }
