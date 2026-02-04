@@ -241,10 +241,13 @@ final class ProjectExplorerViewModel {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
     }
 
-    /// Deletes a project from the global configuration.
+    /// Removes a project from the global configuration.
     ///
     /// This removes the project entry from `~/.claude.json` and cleans up
     /// favorites and recents. The project directory itself is not affected.
+    ///
+    /// - Note: Callers are responsible for clearing any active selection
+    ///   referencing this project before invoking this method.
     func deleteProject(_ project: ProjectEntry) async {
         guard let path = project.path else {
             return
@@ -264,9 +267,9 @@ final class ProjectExplorerViewModel {
                 "Project removed",
                 message: "'\(project.name ?? path)' removed from configuration"
             )
-            Log.general.info("Deleted project from config: \(path)")
+            Log.general.info("Removed project from config: \(path)")
         } catch {
-            Log.general.error("Failed to delete project: \(error.localizedDescription)")
+            Log.general.error("Failed to remove project: \(error.localizedDescription)")
             NotificationManager.shared.showError(error)
         }
     }

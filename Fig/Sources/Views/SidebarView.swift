@@ -104,12 +104,12 @@ struct SidebarView: View {
         }
         .keyboardShortcut("k", modifiers: .command)
         .alert(
-            "Delete Project",
+            "Remove Project",
             isPresented: self.$showDeleteConfirmation,
             presenting: self.projectToDelete
         ) { project in
             Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+            Button("Remove", role: .destructive) {
                 Task {
                     if case let .project(path) = self.selection, path == project.path {
                         self.selection = nil
@@ -172,7 +172,7 @@ struct SidebarView: View {
                 self.projectToDelete = project
                 self.showDeleteConfirmation = true
             } label: {
-                Label("Delete Project", systemImage: "trash")
+                Label("Remove Project", systemImage: "trash")
             }
         }
     }
