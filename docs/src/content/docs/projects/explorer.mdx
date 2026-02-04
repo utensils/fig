@@ -3,4 +3,61 @@ title: Project Explorer
 description: Browse and navigate your Claude Code projects in Fig.
 ---
 
-Project explorer content coming soon.
+The Project Explorer is Fig's sidebar, providing access to all your discovered Claude Code projects and their configuration.
+
+## Sidebar Layout
+
+The sidebar is organized into sections:
+
+### Configuration
+
+The **Global Settings** item appears at the top of the sidebar. Click it (or press **Cmd+,**) to manage system-wide Claude Code settings.
+
+### Favorites
+
+Projects you've pinned appear in a dedicated Favorites section for quick access. See [Favorites & Recents](/fig/projects/favorites/) for details.
+
+### Recents
+
+The last 10 projects you've accessed appear in the Recents section, sorted by most recently opened.
+
+### All Projects
+
+All discovered projects are listed below, with a count badge showing the total number. Each project row displays:
+
+- A **folder icon** — blue if the directory exists, orange with a warning if it's missing
+- The **project name** and an abbreviated path
+- A **star icon** if the project is favorited
+- An **MCP server badge** showing how many servers are configured (if any)
+
+## Filtering Projects
+
+Use the search bar at the top of the sidebar (placeholder text: "Filter projects") to filter the project list by name. The filter applies across all sections.
+
+## Project Detail View
+
+Clicking a project opens its detail view with eight tabs:
+
+| Tab | Description |
+|-----|-------------|
+| **Permissions** | Allow/deny rules with glob patterns |
+| **Environment** | Environment variables |
+| **MCP Servers** | Configured MCP servers |
+| **Hooks** | Claude Code event hooks |
+| **CLAUDE.md** | Project instruction files |
+| **Effective Config** | Merged config with source attribution |
+| **Health** | Configuration validation results |
+| **Advanced** | Raw configuration view |
+
+Switch between tabs by clicking them or using **Cmd+1** through **Cmd+8**.
+
+## Context Menu
+
+Right-click a project to access context menu actions:
+
+- **Toggle favorite** — pin or unpin the project
+- **Remove** — remove the project from the list (with confirmation)
+
+## Bulk Operations
+
+Fig supports selecting multiple projects for batch removal. Enter selection mode to check multiple projects, then remove them in one action.

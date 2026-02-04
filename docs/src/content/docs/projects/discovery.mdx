@@ -3,4 +3,61 @@ title: Project Discovery
 description: How Fig automatically finds your Claude Code projects.
 ---
 
-Project discovery content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+Fig automatically discovers Claude Code projects on your system so you don't have to configure them manually.
+
+## How Discovery Works
+
+Fig finds projects from two sources:
+
+### 1. Global Config Registry
+
+Fig reads `~/.claude.json`, which Claude Code maintains as a registry of projects you've worked with. Any project you've opened with Claude Code will appear here automatically.
+
+### 2. Filesystem Scanning
+
+Fig scans common development directories for folders containing a `.claude/` subdirectory. The default scan locations are:
+
+- `~` (home directory)
+- `~/code` / `~/Code`
+- `~/projects` / `~/Projects`
+- `~/Developer`
+- `~/dev`
+- `~/src`
+- `~/repos`
+- `~/github`
+- `~/workspace`
+
+The scan searches up to **three levels deep** and skips common non-project directories like `node_modules`, `.git`, `vendor`, and build output folders.
+
+## What Gets Discovered
+
+For each discovered project, Fig records:
+
+- **Path** — the project's filesystem location
+- **Display name** — derived from the directory name
+- **Existence status** — whether the directory still exists on disk
+- **Configuration files** — which config files are present:
+  - `settings.json` (project-shared settings)
+  - `settings.local.json` (local overrides)
+  - `.mcp.json` (MCP server configuration)
+- **Last modified** — when the project's configuration was last changed
+
+Projects are sorted by most recently modified first.
+
+## Refreshing the Project List
+
+Fig re-runs discovery automatically during onboarding. After initial setup, the project list updates when you relaunch the app.
+
+## Project Not Found?
+
+If a project doesn't appear in the sidebar:
+
+1. **Check for a `.claude/` directory** — the project must contain a `.claude/` folder to be discovered via filesystem scanning
+2. **Open the project with Claude Code first** — this registers it in `~/.claude.json`, which Fig reads
+3. **Check the directory location** — if your project is outside the default scan directories, open it with Claude Code to register it in the global config
+
+<Aside type="tip">
+Projects registered in `~/.claude.json` are always discovered regardless of their filesystem location. The filesystem scan only supplements this list.
+</Aside>
