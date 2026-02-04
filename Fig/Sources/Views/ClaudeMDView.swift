@@ -74,10 +74,7 @@ struct ClaudeMDView: View {
                     // Project section
                     Section("Project") {
                         ForEach(
-                            viewModel.files.filter {
-                                $0.level == .projectRoot
-                                    || isSubdirectory($0.level)
-                            }
+                            viewModel.files.filter { $0.level != .global }
                         ) { file in
                             ClaudeMDFileRow(file: file)
                                 .tag(file.id)
@@ -210,14 +207,6 @@ struct ClaudeMDView: View {
         }
     }
 
-    private func isSubdirectory(_ level: ClaudeMDLevel) -> Bool {
-        switch level {
-        case .subdirectory:
-            true
-        default:
-            false
-        }
-    }
 }
 
 // MARK: - ClaudeMDFileRow

@@ -283,49 +283,62 @@ final class ClaudeMDViewModel {
     }
 
     private func discoverSubdirectoryFiles() async -> [ClaudeMDFile] {
+        let projectURL = self.projectURL
+        let skipDirs = Self.skipDirectories
+
+        // Run file enumeration off the main actor to avoid blocking the UI
+        let discoveredPaths: [(url: URL, relativePath: String)] = await Task.detached {
+            var paths: [(url: URL, relativePath: String)] = []
+            let fm = FileManager.default
+
+            guard let enumerator = fm.enumerator(
+                at: projectURL,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else {
+                return paths
+            }
+
+            while let itemURL = enumerator.nextObject() as? URL {
+                let dirName = itemURL.lastPathComponent
+
+                // Skip excluded directories
+                if skipDirs.contains(dirName) {
+                    enumerator.skipDescendants()
+                    continue
+                }
+
+                // Only check 3 levels deep
+                let relative = itemURL.path.dropFirst(projectURL.path.count + 1)
+                let depth = relative.components(separatedBy: "/").count
+                if depth > 3 {
+                    enumerator.skipDescendants()
+                    continue
+                }
+
+                // Check for CLAUDE.md in this directory
+                let resourceValues = try? itemURL.resourceValues(forKeys: [.isDirectoryKey])
+                guard resourceValues?.isDirectory == true else { continue }
+
+                let claudeMDURL = itemURL.appendingPathComponent("CLAUDE.md")
+                if fm.fileExists(atPath: claudeMDURL.path) {
+                    let relativePath = String(
+                        itemURL.path.dropFirst(projectURL.path.count + 1)
+                    )
+                    paths.append((url: claudeMDURL, relativePath: relativePath))
+                }
+            }
+
+            return paths
+        }.value
+
         var results: [ClaudeMDFile] = []
-        let fm = FileManager.default
-
-        guard let enumerator = fm.enumerator(
-            at: projectURL,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else {
-            return results
-        }
-
-        while let itemURL = enumerator.nextObject() as? URL {
-            let dirName = itemURL.lastPathComponent
-
-            // Skip excluded directories
-            if Self.skipDirectories.contains(dirName) {
-                enumerator.skipDescendants()
-                continue
-            }
-
-            // Only check 3 levels deep
-            let relative = itemURL.path.dropFirst(projectURL.path.count + 1)
-            let depth = relative.components(separatedBy: "/").count
-            if depth > 3 {
-                enumerator.skipDescendants()
-                continue
-            }
-
-            // Check for CLAUDE.md in this directory
-            let resourceValues = try? itemURL.resourceValues(forKeys: [.isDirectoryKey])
-            guard resourceValues?.isDirectory == true else { continue }
-
-            let claudeMDURL = itemURL.appendingPathComponent("CLAUDE.md")
-            if fm.fileExists(atPath: claudeMDURL.path) {
-                let relativePath = String(
-                    itemURL.path.dropFirst(projectURL.path.count + 1)
-                )
-                let file = await loadFile(
-                    url: claudeMDURL,
-                    level: .subdirectory(relativePath: relativePath)
-                )
-                results.append(file)
-            }
+        for entry in discoveredPaths {
+            let file = await loadFile(
+                url: entry.url,
+                level: .subdirectory(relativePath: entry.relativePath)
+            )
+            results.append(file)
         }
 
         return results.sorted { lhs, rhs in
@@ -340,20 +353,23 @@ final class ClaudeMDViewModel {
                 .appendingPathComponent(".claude").path
         )
         let workingDir = isGlobal ? url.deletingLastPathComponent() : projectURL
+        let filePath = url.path
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = ["ls-files", "--error-unmatch", url.path]
-        process.currentDirectoryURL = workingDir
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
+        return await Task.detached {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+            process.arguments = ["ls-files", "--error-unmatch", filePath]
+            process.currentDirectoryURL = workingDir
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
 
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
-        }
+            do {
+                try process.run()
+                process.waitUntilExit()
+                return process.terminationStatus == 0
+            } catch {
+                return false
+            }
+        }.value
     }
 }
