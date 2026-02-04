@@ -69,6 +69,13 @@ final class FavoritesStorage {
         self.save()
     }
 
+    /// Removes a project from both favorites and recents.
+    func removeProject(_ path: String) {
+        self.favoriteProjectPaths.remove(path)
+        self.recentProjectPaths.removeAll { $0 == path }
+        self.save()
+    }
+
     // MARK: Private
 
     private static let favoritesKey = "favoriteProjects"
@@ -232,6 +239,36 @@ final class ProjectExplorerViewModel {
         }
         let url = URL(fileURLWithPath: path)
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
+    }
+
+    /// Deletes a project from the global configuration.
+    ///
+    /// This removes the project entry from `~/.claude.json` and cleans up
+    /// favorites and recents. The project directory itself is not affected.
+    func deleteProject(_ project: ProjectEntry) async {
+        guard let path = project.path else {
+            return
+        }
+
+        do {
+            guard var config = try await configManager.readGlobalConfig() else {
+                return
+            }
+            config.projects?.removeValue(forKey: path)
+            try await configManager.writeGlobalConfig(config)
+
+            self.projects.removeAll { $0.path == path }
+            self.favoritesStorage.removeProject(path)
+
+            NotificationManager.shared.showSuccess(
+                "Project removed",
+                message: "'\(project.name ?? path)' removed from configuration"
+            )
+            Log.general.info("Deleted project from config: \(path)")
+        } catch {
+            Log.general.error("Failed to delete project: \(error.localizedDescription)")
+            NotificationManager.shared.showError(error)
+        }
     }
 
     /// Opens a project in Terminal.

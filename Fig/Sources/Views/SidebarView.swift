@@ -103,9 +103,33 @@ struct SidebarView: View {
             QuickSwitcherView(viewModel: self.viewModel, selection: self.$selection)
         }
         .keyboardShortcut("k", modifiers: .command)
+        .alert(
+            "Delete Project",
+            isPresented: self.$showDeleteConfirmation,
+            presenting: self.projectToDelete
+        ) { project in
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                Task {
+                    if case let .project(path) = self.selection, path == project.path {
+                        self.selection = nil
+                    }
+                    await self.viewModel.deleteProject(project)
+                }
+            }
+        } message: { project in
+            let name = project.name ?? "this project"
+            Text(
+                "Are you sure you want to remove '\(name)' from your configuration?" +
+                    " The project directory will not be affected."
+            )
+        }
     }
 
     // MARK: Private
+
+    @State private var showDeleteConfirmation = false
+    @State private var projectToDelete: ProjectEntry?
 
     private func projectRow(for project: ProjectEntry, isFavoriteSection: Bool) -> some View {
         ProjectRowView(
@@ -141,6 +165,15 @@ struct SidebarView: View {
                 Label("Open in Terminal", systemImage: "terminal")
             }
             .disabled(!self.viewModel.projectExists(project))
+
+            Divider()
+
+            Button(role: .destructive) {
+                self.projectToDelete = project
+                self.showDeleteConfirmation = true
+            } label: {
+                Label("Delete Project", systemImage: "trash")
+            }
         }
     }
 }
