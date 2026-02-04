@@ -3,4 +3,70 @@ title: MCP Server Management
 description: Add, edit, and manage MCP servers for Claude Code projects.
 ---
 
-MCP server management content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+Fig provides a visual interface for managing [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers that extend Claude Code's capabilities.
+
+## Adding an MCP Server
+
+Press **Cmd+Shift+N** or use the add button in the MCP Servers tab to create a new server.
+
+Fig supports two transport types:
+
+### Stdio Transport
+
+Stdio servers run as local processes that communicate via standard input/output. Configure:
+
+- **Command** — the executable to run (e.g., `npx`, `python`, `node`)
+- **Args** — command-line arguments as an array
+- **Env** — environment variables passed to the process
+
+Example configuration:
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"],
+  "env": {}
+}
+```
+
+### HTTP Transport
+
+HTTP servers communicate over HTTP/SSE connections. Configure:
+
+- **URL** — the server endpoint
+- **Headers** — optional HTTP headers for authentication
+
+Example configuration:
+
+```json
+{
+  "type": "http",
+  "url": "http://localhost:3000/mcp",
+  "headers": {}
+}
+```
+
+## Editing Servers
+
+Click any server in the MCP Servers tab to edit its configuration. Changes are validated and saved to the appropriate configuration file.
+
+## Copying Servers Between Projects
+
+Fig lets you copy MCP server configurations from one project to another. This avoids re-entering the same configuration when multiple projects use the same server.
+
+## Configuration File Location
+
+MCP servers are stored in:
+
+| Scope | File |
+|-------|------|
+| **Global** | `~/.claude.json` (under `mcpServers`) |
+| **Project** | `<project>/.mcp.json` |
+
+Project-level servers are defined in `.mcp.json` at the project root.
+
+<Aside type="note">
+Fig preserves any additional properties in MCP server configurations that it doesn't directly manage, ensuring round-trip safety when editing.
+</Aside>

@@ -3,4 +3,45 @@ title: Effective Config Viewer
 description: View the merged configuration with source attribution.
 ---
 
-Effective config viewer content coming soon.
+The Effective Config Viewer shows you the final, merged configuration that Claude Code will use for a project. It resolves all layers of configuration into a single view.
+
+## What Is Effective Config?
+
+Claude Code configuration can come from multiple files at different levels:
+
+1. **Global** — `~/.claude/settings.json`
+2. **Project Shared** — `<project>/.claude/settings.json`
+3. **Project Local** — `<project>/.claude/settings.local.json`
+
+The "effective config" is the result of merging all these layers according to their precedence rules. This is what Claude Code actually uses at runtime.
+
+## Source Attribution
+
+Each setting in the effective config view shows a **provenance badge** indicating which file it came from. This makes it clear where a setting originates and helps you identify:
+
+- Which settings are inherited from global config
+- Which are set at the project level
+- Which are locally overridden
+
+## Merge Semantics
+
+Different settings types merge differently:
+
+| Setting Type | Merge Behavior |
+|-------------|----------------|
+| **Permissions** | Union across tiers — allow/deny rules from all levels combine |
+| **Environment Variables** | Override — more specific tiers replace less specific ones |
+| **Hooks** | Concatenate — hooks from all tiers run together |
+| **Disallowed Tools** | Union — tools disabled at any level remain disabled |
+
+## Understanding Precedence
+
+When the same setting is defined at multiple levels, the most specific level takes priority:
+
+**Project Local > Project Shared > Global**
+
+For example, if an environment variable `API_KEY` is set in both global and project local settings, the project local value is used.
+
+## Using the Viewer
+
+Open the **Effective Config** tab (tab 6, or **Cmd+6**) in any project's detail view to see the merged result. Look at the source badges to understand where each value comes from and which file to edit if you want to change it.

@@ -3,4 +3,62 @@ title: Settings Editor
 description: Edit Claude Code permissions, environment variables, and settings visually.
 ---
 
-Settings editor content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+The Settings Editor lets you manage Claude Code permissions, environment variables, and other settings through a visual interface instead of editing JSON files by hand.
+
+## Permissions
+
+Permissions control which tools and actions Claude Code is allowed to use. They consist of **allow** and **deny** rules using glob patterns.
+
+### Allow Rules
+
+Allow rules grant Claude Code permission to use specific tools or perform actions. Each rule is a glob pattern such as:
+
+- `Bash(*)` — allow all bash commands
+- `Read(~/projects/**)` — allow reading files in the projects directory
+- `Write(src/**)` — allow writing to the src directory
+
+### Deny Rules
+
+Deny rules block specific tools or actions. Deny rules take precedence over allow rules when both match. Examples:
+
+- `Bash(rm -rf *)` — deny destructive remove commands
+- `Write(.env)` — deny writing to environment files
+
+### Disallowed Tools
+
+You can also completely disable specific tools by adding them to the disallowed tools list. This prevents Claude Code from using those tools entirely.
+
+## Environment Variables
+
+The Environment tab lets you manage key-value environment variables that are passed to Claude Code. These variables are available during Claude Code sessions and can be used by MCP servers and hooks.
+
+Add, edit, or remove variables using the visual editor.
+
+## Scope: Global vs. Project
+
+Settings can be configured at three levels:
+
+| Level | File | Scope |
+|-------|------|-------|
+| **Global** | `~/.claude/settings.json` | Applies to all projects |
+| **Project Shared** | `<project>/.claude/settings.json` | Shared with the team via version control |
+| **Project Local** | `<project>/.claude/settings.local.json` | Your personal overrides, gitignored |
+
+When the same setting exists at multiple levels, the most specific level wins:
+
+**Project Local > Project Shared > Global**
+
+<Aside type="tip">
+Use `settings.local.json` for machine-specific settings like API keys or paths that differ between developers. This file is typically gitignored.
+</Aside>
+
+## Global Settings
+
+Access global settings by clicking **Global Settings** in the sidebar or pressing **Cmd+,**. The global settings editor has four tabs:
+
+1. **Permissions** — global allow/deny rules
+2. **Environment** — global environment variables
+3. **MCP Servers** — globally configured MCP servers
+4. **Advanced** — raw JSON view
