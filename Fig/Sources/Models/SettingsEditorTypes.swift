@@ -270,21 +270,28 @@ struct EditableHookDefinition: Identifiable, Equatable, Hashable {
     let id: UUID
     var type: String
     var command: String
+    var additionalProperties: [String: AnyCodable]?
 
     init(id: UUID = UUID(), type: String = "command", command: String = "") {
         self.id = id
         self.type = type
         self.command = command
+        self.additionalProperties = nil
     }
 
     init(from definition: HookDefinition) {
         self.id = UUID()
         self.type = definition.type ?? "command"
         self.command = definition.command ?? ""
+        self.additionalProperties = definition.additionalProperties
     }
 
     func toHookDefinition() -> HookDefinition {
-        HookDefinition(type: type, command: command.isEmpty ? nil : command)
+        HookDefinition(
+            type: type,
+            command: command.isEmpty ? nil : command,
+            additionalProperties: additionalProperties
+        )
     }
 }
 
@@ -295,23 +302,27 @@ struct EditableHookGroup: Identifiable, Equatable, Hashable {
     let id: UUID
     var matcher: String
     var hooks: [EditableHookDefinition]
+    var additionalProperties: [String: AnyCodable]?
 
     init(id: UUID = UUID(), matcher: String = "", hooks: [EditableHookDefinition] = []) {
         self.id = id
         self.matcher = matcher
         self.hooks = hooks
+        self.additionalProperties = nil
     }
 
     init(from group: HookGroup) {
         self.id = UUID()
         self.matcher = group.matcher ?? ""
         self.hooks = (group.hooks ?? []).map { EditableHookDefinition(from: $0) }
+        self.additionalProperties = group.additionalProperties
     }
 
     func toHookGroup() -> HookGroup {
         HookGroup(
             matcher: matcher.isEmpty ? nil : matcher,
-            hooks: hooks.isEmpty ? nil : hooks.map { $0.toHookDefinition() }
+            hooks: hooks.isEmpty ? nil : hooks.map { $0.toHookDefinition() },
+            additionalProperties: additionalProperties
         )
     }
 }

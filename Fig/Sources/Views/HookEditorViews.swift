@@ -50,6 +50,41 @@ struct HookEditorView: View {
                     )
                 }
 
+                // Show unrecognized hook events that exist in settings
+                // but aren't in the HookEvent enum (e.g., future event types)
+                let unrecognizedEvents = viewModel.hookGroups.keys
+                    .filter { key in !HookEvent.allCases.contains(where: { $0.rawValue == key }) }
+                    .sorted()
+
+                if !unrecognizedEvents.isEmpty {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Other Events", systemImage: "questionmark.circle")
+                                .font(.headline)
+
+                            Text(
+                                "These hook events are not recognized by this editor but will be preserved when saving."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                            ForEach(unrecognizedEvents, id: \.self) { eventKey in
+                                let groupCount = viewModel.hookGroups[eventKey]?.count ?? 0
+                                HStack {
+                                    Text(eventKey)
+                                        .font(.system(.body, design: .monospaced))
+                                    Spacer()
+                                    Text(
+                                        "\(groupCount) group\(groupCount == 1 ? "" : "s")"
+                                    )
+                                    .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
                 // Help reference
                 HookVariablesReference()
 

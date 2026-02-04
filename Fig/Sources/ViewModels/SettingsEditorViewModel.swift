@@ -617,7 +617,8 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
             guard let self,
                   let idx = self.hookGroups[event]?.firstIndex(where: { $0.id == groupID })
             else { return }
-            let insertIndex = min(hookIndex, self.hookGroups[event]![idx].hooks.count)
+            let hookCount = self.hookGroups[event]?[idx].hooks.count ?? 0
+            let insertIndex = min(hookIndex, hookCount)
             self.hookGroups[event]?[idx].hooks.insert(hook, at: insertIndex)
             self.markDirty()
             self.registerUndo(actionName: "Remove Hook") { [weak self] in
@@ -668,16 +669,16 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
 
     /// Moves hook definitions within a group for reordering.
     func moveHookDefinition(event: String, groupID: UUID, from source: Int, direction: Int) {
-        guard let groupIndex = hookGroups[event]?.firstIndex(where: { $0.id == groupID })
+        guard let groupIndex = hookGroups[event]?.firstIndex(where: { $0.id == groupID }),
+              let hooks = hookGroups[event]?[groupIndex].hooks
         else { return }
 
         let destination = source + direction
-        let hooks = hookGroups[event]![groupIndex].hooks
         guard destination >= 0, destination < hooks.count else { return }
 
         let previousHooks = hooks
         hookGroups[event]?[groupIndex].hooks.swapAt(source, destination)
-        let newHooks = hookGroups[event]![groupIndex].hooks
+        guard let newHooks = hookGroups[event]?[groupIndex].hooks else { return }
         markDirty()
 
         registerUndo(actionName: "Reorder Hooks") { [weak self] in
@@ -705,7 +706,7 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
 
         let previousGroups = groups
         hookGroups[event]?.swapAt(source, destination)
-        let newGroups = hookGroups[event]!
+        guard let newGroups = hookGroups[event] else { return }
         markDirty()
 
         registerUndo(actionName: "Reorder Hook Groups") { [weak self] in
