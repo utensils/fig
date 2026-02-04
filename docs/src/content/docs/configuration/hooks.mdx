@@ -63,7 +63,7 @@ Hooks are stored in the `hooks` field of settings files:
 }
 ```
 
-Hooks follow the same precedence as other settings: project local overrides project shared, which overrides global.
+Hooks from all configuration tiers concatenate — hooks defined at every level will run together.
 
 <Aside type="tip">
 Start with `PostToolUse` hooks for logging and auditing, then add `PreToolUse` hooks as you identify specific workflows to customize.
