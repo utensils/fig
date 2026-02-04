@@ -3,4 +3,63 @@ title: Safety Features
 description: Automatic backups, external change detection, and undo/redo in Fig.
 ---
 
-Safety features content coming soon.
+Fig includes several safety features to protect your configuration from accidental loss or corruption.
+
+## Automatic Backups
+
+Every time Fig saves a configuration file, it creates a timestamped backup of the previous version before writing. This happens automatically with no user action required.
+
+### How Backups Work
+
+- Before each write, the current file contents are saved to a backup
+- Backups use timestamped filenames for easy identification
+- Backups are created for all managed configuration files
+
+### Restoring from Backup
+
+If you need to restore a previous version of a configuration file, locate the timestamped backup file and copy it back to the original location.
+
+## External Change Detection
+
+Fig monitors configuration files for changes made outside the app (e.g., by a text editor, Claude Code itself, or version control operations).
+
+### How Detection Works
+
+Fig uses file system monitoring based on modification dates. When a configuration file is changed by another process:
+
+1. Fig detects the modification
+2. A warning is displayed indicating the file was modified externally
+3. You're given options to resolve the conflict:
+   - **Reload** — load the external changes, discarding your unsaved edits
+   - **Overwrite** — keep your current edits and overwrite the external changes
+
+### Symlink Handling
+
+Fig resolves symlinks when reading configuration files and includes circular reference detection to prevent infinite loops.
+
+## Undo / Redo
+
+Fig maintains an undo history for configuration changes within each editing session.
+
+### Usage
+
+| Action | Shortcut |
+|--------|----------|
+| **Undo** | **Cmd+Z** |
+| **Redo** | **Cmd+Shift+Z** |
+
+### Scope and Limitations
+
+- Undo history is per-session and resets when you close the app or switch projects
+- Each undo step reverses a single configuration change
+- Undo/redo applies to the currently active configuration view
+
+## JSON Preservation
+
+Fig uses custom JSON encoding and decoding that preserves:
+
+- Unknown keys added by Claude Code or other tools
+- Key ordering where possible
+- Pretty-printed, sorted output for readability
+
+This ensures that Fig never drops configuration data it doesn't directly manage, even as Claude Code evolves and adds new settings.
