@@ -17,16 +17,3 @@ updates:
       - "swift"
     reviewers:
       - "doomspork"
-
-  # GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: "ci(deps):"
-    labels:
-      - "dependencies"
-      - "ci"
