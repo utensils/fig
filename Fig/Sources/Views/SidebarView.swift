@@ -384,9 +384,26 @@ struct ProjectRowView: View {
             }
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
     }
 
     // MARK: Private
+
+    private var accessibilityDescription: String {
+        var parts: [String] = []
+        parts.append(project.name ?? "Unknown project")
+        if !exists {
+            parts.append("directory not found")
+        }
+        if isFavorite {
+            parts.append("favorite")
+        }
+        if mcpCount > 0 {
+            parts.append("\(mcpCount) MCP server\(mcpCount == 1 ? "" : "s")")
+        }
+        return parts.joined(separator: ", ")
+    }
 
     /// Abbreviates a path by replacing the home directory with ~.
     private func abbreviatePath(_ path: String) -> String {
@@ -584,9 +601,20 @@ struct QuickSwitcherRow: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(self.isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(self.quickSwitcherAccessibilityLabel)
+        .accessibilityAddTraits(self.isSelected ? .isSelected : [])
     }
 
     // MARK: Private
+
+    private var quickSwitcherAccessibilityLabel: String {
+        var parts: [String] = [self.project.name ?? "Unknown project"]
+        if self.isFavorite {
+            parts.append("favorite")
+        }
+        return parts.joined(separator: ", ")
+    }
 
     private func abbreviatePath(_ path: String) -> String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path

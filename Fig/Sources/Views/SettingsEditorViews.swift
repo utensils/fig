@@ -111,6 +111,7 @@ struct DirtyStateIndicator: View {
                 .fill(.orange)
                 .frame(width: 8, height: 8)
                 .help("Unsaved changes")
+                .accessibilityLabel("Unsaved changes")
         }
     }
 }

@@ -20,6 +20,7 @@ struct SourceBadge: View {
         .padding(.vertical, 2)
         .background(backgroundColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
         .foregroundStyle(backgroundColor)
+        .accessibilityLabel("Source: \(source.label)")
     }
 
     // MARK: Private
@@ -194,6 +195,8 @@ struct PermissionRuleRow: View {
             SourceBadge(source: source)
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(type == .allow ? "Allow" : "Deny") rule: \(rule), source: \(source.label)")
         .contextMenu {
             Button {
                 NSPasteboard.general.clearContents()
@@ -311,6 +314,8 @@ struct EnvironmentVariableRow: View {
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(isValueVisible ? "Hide value" : "Show value")
+                .accessibilityHint("Toggles visibility of sensitive value for \(key)")
             }
 
             SourceBadge(source: source)
@@ -446,6 +451,7 @@ struct MCPServerCard: View {
                         }
                         .buttonStyle(.plain)
                         .help("Copy as JSON")
+                        .accessibilityLabel("Copy \(name) as JSON")
 
                         // Copy to project
                         if onCopy != nil {
@@ -457,6 +463,7 @@ struct MCPServerCard: View {
                             }
                             .buttonStyle(.plain)
                             .help("Copy to...")
+                            .accessibilityLabel("Copy \(name) to another project")
                         }
 
                         if onEdit != nil {
@@ -468,6 +475,7 @@ struct MCPServerCard: View {
                             }
                             .buttonStyle(.plain)
                             .help("Edit server")
+                            .accessibilityLabel("Edit \(name)")
                         }
 
                         if onDelete != nil {
@@ -480,6 +488,7 @@ struct MCPServerCard: View {
                             }
                             .buttonStyle(.plain)
                             .help("Delete server")
+                            .accessibilityLabel("Delete \(name)")
                         }
                     }
 
@@ -494,6 +503,7 @@ struct MCPServerCard: View {
                             .font(.caption)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(isExpanded ? "Collapse \(name) details" : "Expand \(name) details")
                 }
 
                 // Summary line
