@@ -218,6 +218,7 @@ enum ToolType: String, CaseIterable, Identifiable {
 
 /// Target file for saving edited settings.
 enum EditingTarget: String, CaseIterable, Identifiable {
+    case global
     case projectShared
     case projectLocal
 
@@ -225,6 +226,8 @@ enum EditingTarget: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
+        case .global:
+            "Global (settings.json)"
         case .projectShared:
             "Shared (settings.json)"
         case .projectLocal:
@@ -234,6 +237,8 @@ enum EditingTarget: String, CaseIterable, Identifiable {
 
     var description: String {
         switch self {
+        case .global:
+            "Applies to all projects"
         case .projectShared:
             "Committed to git, shared with team"
         case .projectLocal:
@@ -243,11 +248,18 @@ enum EditingTarget: String, CaseIterable, Identifiable {
 
     var source: ConfigSource {
         switch self {
+        case .global:
+            .global
         case .projectShared:
             .projectShared
         case .projectLocal:
             .projectLocal
         }
+    }
+
+    /// Targets available when editing project settings.
+    static var projectTargets: [EditingTarget] {
+        [.projectShared, .projectLocal]
     }
 }
 

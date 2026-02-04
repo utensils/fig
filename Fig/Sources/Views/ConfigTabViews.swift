@@ -47,6 +47,12 @@ struct PermissionsTabView: View {
     var source: ConfigSource?
     var emptyMessage = "No permission rules configured."
 
+    /// Callback when a rule should be promoted to global settings.
+    var onPromoteToGlobal: ((String, PermissionType) -> Void)?
+
+    /// Callback when a rule should be copied to another scope.
+    var onCopyToScope: ((String, PermissionType, ConfigSource) -> Void)?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -72,7 +78,14 @@ struct PermissionsTabView: View {
                                 PermissionRuleRow(
                                     rule: item.rule,
                                     type: .allow,
-                                    source: item.source
+                                    source: item.source,
+                                    isOverride: isRuleOverridingGlobal(
+                                        rule: item.rule,
+                                        type: .allow,
+                                        source: item.source
+                                    ),
+                                    onPromoteToGlobal: onPromoteToGlobal,
+                                    onCopyToScope: onCopyToScope
                                 )
                             }
                         }
@@ -97,7 +110,14 @@ struct PermissionsTabView: View {
                                 PermissionRuleRow(
                                     rule: item.rule,
                                     type: .deny,
-                                    source: item.source
+                                    source: item.source,
+                                    isOverride: isRuleOverridingGlobal(
+                                        rule: item.rule,
+                                        type: .deny,
+                                        source: item.source
+                                    ),
+                                    onPromoteToGlobal: onPromoteToGlobal,
+                                    onCopyToScope: onCopyToScope
                                 )
                             }
                         }
@@ -132,6 +152,12 @@ struct PermissionsTabView: View {
         }
         return []
     }
+
+    /// Checks if a project-level rule also exists at the global level.
+    private func isRuleOverridingGlobal(rule: String, type: PermissionType, source: ConfigSource) -> Bool {
+        guard source != .global, let allPermissions else { return false }
+        return allPermissions.contains { $0.rule == rule && $0.type == type && $0.source == .global }
+    }
 }
 
 // MARK: - PermissionRuleRow
@@ -141,6 +167,9 @@ struct PermissionRuleRow: View {
     let rule: String
     let type: PermissionType
     let source: ConfigSource
+    var isOverride = false
+    var onPromoteToGlobal: ((String, PermissionType) -> Void)?
+    var onCopyToScope: ((String, PermissionType, ConfigSource) -> Void)?
 
     var body: some View {
         HStack {
@@ -153,11 +182,47 @@ struct PermissionRuleRow: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
 
+            if isOverride {
+                Image(systemName: "arrow.up.arrow.down")
+                    .foregroundStyle(.orange)
+                    .font(.caption2)
+                    .help("This rule also exists in global settings")
+            }
+
             Spacer()
 
             SourceBadge(source: source)
         }
         .padding(.vertical, 2)
+        .contextMenu {
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(rule, forType: .string)
+            } label: {
+                Label("Copy Rule", systemImage: "doc.on.doc")
+            }
+
+            if source != .global, onPromoteToGlobal != nil {
+                Divider()
+
+                Button {
+                    onPromoteToGlobal?(rule, type)
+                } label: {
+                    Label("Promote to Global", systemImage: "arrow.up.to.line")
+                }
+            }
+
+            if source == .projectShared || source == .projectLocal {
+                let otherScope: ConfigSource = source == .projectShared ? .projectLocal : .projectShared
+                if onCopyToScope != nil {
+                    Button {
+                        onCopyToScope?(rule, type, otherScope)
+                    } label: {
+                        Label("Copy to \(otherScope.label)", systemImage: "arrow.left.arrow.right")
+                    }
+                }
+            }
+        }
     }
 }
 

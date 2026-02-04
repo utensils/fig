@@ -6,25 +6,47 @@ import SwiftUI
 
 // MARK: - SettingsEditorViewModel
 
-/// View model for editing project settings with undo/redo, dirty tracking, and file watching.
+/// View model for editing settings (global or project-level) with undo/redo, dirty tracking, and file watching.
 @MainActor
 @Observable
 final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
     // MARK: Lifecycle
 
+    /// Creates a view model for editing project settings.
     init(projectPath: String, configManager: ConfigFileManager = .shared) {
         self.projectPath = projectPath
         projectURL = URL(fileURLWithPath: projectPath)
         self.configManager = configManager
+        editingTarget = .projectShared
+    }
+
+    /// Creates a view model for editing global settings.
+    static func forGlobal(configManager: ConfigFileManager = .shared) -> SettingsEditorViewModel {
+        SettingsEditorViewModel(configManager: configManager)
+    }
+
+    /// Private initializer for global mode.
+    private init(configManager: ConfigFileManager) {
+        self.projectPath = nil
+        self.projectURL = nil
+        self.configManager = configManager
+        self.editingTarget = .global
     }
 
     deinit {
         // Clean up file watchers - note: must be called from a Task since deinit is sync
-        Task { [configManager, projectURL] in
-            let settingsURL = await configManager.projectSettingsURL(for: projectURL)
-            let localSettingsURL = await configManager.projectLocalSettingsURL(for: projectURL)
-            await configManager.stopWatching(settingsURL)
-            await configManager.stopWatching(localSettingsURL)
+        if let projectURL {
+            Task { [configManager, projectURL] in
+                let settingsURL = await configManager.projectSettingsURL(for: projectURL)
+                let localSettingsURL = await configManager.projectLocalSettingsURL(for: projectURL)
+                await configManager.stopWatching(settingsURL)
+                await configManager.stopWatching(localSettingsURL)
+            }
+        } else {
+            Task { [configManager] in
+                let globalURL = await configManager.globalSettingsURL
+                await configManager.stopWatching(globalURL)
+            }
         }
     }
 
@@ -32,8 +54,16 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
 
     // MARK: - Properties
 
-    let projectPath: String
-    let projectURL: URL
+    /// Project path, nil when editing global settings.
+    let projectPath: String?
+
+    /// Project URL, nil when editing global settings.
+    let projectURL: URL?
+
+    /// Whether this view model is editing global settings.
+    var isGlobalMode: Bool {
+        projectURL == nil
+    }
 
     /// Whether data is currently loading.
     private(set) var isLoading = false
@@ -44,7 +74,7 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
     /// Whether saving is in progress.
     private(set) var isSaving = false
 
-    /// Current editing target (shared or local).
+    /// Current editing target.
     var editingTarget: EditingTarget = .projectShared {
         didSet {
             if oldValue != editingTarget {
@@ -101,6 +131,7 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
 
     // MARK: - Loaded Settings
 
+    private(set) var globalSettings: ClaudeSettings?
     private(set) var projectSettings: ClaudeSettings?
     private(set) var projectLocalSettings: ClaudeSettings?
 
@@ -111,9 +142,13 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
 
     // MARK: - Computed Properties
 
-    var projectName: String {
-        projectURL.lastPathComponent
+    var displayName: String {
+        if isGlobalMode {
+            return "Global Settings"
+        }
+        return projectURL?.lastPathComponent ?? "Unknown"
     }
+
 
     var allowRules: [EditablePermissionRule] {
         permissionRules.filter { $0.type == .allow }
@@ -142,18 +177,22 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
 
     // MARK: - Loading
 
-    /// Loads settings for the current project.
+    /// Loads settings for editing.
     func loadSettings() async {
         isLoading = true
 
         do {
-            projectSettings = try await configManager.readProjectSettings(for: projectURL)
-            projectLocalSettings = try await configManager.readProjectLocalSettings(for: projectURL)
+            if isGlobalMode {
+                globalSettings = try await configManager.readGlobalSettings()
+            } else if let projectURL {
+                projectSettings = try await configManager.readProjectSettings(for: projectURL)
+                projectLocalSettings = try await configManager.readProjectLocalSettings(for: projectURL)
+            }
 
             loadEditableData()
             startFileWatching()
 
-            Log.general.info("Loaded settings for editing: \(self.projectName)")
+            Log.general.info("Loaded settings for editing: \(self.displayName)")
         } catch {
             Log.general.error("Failed to load settings for editing: \(error.localizedDescription)")
         }
@@ -180,10 +219,15 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
         let settings = buildSettings()
 
         switch editingTarget {
+        case .global:
+            try await configManager.writeGlobalSettings(settings)
+            globalSettings = settings
         case .projectShared:
+            guard let projectURL else { return }
             try await configManager.writeProjectSettings(settings, for: projectURL)
             projectSettings = settings
         case .projectLocal:
+            guard let projectURL else { return }
             try await configManager.writeProjectLocalSettings(settings, for: projectURL)
             projectLocalSettings = settings
         }
@@ -516,7 +560,15 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
     private let configManager: ConfigFileManager
 
     private func loadEditableData() {
-        let settings: ClaudeSettings? = editingTarget == .projectShared ? projectSettings : projectLocalSettings
+        let settings: ClaudeSettings?
+        switch editingTarget {
+        case .global:
+            settings = globalSettings
+        case .projectShared:
+            settings = projectSettings
+        case .projectLocal:
+            settings = projectLocalSettings
+        }
 
         // Load permission rules
         var rules: [EditablePermissionRule] = []
@@ -557,9 +609,15 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
     }
 
     private func buildSettings() -> ClaudeSettings {
-        let existingSettings: ClaudeSettings? = editingTarget == .projectShared
-            ? projectSettings
-            : projectLocalSettings
+        let existingSettings: ClaudeSettings?
+        switch editingTarget {
+        case .global:
+            existingSettings = globalSettings
+        case .projectShared:
+            existingSettings = projectSettings
+        case .projectLocal:
+            existingSettings = projectLocalSettings
+        }
 
         let allowRules = permissionRules.filter { $0.type == .allow }.map(\.rule)
         let denyRules = permissionRules.filter { $0.type == .deny }.map(\.rule)
@@ -603,18 +661,27 @@ final class SettingsEditorViewModel { // swiftlint:disable:this type_body_length
 
     private func startFileWatching() {
         Task {
-            let settingsURL = await configManager.projectSettingsURL(for: projectURL)
-            let localSettingsURL = await configManager.projectLocalSettingsURL(for: projectURL)
-
-            await configManager.startWatching(settingsURL) { [weak self] url in
-                Task { @MainActor in
-                    self?.handleExternalChange(url: url)
+            if isGlobalMode {
+                let globalURL = await configManager.globalSettingsURL
+                await configManager.startWatching(globalURL) { [weak self] url in
+                    Task { @MainActor in
+                        self?.handleExternalChange(url: url)
+                    }
                 }
-            }
+            } else if let projectURL {
+                let settingsURL = await configManager.projectSettingsURL(for: projectURL)
+                let localSettingsURL = await configManager.projectLocalSettingsURL(for: projectURL)
 
-            await configManager.startWatching(localSettingsURL) { [weak self] url in
-                Task { @MainActor in
-                    self?.handleExternalChange(url: url)
+                await configManager.startWatching(settingsURL) { [weak self] url in
+                    Task { @MainActor in
+                        self?.handleExternalChange(url: url)
+                    }
+                }
+
+                await configManager.startWatching(localSettingsURL) { [weak self] url in
+                    Task { @MainActor in
+                        self?.handleExternalChange(url: url)
+                    }
                 }
             }
         }

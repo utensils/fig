@@ -138,7 +138,9 @@ struct GlobalSettingsDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            GlobalSettingsHeaderView(viewModel: self.viewModel)
+            GlobalSettingsHeaderView(viewModel: self.viewModel) {
+                showingEditor = true
+            }
 
             Divider()
 
@@ -163,11 +165,19 @@ struct GlobalSettingsDetailView: View {
         .task {
             await self.viewModel.load()
         }
+        .sheet(isPresented: $showingEditor) {
+            GlobalSettingsEditorView {
+                Task {
+                    await self.viewModel.load()
+                }
+            }
+        }
     }
 
     // MARK: Private
 
     @State private var viewModel = GlobalSettingsViewModel()
+    @State private var showingEditor = false
 
     @ViewBuilder
     private func globalTabContent(for tab: GlobalSettingsTab) -> some View {
@@ -201,6 +211,7 @@ struct GlobalSettingsDetailView: View {
 /// Header view for global settings.
 struct GlobalSettingsHeaderView: View {
     @Bindable var viewModel: GlobalSettingsViewModel
+    var onEditSettings: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -247,6 +258,16 @@ struct GlobalSettingsHeaderView: View {
                             exists: status.exists
                         )
                     }
+                }
+
+                // Edit button
+                if let onEditSettings {
+                    Button {
+                        onEditSettings()
+                    } label: {
+                        Label("Edit Settings", systemImage: "pencil")
+                    }
+                    .buttonStyle(.bordered)
                 }
             }
         }

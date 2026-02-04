@@ -12,9 +12,11 @@ struct AttributionSettingsEditorView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Target selector
-                HStack {
-                    EditingTargetPicker(selection: $viewModel.editingTarget)
-                    Spacer()
+                if !viewModel.isGlobalMode {
+                    HStack {
+                        EditingTargetPicker(selection: $viewModel.editingTarget)
+                        Spacer()
+                    }
                 }
 
                 // Attribution settings

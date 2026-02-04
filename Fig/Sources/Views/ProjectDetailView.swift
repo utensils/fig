@@ -114,6 +114,12 @@ struct ProjectDetailView: View {
                 ConfigImportView(viewModel: importVM)
             }
         }
+        .promoteToGlobalAlert(
+            isPresented: $showPromoteConfirmation,
+            ruleToPromote: $ruleToPromote,
+            projectURL: viewModel.projectURL,
+            onComplete: { await viewModel.loadConfiguration() }
+        )
     }
 
     // MARK: Private
@@ -129,6 +135,8 @@ struct ProjectDetailView: View {
     @State private var exportViewModel: ConfigExportViewModel?
     @State private var showImportSheet = false
     @State private var importViewModel: ConfigImportViewModel?
+    @State private var showPromoteConfirmation = false
+    @State private var ruleToPromote: RulePromotionInfo?
 
     @ViewBuilder
     private func tabContent(for tab: ProjectDetailTab) -> some View {
@@ -136,7 +144,37 @@ struct ProjectDetailView: View {
         case .permissions:
             PermissionsTabView(
                 allPermissions: viewModel.allPermissions,
-                emptyMessage: "No permission rules configured for this project."
+                emptyMessage: "No permission rules configured for this project.",
+                onPromoteToGlobal: { rule, type in
+                    ruleToPromote = RulePromotionInfo(rule: rule, type: type)
+                    showPromoteConfirmation = true
+                },
+                onCopyToScope: { rule, type, targetScope in
+                    Task {
+                        do {
+                            let added = try await PermissionRuleCopyService.shared.copyRule(
+                                rule: rule,
+                                type: type,
+                                to: targetScope,
+                                projectPath: viewModel.projectURL
+                            )
+                            if added {
+                                NotificationManager.shared.showSuccess(
+                                    "Rule Copied",
+                                    message: "Copied to \(targetScope.label)"
+                                )
+                            } else {
+                                NotificationManager.shared.showInfo(
+                                    "Rule Already Exists",
+                                    message: "This rule already exists in \(targetScope.label)"
+                                )
+                            }
+                            await viewModel.loadConfiguration()
+                        } catch {
+                            NotificationManager.shared.showError(error)
+                        }
+                    }
+                }
             )
         case .environment:
             EnvironmentTabView(
