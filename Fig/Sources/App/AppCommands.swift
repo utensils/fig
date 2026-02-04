@@ -11,7 +11,6 @@ struct AppCommands: Commands {
                 self.selection = .globalSettings
             }
             .keyboardShortcut(",", modifiers: .command)
-            .disabled(self.selection == nil)
         }
 
         // File menu: New MCP Server
@@ -19,14 +18,14 @@ struct AppCommands: Commands {
             Button("New MCP Server") {
                 self.addMCPServer?()
             }
-            .keyboardShortcut("n", modifiers: .command)
+            .keyboardShortcut("n", modifiers: [.command, .shift])
             .disabled(self.addMCPServer == nil)
         }
 
         // Tab menu for switching detail tabs
         CommandMenu("Tab") {
             if self.projectTab != nil {
-                ForEach(Array(ProjectDetailTab.allCases.enumerated()), id: \.element) { index, tab in
+                ForEach(Array(ProjectDetailTab.allCases.prefix(9).enumerated()), id: \.element) { index, tab in
                     Button(tab.title) {
                         self.projectTab = tab
                     }
@@ -36,7 +35,7 @@ struct AppCommands: Commands {
                     )
                 }
             } else if self.globalTab != nil {
-                ForEach(Array(GlobalSettingsTab.allCases.enumerated()), id: \.element) { index, tab in
+                ForEach(Array(GlobalSettingsTab.allCases.prefix(9).enumerated()), id: \.element) { index, tab in
                     Button(tab.title) {
                         self.globalTab = tab
                     }
