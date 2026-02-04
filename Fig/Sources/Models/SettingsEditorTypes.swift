@@ -263,6 +263,192 @@ enum EditingTarget: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - EditableHookDefinition
+
+/// A hook definition with editing metadata.
+struct EditableHookDefinition: Identifiable, Equatable, Hashable {
+    let id: UUID
+    var type: String
+    var command: String
+    var additionalProperties: [String: AnyCodable]?
+
+    init(id: UUID = UUID(), type: String = "command", command: String = "") {
+        self.id = id
+        self.type = type
+        self.command = command
+        self.additionalProperties = nil
+    }
+
+    init(from definition: HookDefinition) {
+        self.id = UUID()
+        self.type = definition.type ?? "command"
+        self.command = definition.command ?? ""
+        self.additionalProperties = definition.additionalProperties
+    }
+
+    func toHookDefinition() -> HookDefinition {
+        HookDefinition(
+            type: type,
+            command: command.isEmpty ? nil : command,
+            additionalProperties: additionalProperties
+        )
+    }
+}
+
+// MARK: - EditableHookGroup
+
+/// A hook group with editing metadata.
+struct EditableHookGroup: Identifiable, Equatable, Hashable {
+    let id: UUID
+    var matcher: String
+    var hooks: [EditableHookDefinition]
+    var additionalProperties: [String: AnyCodable]?
+
+    init(id: UUID = UUID(), matcher: String = "", hooks: [EditableHookDefinition] = []) {
+        self.id = id
+        self.matcher = matcher
+        self.hooks = hooks
+        self.additionalProperties = nil
+    }
+
+    init(from group: HookGroup) {
+        self.id = UUID()
+        self.matcher = group.matcher ?? ""
+        self.hooks = (group.hooks ?? []).map { EditableHookDefinition(from: $0) }
+        self.additionalProperties = group.additionalProperties
+    }
+
+    func toHookGroup() -> HookGroup {
+        HookGroup(
+            matcher: matcher.isEmpty ? nil : matcher,
+            hooks: hooks.isEmpty ? nil : hooks.map { $0.toHookDefinition() },
+            additionalProperties: additionalProperties
+        )
+    }
+}
+
+// MARK: - HookEvent
+
+/// Hook lifecycle event types.
+enum HookEvent: String, CaseIterable, Identifiable {
+    case preToolUse = "PreToolUse"
+    case postToolUse = "PostToolUse"
+    case notification = "Notification"
+    case stop = "Stop"
+
+    // MARK: Internal
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .preToolUse: "Pre Tool Use"
+        case .postToolUse: "Post Tool Use"
+        case .notification: "Notification"
+        case .stop: "Stop"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .preToolUse: "Runs before a tool is executed"
+        case .postToolUse: "Runs after a tool finishes executing"
+        case .notification: "Runs when Claude sends notifications"
+        case .stop: "Runs when Claude finishes responding"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .preToolUse: "arrow.right.circle"
+        case .postToolUse: "arrow.left.circle"
+        case .notification: "bell"
+        case .stop: "stop.circle"
+        }
+    }
+
+    var matcherPlaceholder: String {
+        switch self {
+        case .preToolUse: "Bash(*), Read(src/**), Write, etc."
+        case .postToolUse: "Bash(*), Edit(*.py), etc."
+        case .notification: "Optional pattern..."
+        case .stop: "Optional pattern..."
+        }
+    }
+
+    var supportsMatcher: Bool {
+        switch self {
+        case .preToolUse, .postToolUse: true
+        case .notification, .stop: false
+        }
+    }
+}
+
+// MARK: - HookTemplate
+
+/// Quick-add templates for common hook configurations.
+struct HookTemplate: Identifiable {
+    let id: String
+    let name: String
+    let description: String
+    let event: HookEvent
+    let matcher: String?
+    let commands: [String]
+
+    static let allTemplates: [HookTemplate] = [
+        HookTemplate(
+            id: "format-python",
+            name: "Format Python on save",
+            description: "Run black formatter after writing Python files",
+            event: .postToolUse,
+            matcher: "Write(*.py)",
+            commands: ["black $CLAUDE_FILE_PATH"]
+        ),
+        HookTemplate(
+            id: "lint-after-edit",
+            name: "Run linter after edit",
+            description: "Run ESLint after editing TypeScript files",
+            event: .postToolUse,
+            matcher: "Edit(*.ts)",
+            commands: ["npx eslint --fix $CLAUDE_FILE_PATH"]
+        ),
+        HookTemplate(
+            id: "notify-completion",
+            name: "Notify on completion",
+            description: "Send a system notification when Claude stops",
+            event: .stop,
+            matcher: nil,
+            commands: [
+                "osascript -e 'display notification \"Claude Code finished\" with title \"Fig\"'",
+            ]
+        ),
+        HookTemplate(
+            id: "pre-bash-guard",
+            name: "Guard dangerous commands",
+            description: "Log all bash commands before execution",
+            event: .preToolUse,
+            matcher: "Bash(*)",
+            commands: ["echo \"Running: $CLAUDE_TOOL_INPUT\" >> ~/.claude/hook.log"]
+        ),
+        HookTemplate(
+            id: "post-write-test",
+            name: "Run tests after write",
+            description: "Run tests after writing test files",
+            event: .postToolUse,
+            matcher: "Write(*test*)",
+            commands: ["npm test"]
+        ),
+        HookTemplate(
+            id: "format-swift",
+            name: "Format Swift on save",
+            description: "Run swift-format after writing Swift files",
+            event: .postToolUse,
+            matcher: "Write(*.swift)",
+            commands: ["swift-format format -i $CLAUDE_FILE_PATH"]
+        ),
+    ]
+}
+
 // MARK: - ConflictResolution
 
 /// Options for resolving external file change conflicts.

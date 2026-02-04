@@ -43,6 +43,12 @@ struct ProjectSettingsEditorView: View {
                         }
                         .tag(EditorTab.environment)
 
+                    HookEditorView(viewModel: viewModel)
+                        .tabItem {
+                            Label("Hooks", systemImage: "bolt.horizontal")
+                        }
+                        .tag(EditorTab.hooks)
+
                     AttributionSettingsEditorView(viewModel: viewModel)
                         .tabItem {
                             Label("General", systemImage: "gearshape")
@@ -116,6 +122,7 @@ struct ProjectSettingsEditorView: View {
     private enum EditorTab: String, CaseIterable, Identifiable {
         case permissions
         case environment
+        case hooks
         case general
 
         var id: String { rawValue }
