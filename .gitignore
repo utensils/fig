@@ -73,6 +73,11 @@ fastlane/test_output
 .env.local
 *.local
 
+# Docs site
+docs/node_modules/
+docs/dist/
+docs/.astro/
+
 # Archives
 *.zip
 *.tar.gz

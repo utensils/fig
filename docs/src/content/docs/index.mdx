@@ -1,0 +1,41 @@
+---
+title: Fig Documentation
+description: Documentation for Fig, a native macOS application for managing Claude Code configuration.
+template: splash
+hero:
+  tagline: A visual interface for managing Claude Code configuration. Stop hand-editing scattered JSON files.
+  actions:
+    - text: Get Started
+      link: /fig/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/utensils/fig
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Features
+
+<CardGrid stagger>
+	<Card title="Project Discovery" icon="magnifier">
+		Automatically finds your Claude Code projects from `~/.claude.json` and common development directories.
+	</Card>
+	<Card title="MCP Server Management" icon="setting">
+		Add, edit, and copy MCP servers between projects with a visual interface.
+	</Card>
+	<Card title="Visual Hook Composer" icon="list-format">
+		Configure Claude Code hooks without writing JSON by hand.
+	</Card>
+	<Card title="Config Health Checks" icon="approve-check-circle">
+		Validates your configuration and highlights potential issues.
+	</Card>
+	<Card title="Automatic Backups" icon="document">
+		Every save creates a timestamped backup so you can always roll back.
+	</Card>
+	<Card title="Merged Config Viewer" icon="open-book">
+		See the effective configuration with source attribution for every setting.
+	</Card>
+</CardGrid>
