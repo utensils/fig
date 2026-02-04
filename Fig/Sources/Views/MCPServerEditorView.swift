@@ -57,7 +57,7 @@ struct MCPServerEditorView: View {
         .onChange(of: viewModel.formData.scope) { _, _ in viewModel.validate() }
         .onAppear {
             viewModel.validate()
-            focusedField = .name
+            focusedField = viewModel.isEditing ? .command : .name
         }
     }
 
