@@ -211,9 +211,16 @@ struct SidebarView: View {
     @State private var selectedProjectPaths: Set<String> = []
     @State private var showBulkDeleteConfirmation = false
 
+    private var visibleProjectPaths: Set<String> {
+        let favorites = self.viewModel.favoriteProjects.compactMap(\.path)
+        let recents = self.viewModel.recentProjects.compactMap(\.path)
+        let filtered = self.viewModel.filteredProjects.compactMap(\.path)
+        return Set(favorites + recents + filtered)
+    }
+
     private var allProjectsSelected: Bool {
-        let allPaths = Set(self.viewModel.projects.compactMap(\.path))
-        return !allPaths.isEmpty && allPaths.isSubset(of: self.selectedProjectPaths)
+        let visible = self.visibleProjectPaths
+        return !visible.isEmpty && visible.isSubset(of: self.selectedProjectPaths)
     }
 
     private func toggleSelectMode() {
@@ -240,25 +247,20 @@ struct SidebarView: View {
     }
 
     private func selectAllProjects() {
-        let paths = self.viewModel.projects.compactMap(\.path)
-        self.selectedProjectPaths = Set(paths)
+        self.selectedProjectPaths = self.visibleProjectPaths
     }
 
+    @ViewBuilder
     private func projectRow(for project: ProjectEntry, isFavoriteSection: Bool) -> some View {
-        HStack(spacing: 6) {
+        let content = HStack(spacing: 6) {
             if self.isSelectMode {
-                Button {
-                    self.toggleProjectSelection(project)
-                } label: {
-                    Image(
-                        systemName: self.isProjectSelected(project)
-                            ? "checkmark.circle.fill" : "circle"
-                    )
-                    .foregroundStyle(
-                        self.isProjectSelected(project) ? Color.accentColor : .secondary
-                    )
-                }
-                .buttonStyle(.borderless)
+                Image(
+                    systemName: self.isProjectSelected(project)
+                        ? "checkmark.circle.fill" : "circle"
+                )
+                .foregroundStyle(
+                    self.isProjectSelected(project) ? Color.accentColor : .secondary
+                )
             }
 
             ProjectRowView(
@@ -268,42 +270,51 @@ struct SidebarView: View {
                 isFavorite: self.viewModel.isFavorite(project)
             )
         }
-        .tag(NavigationSelection.project(project.path ?? ""))
-        .contextMenu {
-            Button {
-                self.viewModel.toggleFavorite(project)
-            } label: {
-                if self.viewModel.isFavorite(project) {
-                    Label("Remove from Favorites", systemImage: "star.slash")
-                } else {
-                    Label("Add to Favorites", systemImage: "star")
+        .contentShape(Rectangle())
+
+        if self.isSelectMode {
+            content.onTapGesture {
+                self.toggleProjectSelection(project)
+            }
+        } else {
+            content
+                .tag(NavigationSelection.project(project.path ?? ""))
+                .contextMenu {
+                    Button {
+                        self.viewModel.toggleFavorite(project)
+                    } label: {
+                        if self.viewModel.isFavorite(project) {
+                            Label("Remove from Favorites", systemImage: "star.slash")
+                        } else {
+                            Label("Add to Favorites", systemImage: "star")
+                        }
+                    }
+
+                    Divider()
+
+                    Button {
+                        self.viewModel.revealInFinder(project)
+                    } label: {
+                        Label("Reveal in Finder", systemImage: "folder")
+                    }
+                    .disabled(!self.viewModel.projectExists(project))
+
+                    Button {
+                        self.viewModel.openInTerminal(project)
+                    } label: {
+                        Label("Open in Terminal", systemImage: "terminal")
+                    }
+                    .disabled(!self.viewModel.projectExists(project))
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        self.projectToDelete = project
+                        self.showDeleteConfirmation = true
+                    } label: {
+                        Label("Remove Project", systemImage: "trash")
+                    }
                 }
-            }
-
-            Divider()
-
-            Button {
-                self.viewModel.revealInFinder(project)
-            } label: {
-                Label("Reveal in Finder", systemImage: "folder")
-            }
-            .disabled(!self.viewModel.projectExists(project))
-
-            Button {
-                self.viewModel.openInTerminal(project)
-            } label: {
-                Label("Open in Terminal", systemImage: "terminal")
-            }
-            .disabled(!self.viewModel.projectExists(project))
-
-            Divider()
-
-            Button(role: .destructive) {
-                self.projectToDelete = project
-                self.showDeleteConfirmation = true
-            } label: {
-                Label("Remove Project", systemImage: "trash")
-            }
         }
     }
 }

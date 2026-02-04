@@ -298,8 +298,9 @@ final class ProjectExplorerViewModel {
 
             try await configManager.writeGlobalConfig(config)
 
+            let pathSet = Set(paths)
+            self.projects.removeAll { pathSet.contains($0.path ?? "") }
             for path in paths {
-                self.projects.removeAll { $0.path == path }
                 self.favoritesStorage.removeProject(path)
             }
 
