@@ -1,5 +1,9 @@
 # Fig
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/1f5228a2-0111-40fc-a5e7-5dc3a29110ca" alt="Fig logo" width="200" />
+</p>
+
 A native macOS application for managing [Claude Code](https://github.com/anthropics/claude-code) configuration.
 
 ## What is Fig?
