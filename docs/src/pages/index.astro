@@ -79,6 +79,15 @@ import { Image } from 'astro:assets';
 				font-weight: 700;
 				font-size: 1.25rem;
 				color: var(--fig-purple);
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+			}
+
+			.nav-logo-img {
+				width: 28px;
+				height: 28px;
+				object-fit: contain;
 			}
 
 			nav .nav-links {
@@ -105,8 +114,8 @@ import { Image } from 'astro:assets';
 				margin: 0 auto;
 			}
 
-			.hero img {
-				width: 140px;
+			.hero-logo {
+				width: 160px;
 				height: auto;
 				margin-bottom: 1.5rem;
 			}
@@ -267,7 +276,7 @@ import { Image } from 'astro:assets';
 	</head>
 	<body>
 		<nav>
-			<div class="logo">Fig</div>
+			<div class="logo"><img src="/fig/fig-logo.png" alt="Fig logo" class="nav-logo-img" /> Fig</div>
 			<ul class="nav-links">
 				<li><a href="/fig/getting-started/">Docs</a></li>
 				<li><a href="https://github.com/utensils/fig">GitHub</a></li>
@@ -275,6 +284,7 @@ import { Image } from 'astro:assets';
 		</nav>
 
 		<section class="hero">
+			<img src="/fig/fig-logo.png" alt="Fig logo" class="hero-logo" />
 			<h1>A visual interface for <span>Claude Code</span> configuration</h1>
 			<p>
 				Stop hand-editing scattered JSON files. Fig discovers your projects

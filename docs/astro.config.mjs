@@ -10,7 +10,7 @@ export default defineConfig({
 		starlight({
 			title: 'Fig',
 			logo: {
-				src: './public/favicon.svg',
+				src: './src/assets/fig-logo.png',
 			},
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/utensils/fig' },
