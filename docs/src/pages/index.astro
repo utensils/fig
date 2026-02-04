@@ -1,0 +1,352 @@
+---
+import { Image } from 'astro:assets';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Fig - Visual Claude Code Configuration</title>
+		<meta name="description" content="A native macOS application for managing Claude Code configuration. Stop hand-editing scattered JSON files." />
+		<meta property="og:title" content="Fig - Visual Claude Code Configuration" />
+		<meta property="og:description" content="A native macOS application for managing Claude Code configuration." />
+		<meta property="og:type" content="website" />
+		<link rel="icon" type="image/svg+xml" href="/fig/favicon.svg" />
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			:root {
+				--fig-purple: #6b3fa0;
+				--fig-purple-dark: #4a2870;
+				--fig-purple-light: #9b6dd7;
+				--fig-lavender: #f3e8ff;
+				--fig-green: #4a8c5c;
+				--fig-orange: #e87f3a;
+				--fig-bg: #ffffff;
+				--fig-text: #1a1a2e;
+				--fig-text-muted: #555;
+				--fig-card-bg: #ffffff;
+				--fig-card-border: #e8e0f0;
+				--fig-code-bg: #1e1e2e;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--fig-purple: #9b6dd7;
+					--fig-purple-dark: #e8d5ff;
+					--fig-purple-light: #6b3fa0;
+					--fig-lavender: #2d1650;
+					--fig-bg: #121218;
+					--fig-text: #e8e0f0;
+					--fig-text-muted: #a0a0b0;
+					--fig-card-bg: #1a1a28;
+					--fig-card-border: #2d2d40;
+				}
+			}
+
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+				background: var(--fig-bg);
+				color: var(--fig-text);
+				line-height: 1.6;
+			}
+
+			a {
+				color: var(--fig-purple);
+				text-decoration: none;
+			}
+
+			a:hover {
+				text-decoration: underline;
+			}
+
+			/* Nav */
+			nav {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				max-width: 1100px;
+				margin: 0 auto;
+				padding: 1rem 1.5rem;
+			}
+
+			nav .logo {
+				font-weight: 700;
+				font-size: 1.25rem;
+				color: var(--fig-purple);
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+			}
+
+			.nav-logo-img {
+				width: 28px;
+				height: 28px;
+				object-fit: contain;
+			}
+
+			nav .nav-links {
+				display: flex;
+				gap: 1.5rem;
+				list-style: none;
+			}
+
+			nav .nav-links a {
+				color: var(--fig-text-muted);
+				font-size: 0.95rem;
+			}
+
+			nav .nav-links a:hover {
+				color: var(--fig-purple);
+				text-decoration: none;
+			}
+
+			/* Hero */
+			.hero {
+				text-align: center;
+				padding: 4rem 1.5rem 3rem;
+				max-width: 800px;
+				margin: 0 auto;
+			}
+
+			.hero-logo {
+				width: 160px;
+				height: auto;
+				margin-bottom: 1.5rem;
+			}
+
+			.hero h1 {
+				font-size: 2.5rem;
+				font-weight: 700;
+				margin-bottom: 1rem;
+				color: var(--fig-text);
+			}
+
+			.hero h1 span {
+				color: var(--fig-purple);
+			}
+
+			.hero p {
+				font-size: 1.2rem;
+				color: var(--fig-text-muted);
+				max-width: 600px;
+				margin: 0 auto 2rem;
+			}
+
+			.hero-actions {
+				display: flex;
+				gap: 1rem;
+				justify-content: center;
+				flex-wrap: wrap;
+			}
+
+			.btn {
+				display: inline-block;
+				padding: 0.75rem 1.5rem;
+				border-radius: 8px;
+				font-weight: 600;
+				font-size: 1rem;
+				transition: opacity 0.2s;
+			}
+
+			.btn:hover {
+				opacity: 0.9;
+				text-decoration: none;
+			}
+
+			.btn-primary {
+				background: var(--fig-purple);
+				color: #fff;
+			}
+
+			.btn-secondary {
+				border: 2px solid var(--fig-purple);
+				color: var(--fig-purple);
+			}
+
+			/* Features */
+			.features {
+				max-width: 1100px;
+				margin: 0 auto;
+				padding: 3rem 1.5rem;
+			}
+
+			.features h2 {
+				text-align: center;
+				font-size: 1.75rem;
+				margin-bottom: 2rem;
+			}
+
+			.feature-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+				gap: 1.5rem;
+			}
+
+			.feature-card {
+				background: var(--fig-card-bg);
+				border: 1px solid var(--fig-card-border);
+				border-radius: 12px;
+				padding: 1.5rem;
+			}
+
+			.feature-card h3 {
+				font-size: 1.1rem;
+				margin-bottom: 0.5rem;
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+			}
+
+			.feature-card p {
+				color: var(--fig-text-muted);
+				font-size: 0.95rem;
+			}
+
+			.feature-icon {
+				font-size: 1.3rem;
+			}
+
+			/* Install */
+			.install {
+				max-width: 700px;
+				margin: 0 auto;
+				padding: 3rem 1.5rem;
+			}
+
+			.install h2 {
+				text-align: center;
+				font-size: 1.75rem;
+				margin-bottom: 1.5rem;
+			}
+
+			.code-block {
+				background: var(--fig-code-bg);
+				color: #cdd6f4;
+				border-radius: 10px;
+				padding: 1.25rem 1.5rem;
+				font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+				font-size: 0.9rem;
+				line-height: 1.7;
+				overflow-x: auto;
+			}
+
+			.code-block .comment {
+				color: #6c7086;
+			}
+
+			/* Footer */
+			footer {
+				text-align: center;
+				padding: 2rem 1.5rem;
+				color: var(--fig-text-muted);
+				font-size: 0.9rem;
+				border-top: 1px solid var(--fig-card-border);
+				max-width: 1100px;
+				margin: 2rem auto 0;
+			}
+
+			footer .footer-links {
+				display: flex;
+				gap: 1.5rem;
+				justify-content: center;
+				margin-bottom: 0.75rem;
+				list-style: none;
+			}
+
+			@media (max-width: 768px) {
+				.hero h1 {
+					font-size: 1.75rem;
+				}
+
+				.hero p {
+					font-size: 1.05rem;
+				}
+
+				.feature-grid {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<nav>
+			<div class="logo"><img src="/fig/fig-logo.png" alt="Fig logo" class="nav-logo-img" /> Fig</div>
+			<ul class="nav-links">
+				<li><a href="/fig/getting-started/">Docs</a></li>
+				<li><a href="https://github.com/utensils/fig">GitHub</a></li>
+			</ul>
+		</nav>
+
+		<section class="hero">
+			<img src="/fig/fig-logo.png" alt="Fig logo" class="hero-logo" />
+			<h1>A visual interface for <span>Claude Code</span> configuration</h1>
+			<p>
+				Stop hand-editing scattered JSON files. Fig discovers your projects
+				and lets you manage settings, MCP servers, and hooks from one native
+				macOS app.
+			</p>
+			<div class="hero-actions">
+				<a href="/fig/getting-started/" class="btn btn-primary">Get Started</a>
+				<a href="https://github.com/utensils/fig" class="btn btn-secondary">View on GitHub</a>
+			</div>
+		</section>
+
+		<section class="features">
+			<h2>Features</h2>
+			<div class="feature-grid">
+				<div class="feature-card">
+					<h3><span class="feature-icon">🔍</span> Project Discovery</h3>
+					<p>Automatically finds your Claude Code projects from ~/.claude.json and common development directories.</p>
+				</div>
+				<div class="feature-card">
+					<h3><span class="feature-icon">🔌</span> MCP Server Management</h3>
+					<p>Add, edit, and copy MCP servers between projects with a visual interface. Supports both stdio and SSE transports.</p>
+				</div>
+				<div class="feature-card">
+					<h3><span class="feature-icon">🪝</span> Visual Hook Composer</h3>
+					<p>Configure Claude Code hooks without writing JSON by hand. Set up PreToolUse, PostToolUse, and other event handlers visually.</p>
+				</div>
+				<div class="feature-card">
+					<h3><span class="feature-icon">✅</span> Config Health Checks</h3>
+					<p>Validates your configuration and highlights potential issues with clear severity levels and resolution guidance.</p>
+				</div>
+				<div class="feature-card">
+					<h3><span class="feature-icon">💾</span> Automatic Backups</h3>
+					<p>Every save creates a timestamped backup so you can always roll back. No data is ever lost.</p>
+				</div>
+				<div class="feature-card">
+					<h3><span class="feature-icon">📋</span> Merged Config Viewer</h3>
+					<p>See the effective configuration with source attribution — know exactly which file each setting comes from.</p>
+				</div>
+			</div>
+		</section>
+
+		<section class="install">
+			<h2>Quick Install</h2>
+			<div class="code-block">
+				<span class="comment"># Clone and build from source</span><br />
+				git clone https://github.com/utensils/fig.git<br />
+				cd fig/Fig<br />
+				swift build<br />
+				<br />
+				<span class="comment"># Or open in Xcode</span><br />
+				open Package.swift
+			</div>
+		</section>
+
+		<footer>
+			<ul class="footer-links">
+				<li><a href="/fig/getting-started/">Documentation</a></li>
+				<li><a href="https://github.com/utensils/fig">GitHub</a></li>
+				<li><a href="https://github.com/utensils/fig/blob/main/LICENSE">MIT License</a></li>
+			</ul>
+			<p>Fig is a native macOS app for managing Claude Code configuration.</p>
+		</footer>
+	</body>
+</html>

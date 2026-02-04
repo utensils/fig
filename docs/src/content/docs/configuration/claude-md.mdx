@@ -1,0 +1,48 @@
+---
+title: CLAUDE.md Editor
+description: Preview and edit CLAUDE.md project instruction files.
+---
+
+The CLAUDE.md Editor lets you view and edit the instruction files that guide Claude Code's behavior in your projects.
+
+## What Is CLAUDE.md?
+
+`CLAUDE.md` files provide project-specific instructions to Claude Code. They can contain:
+
+- Coding conventions and style guidelines
+- Project architecture notes
+- Build and test commands
+- Important context about the codebase
+- Preferred patterns and practices
+
+Claude Code reads these files automatically and follows the instructions when working on your project.
+
+## File Hierarchy
+
+CLAUDE.md files can exist at multiple levels, and Fig shows them in a file tree:
+
+- **Global** — `~/.claude/CLAUDE.md` (applies to all projects)
+- **Project** — `<project>/.claude/CLAUDE.md` (applies to this project)
+
+The sidebar shows which files exist (doc icon) and which can be created (doc with plus icon).
+
+## Preview Mode
+
+Select a CLAUDE.md file to see a rendered Markdown preview. The preview displays:
+
+- The formatted content with headings, lists, code blocks, and other Markdown elements
+- The file path in the toolbar
+- A git status badge indicating if the file is tracked
+
+## Edit Mode
+
+Click the **Edit** button in the toolbar to switch to the text editor. You can modify the Markdown content directly.
+
+When editing:
+- The editor shows the raw Markdown source
+- Click **Save** to write changes to disk
+- Click **Cancel** to discard your edits
+
+## Creating New Files
+
+If a CLAUDE.md file doesn't exist yet at a given level, click the **Create** button to start a new one. Fig will create the file and open it in the editor.

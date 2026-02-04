@@ -1,0 +1,54 @@
+---
+title: Config Health Checks
+description: Validate your Claude Code configuration and find issues.
+---
+
+Fig automatically validates your Claude Code configuration and highlights potential issues, security concerns, and improvement opportunities.
+
+## Severity Levels
+
+Health check findings are categorized by severity:
+
+| Severity | Description |
+|----------|-------------|
+| **Security** | Issues that may expose sensitive data or create security risks |
+| **Warning** | Configuration problems that could cause unexpected behavior |
+| **Suggestion** | Recommendations for better configuration practices |
+| **Good** | Positive findings confirming good practices |
+
+## Health Checks
+
+Fig runs the following checks:
+
+### Security
+
+- **Deny List Security Check** — verifies that appropriate deny rules are in place to prevent dangerous operations
+
+### Warnings
+
+- **Broad Allow Rules Check** — flags overly permissive allow rules that grant more access than necessary
+- **Global Config Size Check** — warns if the global configuration file exceeds 5 MB, which may indicate accumulated data
+- **MCP Hardcoded Secrets Check** — detects API keys, tokens, or other secrets hardcoded in MCP server configurations
+
+### Suggestions
+
+- **Local Settings Check** — suggests using `settings.local.json` for machine-specific settings
+- **MCP Scoping Check** — recommends scoping MCP servers to specific projects rather than configuring them globally
+- **Hook Suggestions Check** — recommends useful hooks based on your project configuration
+
+### Good Practices
+
+- **Good Practices Check** — confirms positive configuration patterns are in place
+
+## Using Health Checks
+
+Open the **Health** tab (tab 7, or **Cmd+7**) in any project's detail view. Findings are listed by severity, with the most critical issues first.
+
+Each finding includes:
+- A clear description of the issue
+- Why it matters
+- Guidance on how to resolve it
+
+## Resolving Issues
+
+Click on any finding to see its details and recommended resolution. Most issues can be fixed directly through Fig's configuration editors by navigating to the relevant tab.

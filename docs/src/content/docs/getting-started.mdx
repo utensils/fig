@@ -1,0 +1,114 @@
+---
+title: Getting Started
+description: Install Fig and get up and running with Claude Code configuration management.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+## System Requirements
+
+- **macOS 14.0** (Sonoma) or later
+- **Xcode 16.0+** (for building from source)
+- **Swift 6.0**
+- [Claude Code](https://github.com/anthropics/claude-code) installed and configured
+
+## Installation
+
+### From Source
+
+<Steps>
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/utensils/fig.git
+   ```
+
+2. Build with Swift Package Manager:
+
+   ```bash
+   cd fig/Fig
+   swift build
+   ```
+
+   Or open `Package.swift` in Xcode and press **Cmd+R** to build and run.
+
+</Steps>
+
+<Aside type="tip">
+A Homebrew Cask formula is planned for future releases to simplify installation.
+</Aside>
+
+## First Run
+
+When you launch Fig for the first time, you'll be guided through a five-step onboarding flow.
+
+### 1. Welcome
+
+The welcome screen introduces Fig and highlights its three core capabilities: project browsing, configuration editing, and MCP server management. You can begin the setup or skip it entirely.
+
+### 2. Permissions
+
+Fig explains which configuration files it needs to read and write:
+
+| File | Purpose |
+|------|---------|
+| `~/.claude.json` | Global project registry |
+| `~/.claude/settings.json` | Global settings |
+| `<project>/.claude/settings.json` | Per-project settings |
+| `<project>/.mcp.json` | MCP server configuration |
+
+Fig accesses these files through standard macOS file system APIs. No special permissions are required beyond normal file access.
+
+### 3. Project Discovery
+
+Fig automatically scans your filesystem for Claude Code projects. It checks:
+
+- Projects registered in `~/.claude.json`
+- Common development directories (`~/code`, `~/Developer`, `~/projects`, `~/src`, and others)
+
+The scan looks for `.claude/` directories up to three levels deep. You'll see a list of discovered projects with their status.
+
+### 4. Feature Tour
+
+A four-page walkthrough covers:
+
+- **Project Explorer** — browsing and navigating your projects
+- **Configuration Editor** — editing settings with a visual interface
+- **MCP Server Management** — adding and configuring MCP servers
+- **Global Settings** — managing system-wide Claude Code settings
+
+You can navigate through each page or skip the tour.
+
+### 5. Completion
+
+A summary screen shows how many projects were discovered. Click **Open Fig** to enter the main application.
+
+## Quick Tour
+
+### Opening a Project
+
+The sidebar lists all discovered projects. Click any project to open its detail view. You can also use **Cmd+K** to open the quick switcher and search for a project by name.
+
+### Viewing Configuration
+
+Project details are organized into tabs:
+
+1. **Permissions** — allow/deny rules with glob patterns
+2. **Environment** — environment variables
+3. **MCP Servers** — configured MCP servers
+4. **Hooks** — Claude Code event hooks
+5. **CLAUDE.md** — project instruction files
+6. **Effective Config** — merged view with source attribution
+7. **Health** — configuration validation results
+8. **Advanced** — raw configuration view
+
+Use **Cmd+1** through **Cmd+8** to switch between tabs.
+
+### Making a Change
+
+Edit any configuration value through the visual interface. Changes are saved to the appropriate configuration file. Fig automatically creates a timestamped backup before every write, so you can always revert.
+
+### Global Settings
+
+Click **Global Settings** at the top of the sidebar (or press **Cmd+,**) to manage system-wide settings that apply to all projects.

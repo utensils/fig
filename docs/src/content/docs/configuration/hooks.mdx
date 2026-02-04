@@ -1,0 +1,70 @@
+---
+title: Visual Hook Composer
+description: Configure Claude Code hooks with a visual editor.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Hooks let you run custom commands when Claude Code performs specific actions. Fig's Visual Hook Composer lets you create and edit hooks without writing JSON by hand.
+
+## What Are Hooks?
+
+Hooks are event handlers that trigger shell commands at specific points during a Claude Code session. They're useful for:
+
+- Running linters or formatters after code changes
+- Logging tool usage for auditing
+- Enforcing project-specific rules
+- Triggering notifications or integrations
+
+## Hook Event Types
+
+Hooks are keyed by event name. Common event types include:
+
+| Event | When It Fires |
+|-------|--------------|
+| **PreToolUse** | Before Claude Code uses a tool |
+| **PostToolUse** | After Claude Code uses a tool |
+| **Notification** | When Claude Code sends a notification |
+| **Stop** | When Claude Code finishes a session |
+
+## Hook Groups
+
+Each event can have multiple hook groups. A hook group defines:
+
+- **Matcher** — an optional pattern that filters when the hook fires (e.g., only for specific tools or file patterns)
+- **Commands** — the shell commands to execute when the hook triggers
+
+### Creating a Hook Group
+
+1. Navigate to the **Hooks** tab in a project's detail view
+2. Select the event type you want to hook into
+3. Add a new hook group
+4. Optionally set a matcher pattern to narrow when it fires
+5. Add one or more commands to execute
+
+### Matcher Patterns
+
+Matchers filter hook execution based on the event context. For example, a `PreToolUse` hook with a matcher of `Write` will only fire before write operations.
+
+## Configuration Storage
+
+Hooks are stored in the `hooks` field of settings files:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "commands": ["echo 'About to write a file'"]
+      }
+    ]
+  }
+}
+```
+
+Hooks from all configuration tiers concatenate — hooks defined at every level will run together.
+
+<Aside type="tip">
+Start with `PostToolUse` hooks for logging and auditing, then add `PreToolUse` hooks as you identify specific workflows to customize.
+</Aside>

@@ -1,0 +1,158 @@
+---
+title: Configuration Files
+description: Reference for all Claude Code configuration files managed by Fig.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Fig manages six Claude Code configuration files. This reference documents each file's location, structure, and role.
+
+## File Overview
+
+| File | Scope | Purpose |
+|------|-------|---------|
+| `~/.claude.json` | Global | User preferences, project history, global MCP servers |
+| `~/.claude/settings.json` | Global | Global settings and permissions |
+| `<project>/.claude/settings.json` | Project | Project-specific settings (shared) |
+| `<project>/.claude/settings.local.json` | Project | Local overrides (gitignored) |
+| `<project>/.mcp.json` | Project | Project MCP server configuration |
+| `<project>/.claude/CLAUDE.md` | Project | Project instructions for Claude Code |
+
+## Configuration Precedence
+
+When the same setting exists in multiple files, the most specific scope wins:
+
+**Project Local > Project Shared > Global**
+
+Different setting types have different merge behaviors:
+
+- **Permissions** — union across all tiers (rules combine)
+- **Environment variables** — more specific tiers override less specific
+- **Hooks** — concatenate across tiers (all hooks run)
+- **Disallowed tools** — union (disabled at any level stays disabled)
+
+## File Schemas
+
+### ~/.claude.json
+
+The global configuration file stores user preferences and project history.
+
+```json
+{
+  "projects": {
+    "/path/to/project": {
+      "lastOpened": "2025-01-15T10:30:00Z"
+    }
+  },
+  "mcpServers": {
+    "server-name": {
+      "command": "npx",
+      "args": ["-y", "some-mcp-server"],
+      "env": {}
+    }
+  }
+}
+```
+
+Key fields:
+- `projects` — map of project paths to metadata (last opened, etc.)
+- `mcpServers` — globally configured MCP servers
+
+### ~/.claude/settings.json
+
+Global settings that apply to all projects.
+
+```json
+{
+  "permissions": {
+    "allow": ["Read(**)"],
+    "deny": ["Bash(rm -rf *)"]
+  },
+  "env": {
+    "EDITOR": "vim"
+  },
+  "hooks": {},
+  "disallowedTools": []
+}
+```
+
+Key fields:
+- `permissions` — global allow and deny rules (glob pattern arrays)
+- `env` — environment variables (key-value strings)
+- `hooks` — event-keyed hook groups
+- `disallowedTools` — array of tool names to disable
+
+### Project settings.json
+
+Project-specific settings at `<project>/.claude/settings.json`. Same schema as the global settings file, scoped to a single project. This file is typically committed to version control.
+
+```json
+{
+  "permissions": {
+    "allow": ["Write(src/**)"],
+    "deny": []
+  },
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "commands": ["npm run lint"]
+      }
+    ]
+  }
+}
+```
+
+### Project settings.local.json
+
+Local overrides at `<project>/.claude/settings.local.json`. Same schema as settings.json. This file is gitignored and used for machine-specific settings.
+
+```json
+{
+  "env": {
+    "API_KEY": "sk-local-development-key"
+  }
+}
+```
+
+<Aside type="tip">
+Use `settings.local.json` for API keys, local paths, and other values that differ between machines or developers.
+</Aside>
+
+### .mcp.json
+
+Project MCP server configuration at the project root.
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "env": {}
+    },
+    "remote-api": {
+      "type": "http",
+      "url": "https://api.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer token"
+      }
+    }
+  }
+}
+```
+
+Each server entry supports:
+- **Stdio servers**: `command`, `args`, `env`
+- **HTTP servers**: `type: "http"`, `url`, `headers`
+
+### CLAUDE.md
+
+Markdown instruction files at `<project>/.claude/CLAUDE.md` (or `~/.claude/CLAUDE.md` for global). These are free-form Markdown files with no required schema.
+
+## Round-Trip Safety
+
+Fig preserves unknown JSON keys during editing. If a configuration file contains fields that Fig doesn't directly manage, those fields are retained when Fig saves the file. This prevents data loss when Claude Code adds new configuration options.

@@ -87,13 +87,17 @@ Fig manages these Claude Code configuration files:
 | `<project>/.claude/settings.local.json` | Project | Local overrides (gitignored) |
 | `<project>/.mcp.json` | Project | Project MCP server configuration |
 
+## Documentation
+
+Full documentation is available at **[utensils.github.io/fig](https://utensils.github.io/fig/)**.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## Status
 
-Fig is in early development. See the [GitHub Issues](https://github.com/doomspork/fig/issues) for the roadmap and current progress.
+Fig is in early development. See the [GitHub Issues](https://github.com/utensils/fig/issues) for the roadmap and current progress.
 
 ## License
 
