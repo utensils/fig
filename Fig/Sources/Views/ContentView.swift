@@ -11,6 +11,7 @@ struct ContentView: View {
             DetailView(selection: self.selection)
         }
         .navigationSplitViewStyle(.balanced)
+        .focusedSceneValue(\.navigationSelection, self.$selection)
         .onKeyPress(keys: [KeyEquivalent("k")], phases: .down) { press in
             guard press.modifiers.contains(.command) else {
                 return .ignored

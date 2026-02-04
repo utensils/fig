@@ -162,6 +162,7 @@ struct GlobalSettingsDetailView: View {
             }
         }
         .frame(minWidth: 500)
+        .focusedSceneValue(\.globalSettingsTab, self.$viewModel.selectedTab)
         .task {
             await self.viewModel.load()
         }
