@@ -88,6 +88,52 @@ struct SidebarView: View {
         )
         .navigationTitle("Fig")
         .frame(minWidth: 220)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if !self.viewModel.projects.isEmpty {
+                    Button(self.isSelectMode ? "Done" : "Select") {
+                        self.toggleSelectMode()
+                    }
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if self.isSelectMode {
+                VStack(spacing: 0) {
+                    Divider()
+                    HStack {
+                        Button {
+                            if self.allProjectsSelected {
+                                self.selectedProjectPaths.removeAll()
+                            } else {
+                                self.selectAllProjects()
+                            }
+                        } label: {
+                            Text(self.allProjectsSelected ? "Deselect All" : "Select All")
+                        }
+                        .buttonStyle(.borderless)
+
+                        Spacer()
+
+                        if !self.selectedProjectPaths.isEmpty {
+                            Text("\(self.selectedProjectPaths.count) selected")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Button("Remove") {
+                            self.showBulkDeleteConfirmation = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
+                        .disabled(self.selectedProjectPaths.isEmpty)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(.bar)
+                }
+            }
+        }
         .task {
             await self.viewModel.loadProjects()
         }
@@ -114,6 +160,9 @@ struct SidebarView: View {
                     if case let .project(path) = self.selection, path == project.path {
                         self.selection = nil
                     }
+                    if let path = project.path {
+                        self.selectedProjectPaths.remove(path)
+                    }
                     await self.viewModel.deleteProject(project)
                 }
             }
@@ -124,56 +173,148 @@ struct SidebarView: View {
                     " The project directory will not be affected."
             )
         }
+        .alert(
+            "Remove \(self.selectedProjectPaths.count) Project\(self.selectedProjectPaths.count == 1 ? "" : "s")",
+            isPresented: self.$showBulkDeleteConfirmation
+        ) {
+            Button("Cancel", role: .cancel) {}
+            Button("Remove \(self.selectedProjectPaths.count)", role: .destructive) {
+                Task {
+                    if case let .project(path) = self.selection,
+                       self.selectedProjectPaths.contains(path)
+                    {
+                        self.selection = nil
+                    }
+                    let projectsToDelete = self.viewModel.projects.filter { project in
+                        guard let path = project.path else { return false }
+                        return self.selectedProjectPaths.contains(path)
+                    }
+                    await self.viewModel.deleteProjects(projectsToDelete)
+                    self.selectedProjectPaths.removeAll()
+                    self.isSelectMode = false
+                }
+            }
+        } message: {
+            let count = self.selectedProjectPaths.count
+            Text(
+                "Are you sure you want to remove \(count) project\(count == 1 ? "" : "s") from your configuration?" +
+                    " The project directories will not be affected."
+            )
+        }
     }
 
     // MARK: Private
 
     @State private var showDeleteConfirmation = false
     @State private var projectToDelete: ProjectEntry?
+    @State private var isSelectMode = false
+    @State private var selectedProjectPaths: Set<String> = []
+    @State private var showBulkDeleteConfirmation = false
 
+    private var visibleProjectPaths: Set<String> {
+        let favorites = self.viewModel.favoriteProjects.compactMap(\.path)
+        let recents = self.viewModel.recentProjects.compactMap(\.path)
+        let filtered = self.viewModel.filteredProjects.compactMap(\.path)
+        return Set(favorites + recents + filtered)
+    }
+
+    private var allProjectsSelected: Bool {
+        let visible = self.visibleProjectPaths
+        return !visible.isEmpty && visible.isSubset(of: self.selectedProjectPaths)
+    }
+
+    private func toggleSelectMode() {
+        withAnimation {
+            self.isSelectMode.toggle()
+            if !self.isSelectMode {
+                self.selectedProjectPaths.removeAll()
+            }
+        }
+    }
+
+    private func toggleProjectSelection(_ project: ProjectEntry) {
+        guard let path = project.path else { return }
+        if self.selectedProjectPaths.contains(path) {
+            self.selectedProjectPaths.remove(path)
+        } else {
+            self.selectedProjectPaths.insert(path)
+        }
+    }
+
+    private func isProjectSelected(_ project: ProjectEntry) -> Bool {
+        guard let path = project.path else { return false }
+        return self.selectedProjectPaths.contains(path)
+    }
+
+    private func selectAllProjects() {
+        self.selectedProjectPaths = self.visibleProjectPaths
+    }
+
+    @ViewBuilder
     private func projectRow(for project: ProjectEntry, isFavoriteSection: Bool) -> some View {
-        ProjectRowView(
-            project: project,
-            exists: self.viewModel.projectExists(project),
-            mcpCount: self.viewModel.mcpServerCount(for: project),
-            isFavorite: self.viewModel.isFavorite(project)
-        )
-        .tag(NavigationSelection.project(project.path ?? ""))
-        .contextMenu {
-            Button {
-                self.viewModel.toggleFavorite(project)
-            } label: {
-                if self.viewModel.isFavorite(project) {
-                    Label("Remove from Favorites", systemImage: "star.slash")
-                } else {
-                    Label("Add to Favorites", systemImage: "star")
+        let content = HStack(spacing: 6) {
+            if self.isSelectMode {
+                Image(
+                    systemName: self.isProjectSelected(project)
+                        ? "checkmark.circle.fill" : "circle"
+                )
+                .foregroundStyle(
+                    self.isProjectSelected(project) ? Color.accentColor : .secondary
+                )
+            }
+
+            ProjectRowView(
+                project: project,
+                exists: self.viewModel.projectExists(project),
+                mcpCount: self.viewModel.mcpServerCount(for: project),
+                isFavorite: self.viewModel.isFavorite(project)
+            )
+        }
+        .contentShape(Rectangle())
+
+        if self.isSelectMode {
+            content.onTapGesture {
+                self.toggleProjectSelection(project)
+            }
+        } else {
+            content
+                .tag(NavigationSelection.project(project.path ?? ""))
+                .contextMenu {
+                    Button {
+                        self.viewModel.toggleFavorite(project)
+                    } label: {
+                        if self.viewModel.isFavorite(project) {
+                            Label("Remove from Favorites", systemImage: "star.slash")
+                        } else {
+                            Label("Add to Favorites", systemImage: "star")
+                        }
+                    }
+
+                    Divider()
+
+                    Button {
+                        self.viewModel.revealInFinder(project)
+                    } label: {
+                        Label("Reveal in Finder", systemImage: "folder")
+                    }
+                    .disabled(!self.viewModel.projectExists(project))
+
+                    Button {
+                        self.viewModel.openInTerminal(project)
+                    } label: {
+                        Label("Open in Terminal", systemImage: "terminal")
+                    }
+                    .disabled(!self.viewModel.projectExists(project))
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        self.projectToDelete = project
+                        self.showDeleteConfirmation = true
+                    } label: {
+                        Label("Remove Project", systemImage: "trash")
+                    }
                 }
-            }
-
-            Divider()
-
-            Button {
-                self.viewModel.revealInFinder(project)
-            } label: {
-                Label("Reveal in Finder", systemImage: "folder")
-            }
-            .disabled(!self.viewModel.projectExists(project))
-
-            Button {
-                self.viewModel.openInTerminal(project)
-            } label: {
-                Label("Open in Terminal", systemImage: "terminal")
-            }
-            .disabled(!self.viewModel.projectExists(project))
-
-            Divider()
-
-            Button(role: .destructive) {
-                self.projectToDelete = project
-                self.showDeleteConfirmation = true
-            } label: {
-                Label("Remove Project", systemImage: "trash")
-            }
         }
     }
 }
