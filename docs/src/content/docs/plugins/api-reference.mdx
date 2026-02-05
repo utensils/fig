@@ -1,0 +1,371 @@
+---
+title: Plugin API Reference
+description: Complete reference for the Fig plugin Lua API.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This page documents all modules and functions available to Fig plugins through the `fig.*` Lua API.
+
+## API Modules
+
+| Module | Capabilities Required | Description |
+|--------|----------------------|-------------|
+| `fig.version` | None | Fig version information |
+| `fig.log` | None | Logging functions |
+| `fig.config` | `config:read:*`, `config:write:*` | Configuration access |
+| `fig.health` | `health:register`, `health:findings` | Health check registration |
+| `fig.preset` | `preset:register` | Permission preset registration |
+| `fig.fs` | `fs:read:project`, `fs:exists` | Sandboxed file access |
+
+---
+
+## fig.version
+
+Version information about Fig and the plugin API.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `fig.version.app` | string | Fig application version (e.g., `"1.0.0"`) |
+| `fig.version.build` | string | Build number |
+| `fig.version.api` | string | Plugin API version (e.g., `"1.0"`) |
+
+### Example
+
+```lua
+fig.log.info("Running on Fig " .. fig.version.app)
+```
+
+---
+
+## fig.log
+
+Logging functions for debugging and diagnostics.
+
+<Aside type="note">
+All log messages are automatically prefixed with your plugin ID for easy identification.
+</Aside>
+
+### Functions
+
+#### fig.log.debug(message)
+
+Log a debug message.
+
+```lua
+fig.log.debug("Processing rule: " .. rule)
+```
+
+#### fig.log.info(message)
+
+Log an informational message.
+
+```lua
+fig.log.info("Plugin loaded successfully")
+```
+
+#### fig.log.warning(message)
+
+Log a warning message.
+
+```lua
+fig.log.warning("Deprecated configuration detected")
+```
+
+#### fig.log.error(message)
+
+Log an error message.
+
+```lua
+fig.log.error("Failed to parse configuration")
+```
+
+---
+
+## fig.config
+
+Read and write Claude Code configuration.
+
+<Aside type="caution">
+Write operations require sensitive capabilities (`config:write:project` or `config:write:local`) and will prompt for user approval.
+</Aside>
+
+### Functions
+
+#### fig.config.getGlobal(key)
+
+**Requires:** `config:read:global`
+
+Read a value from global settings (`~/.claude/settings.json`).
+
+```lua
+local value = fig.config.getGlobal("permissions")
+```
+
+#### fig.config.getProject(key)
+
+**Requires:** `config:read:project`
+
+Read a value from project settings (`.claude/settings.json`).
+
+```lua
+local hooks = fig.config.getProject("hooks")
+```
+
+#### fig.config.setProject(key, value)
+
+**Requires:** `config:write:project`
+
+Write a value to project settings.
+
+```lua
+fig.config.setProject("env", { MY_VAR = "value" })
+```
+
+#### fig.config.setLocal(key, value)
+
+**Requires:** `config:write:local`
+
+Write a value to local settings (`.claude/settings.local.json`).
+
+```lua
+fig.config.setLocal("env", { DEBUG = "true" })
+```
+
+---
+
+## fig.health
+
+Health check registration and finding creation.
+
+### Functions
+
+#### fig.health.registerCheck(id, checkFunction)
+
+**Requires:** `health:register`
+
+Register a health check function.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Unique identifier for this check |
+| `checkFunction` | function | Function receiving context, returning findings array |
+
+```lua
+fig.health.registerCheck("MyCheck", function(context)
+    local findings = {}
+    -- ... analyze context ...
+    return findings
+end)
+```
+
+#### fig.health.finding(options)
+
+**Requires:** `health:findings`
+
+Create a health check finding.
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `severity` | string | Yes | Severity level (use `fig.health.severity.*`) |
+| `title` | string | Yes | Short title for the finding |
+| `description` | string | Yes | Detailed description |
+| `autoFix` | table | No | Auto-fix action (use `fig.health.autoFix.*`) |
+
+```lua
+fig.health.finding({
+    severity = fig.health.severity.WARNING,
+    title = "Issue detected",
+    description = "Description of the issue and how to fix it",
+    autoFix = fig.health.autoFix.addRule("Read(.env)")
+})
+```
+
+### Constants
+
+#### fig.health.severity
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `CRITICAL` | `"critical"` | Security risk |
+| `WARNING` | `"warning"` | Configuration problem |
+| `SUGGESTION` | `"suggestion"` | Improvement recommendation |
+| `INFO` | `"info"` | Positive feedback |
+
+### Auto-Fix Helpers
+
+#### fig.health.autoFix.addRule(pattern)
+
+Create an auto-fix that adds a rule to the deny list.
+
+```lua
+autoFix = fig.health.autoFix.addRule("Read(.env)")
+```
+
+#### fig.health.autoFix.createLocalSettings()
+
+Create an auto-fix that creates `settings.local.json`.
+
+```lua
+autoFix = fig.health.autoFix.createLocalSettings()
+```
+
+---
+
+## fig.preset
+
+Permission preset registration.
+
+### Functions
+
+#### fig.preset.registerPermissionPreset(options)
+
+**Requires:** `preset:register`
+
+Register a permission preset for the UI.
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `id` | string | Yes | Unique preset identifier |
+| `name` | string | Yes | Display name |
+| `category` | string | No | Category for grouping |
+| `rules` | table | Yes | Array of rule objects |
+
+```lua
+fig.preset.registerPermissionPreset({
+    id = "security-baseline",
+    name = "Security Baseline",
+    category = "security",
+    rules = {
+        { rule = "Read(.env)", type = "deny" },
+        { rule = "Read(secrets/**)", type = "deny" },
+        { rule = "Bash(rm -rf *)", type = "deny" }
+    }
+})
+```
+
+---
+
+## fig.fs
+
+Sandboxed filesystem access.
+
+<Aside type="caution">
+File access is restricted to files within your plugin's directory for security.
+</Aside>
+
+### Functions
+
+#### fig.fs.exists(path)
+
+**Requires:** `fs:exists`
+
+Check if a file exists within the plugin directory.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `path` | string | Relative path within plugin directory |
+
+```lua
+if fig.fs.exists("config.json") then
+    fig.log.info("Config file found")
+end
+```
+
+#### fig.fs.readFile(path)
+
+**Requires:** `fs:read:project`
+
+Read a file's contents within the plugin directory.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `path` | string | Relative path within plugin directory |
+
+Returns `nil` if the file doesn't exist or is outside the plugin directory.
+
+```lua
+local contents = fig.fs.readFile("data.json")
+if contents then
+    -- parse contents
+end
+```
+
+---
+
+## Health Check Context
+
+The context table passed to health check functions contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `denyRules` | table | Array of deny rules from all config sources |
+| `allowRules` | table | Array of allow rules from all config sources |
+| `mcpServers` | table | Map of server name → `{ env = {}, headers = {} }` |
+| `localSettingsExists` | boolean | `true` if `settings.local.json` exists |
+| `mcpConfigExists` | boolean | `true` if `.mcp.json` exists |
+| `globalConfigFileSize` | number | Size of `~/.claude.json` in bytes (or `nil`) |
+| `hasGlobalMCPServers` | boolean | `true` if global MCP servers configured |
+| `hasHooks` | boolean | `true` if any hooks configured |
+
+### Example Context Usage
+
+```lua
+fig.health.registerCheck("FullExample", function(context)
+    local findings = {}
+
+    -- Check deny rules
+    for _, rule in ipairs(context.denyRules) do
+        fig.log.debug("Found deny rule: " .. rule)
+    end
+
+    -- Check MCP servers
+    for name, server in pairs(context.mcpServers) do
+        if server.env then
+            for key, value in pairs(server.env) do
+                -- Check for hardcoded secrets...
+            end
+        end
+    end
+
+    -- Check boolean flags
+    if not context.localSettingsExists then
+        table.insert(findings, fig.health.finding({
+            severity = fig.health.severity.SUGGESTION,
+            title = "No local settings",
+            description = "Consider creating settings.local.json",
+            autoFix = fig.health.autoFix.createLocalSettings()
+        }))
+    end
+
+    return findings
+end)
+```
+
+---
+
+## Capabilities Reference
+
+| Capability | Description | Sensitive |
+|------------|-------------|-----------|
+| `config:read:global` | Read global Claude Code settings | No |
+| `config:read:project` | Read project-level settings | No |
+| `config:read:mcp` | Read MCP server configurations | No |
+| `config:write:project` | Modify project settings | **Yes** |
+| `config:write:local` | Modify local settings | **Yes** |
+| `health:register` | Register health checks | No |
+| `health:findings` | Create health check findings | No |
+| `health:autofix` | Provide automatic fixes | **Yes** |
+| `preset:register` | Register permission presets | No |
+| `mcp:template:register` | Register MCP server templates | No |
+| `hook:template:register` | Register hook templates | No |
+| `event:subscribe` | Subscribe to lifecycle events | No |
+| `ui:notification` | Show user notifications | No |
+| `fs:read:project` | Read files in plugin directory | **Yes** |
+| `fs:exists` | Check if files exist | No |
+
+<Aside type="note">
+**Sensitive capabilities** require explicit user approval before the plugin can use them.
+</Aside>

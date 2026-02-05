@@ -1,0 +1,255 @@
+---
+title: Creating Plugins
+description: Build custom Lua plugins to extend Fig's functionality.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+Learn how to create custom Lua plugins for Fig to add your own health checks, permission presets, and more.
+
+## Plugin Structure
+
+A Fig plugin is a directory containing at minimum:
+
+```
+my-plugin/
+├── plugin.json    # Plugin manifest (required)
+└── init.lua       # Entry point (required)
+```
+
+## Plugin Manifest
+
+The `plugin.json` file describes your plugin's metadata and requirements:
+
+```json
+{
+  "id": "com.example.my-plugin",
+  "name": "My Custom Plugin",
+  "version": "1.0.0",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "summary": "A brief description (max 140 characters)",
+  "description": "A longer description of what your plugin does.",
+  "category": "health-checks",
+  "main": "init.lua",
+  "capabilities": [
+    "health:register",
+    "health:findings"
+  ]
+}
+```
+
+### Manifest Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | Yes | Unique identifier (reverse domain notation recommended) |
+| `name` | Yes | Human-readable name |
+| `version` | Yes | Semantic version (e.g., `1.0.0`) |
+| `author` | Yes | Object with `name` and optional `email` |
+| `summary` | Yes | Brief description (max 140 characters) |
+| `description` | No | Longer description |
+| `category` | Yes | One of: `health-checks`, `presets`, `workflows`, `mcp-templates`, `other` |
+| `main` | Yes | Entry point Lua file |
+| `capabilities` | No | Array of required capabilities |
+
+## Creating a Health Check Plugin
+
+<Steps>
+
+1. Create the plugin directory
+
+   ```bash
+   mkdir -p ~/.fig/plugins/my-health-check
+   ```
+
+2. Create `plugin.json`
+
+   ```json
+   {
+     "id": "com.example.my-health-check",
+     "name": "My Health Check",
+     "version": "1.0.0",
+     "author": { "name": "Your Name" },
+     "summary": "Custom health checks for my projects",
+     "category": "health-checks",
+     "main": "init.lua",
+     "capabilities": [
+       "health:register",
+       "health:findings",
+       "config:read:project"
+     ]
+   }
+   ```
+
+3. Create `init.lua`
+
+   ```lua
+   -- Register a custom health check
+   fig.health.registerCheck("MyCustomCheck", function(context)
+       local findings = {}
+
+       -- Check for a specific condition
+       local allowRules = context.allowRules or {}
+
+       for _, rule in ipairs(allowRules) do
+           if string.find(rule, "dangerous", 1, true) then
+               table.insert(findings, fig.health.finding({
+                   severity = fig.health.severity.WARNING,
+                   title = "Potentially dangerous allow rule",
+                   description = "Found an allow rule containing 'dangerous': " .. rule
+               }))
+           end
+       end
+
+       return findings
+   end)
+
+   fig.log.info("My health check plugin loaded!")
+   ```
+
+4. Restart Fig to discover the new plugin
+
+</Steps>
+
+## Health Check Context
+
+Your health check function receives a `context` table with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `denyRules` | table | Array of all deny rules from all config sources |
+| `allowRules` | table | Array of all allow rules from all config sources |
+| `mcpServers` | table | Map of MCP server name → server config |
+| `localSettingsExists` | boolean | Whether `settings.local.json` exists |
+| `mcpConfigExists` | boolean | Whether `.mcp.json` exists |
+| `globalConfigFileSize` | number | Size of `~/.claude.json` in bytes |
+| `hasGlobalMCPServers` | boolean | Whether global MCP servers are configured |
+| `hasHooks` | boolean | Whether any hooks are configured |
+
+## Creating Findings
+
+Use `fig.health.finding()` to create findings:
+
+```lua
+fig.health.finding({
+    severity = fig.health.severity.WARNING,
+    title = "Short title",
+    description = "Detailed description of the issue",
+    autoFix = fig.health.autoFix.addRule("Read(.env)")  -- optional
+})
+```
+
+### Severity Levels
+
+| Constant | Description |
+|----------|-------------|
+| `fig.health.severity.CRITICAL` | Security risk requiring immediate attention |
+| `fig.health.severity.WARNING` | Configuration issue that could cause problems |
+| `fig.health.severity.SUGGESTION` | Recommendation for improvement |
+| `fig.health.severity.INFO` | Positive feedback about good practices |
+
+### Auto-Fix Options
+
+| Function | Description |
+|----------|-------------|
+| `fig.health.autoFix.addRule(pattern)` | Add a rule to the deny list |
+| `fig.health.autoFix.createLocalSettings()` | Create `settings.local.json` |
+
+## Plugin Lifecycle Functions
+
+Optionally implement these functions for lifecycle hooks:
+
+```lua
+-- Called after plugin is loaded
+function plugin_init()
+    fig.log.info("Plugin initialized")
+end
+
+-- Called before plugin is unloaded
+function plugin_cleanup()
+    fig.log.info("Plugin cleaning up")
+end
+```
+
+## Logging
+
+Use the `fig.log` module for debugging:
+
+```lua
+fig.log.debug("Debug message")
+fig.log.info("Info message")
+fig.log.warning("Warning message")
+fig.log.error("Error message")
+```
+
+<Aside type="tip">
+Log messages appear in Fig's console with your plugin ID prefix, making it easy to identify which plugin generated them.
+</Aside>
+
+## Testing Your Plugin
+
+1. Place your plugin in `~/.fig/plugins/`
+2. Restart Fig to discover the plugin
+3. Open a project and navigate to the **Health** tab
+4. Your custom health check findings should appear
+
+## Security Considerations
+
+<Aside type="caution">
+Plugins run in a sandboxed environment. The following restrictions apply:
+
+- No shell command execution (`os.execute` removed)
+- No arbitrary file I/O (`io.*` removed)
+- No debug introspection (`debug.*` removed)
+- No loading external Lua files (`loadfile`, `dofile` removed)
+- File access limited to plugin directory
+</Aside>
+
+## Example: Complete Health Check Plugin
+
+Here's a complete example that checks for common issues:
+
+```lua
+-- init.lua for com.example.project-standards
+
+-- Check for README.md mention in CLAUDE.md
+fig.health.registerCheck("ClaudeDocumentation", function(context)
+    local findings = {}
+
+    -- This is a suggestion-level check
+    if not context.hasHooks then
+        table.insert(findings, fig.health.finding({
+            severity = fig.health.severity.SUGGESTION,
+            title = "Consider adding pre-commit hooks",
+            description = "Hooks can run formatters and linters automatically. " ..
+                "This helps maintain code quality when Claude makes changes."
+        }))
+    end
+
+    return findings
+end)
+
+-- Check for overly permissive network access
+fig.health.registerCheck("NetworkPermissions", function(context)
+    local findings = {}
+    local allowRules = context.allowRules or {}
+
+    for _, rule in ipairs(allowRules) do
+        if string.find(rule, "WebFetch(*)", 1, true) then
+            table.insert(findings, fig.health.finding({
+                severity = fig.health.severity.WARNING,
+                title = "Unrestricted web access allowed",
+                description = "The rule '" .. rule .. "' allows fetching any URL. " ..
+                    "Consider restricting to specific domains."
+            }))
+        end
+    end
+
+    return findings
+end)
+
+fig.log.info("Project standards plugin loaded")
+```

@@ -1,0 +1,77 @@
+---
+title: Plugin System Overview
+description: Extend Fig with Lua plugins for custom health checks, presets, and automation.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Fig includes a powerful Lua-based plugin system that enables third-party extensions for health checks, permission presets, MCP templates, and more.
+
+## What Are Plugins?
+
+Plugins are self-contained Lua scripts that extend Fig's functionality. They can:
+
+- **Register custom health checks** to validate your Claude Code configuration
+- **Contribute permission presets** for common use cases
+- **Register MCP server templates** for quick setup
+- **Subscribe to lifecycle events** for automation
+
+## Security Model
+
+Fig's plugin system is built with security in mind:
+
+| Feature | Description |
+|---------|-------------|
+| **Sandboxed Execution** | Plugins run in a restricted Lua environment with dangerous functions removed |
+| **Capability-Based Permissions** | Plugins must declare required capabilities and sensitive operations require user approval |
+| **File Access Restrictions** | Plugins can only access files within their own directory |
+
+<Aside type="note">
+Dangerous Lua functions like `os.execute`, `io.*`, `debug.*`, `loadfile`, and `dofile` are completely removed from the sandbox.
+</Aside>
+
+## Plugin Locations
+
+Fig searches for plugins in the following locations (in order of precedence):
+
+1. **Built-in plugins** — Bundled with Fig in `Resources/Plugins/`
+2. **User plugins** — `~/.fig/plugins/`
+3. **App Support plugins** — `~/Library/Application Support/Fig/plugins/`
+
+## Plugin Lifecycle
+
+Plugins go through the following states:
+
+```
+discovered → loading → active
+                ↓
+              error
+                ↓
+            disabled
+```
+
+| State | Description |
+|-------|-------------|
+| **Discovered** | Plugin found but not yet loaded |
+| **Loading** | Plugin is being initialized |
+| **Active** | Plugin loaded and running |
+| **Error** | Plugin encountered an error during load or execution |
+| **Disabled** | Plugin disabled by user |
+
+## Built-in Plugins
+
+Fig ships with three built-in plugins that provide core health check functionality:
+
+- **Security Checks** (`com.fig.builtin.security`) — Validates security best practices
+- **Configuration Suggestions** (`com.fig.builtin.suggestions`) — Recommends configuration improvements
+- **Good Practices** (`com.fig.builtin.good-practices`) — Confirms positive configuration patterns
+
+See [Built-in Plugins](/fig/plugins/built-in/) for details on each plugin's checks.
+
+## Getting Started
+
+To learn more about the plugin system:
+
+- [Built-in Plugins](/fig/plugins/built-in/) — What's included out of the box
+- [Creating Plugins](/fig/plugins/creating-plugins/) — Build your own plugins
+- [Plugin API Reference](/fig/plugins/api-reference/) — Complete API documentation

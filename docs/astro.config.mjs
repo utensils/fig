@@ -45,6 +45,15 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'Plugins',
+					items: [
+						{ label: 'Plugin System Overview', slug: 'plugins/overview' },
+						{ label: 'Built-in Plugins', slug: 'plugins/built-in' },
+						{ label: 'Creating Plugins', slug: 'plugins/creating-plugins' },
+						{ label: 'Plugin API Reference', slug: 'plugins/api-reference' },
+					],
+				},
+				{
 					label: 'Reference',
 					items: [
 						{ label: 'Configuration Files', slug: 'reference/config-files' },
