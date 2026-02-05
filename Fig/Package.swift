@@ -28,6 +28,9 @@ let package = Package(
                 .product(name: "SwiftyLua", package: "SwiftyLua"),
             ],
             path: "Sources",
+            resources: [
+                .copy("../Resources/Plugins"),
+            ],
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
             ],

@@ -1,0 +1,19 @@
+{
+  "id": "com.fig.builtin.good-practices",
+  "name": "Good Practices",
+  "version": "1.0.0",
+  "author": {
+    "name": "Fig Team",
+    "email": "fig@anthropic.com"
+  },
+  "summary": "Reports good practices already in place",
+  "description": "Provides positive feedback about good configuration practices you've already implemented, such as protecting sensitive files and using project-scoped settings.",
+  "category": "health-checks",
+  "main": "init.lua",
+  "capabilities": [
+    "health:register",
+    "health:findings",
+    "config:read:global",
+    "config:read:project"
+  ]
+}

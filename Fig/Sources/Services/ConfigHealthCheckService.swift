@@ -344,7 +344,7 @@ struct GoodPracticesCheck: HealthCheck {
 
 /// Service that runs all health checks and returns aggregated findings.
 enum ConfigHealthCheckService {
-    /// All registered health checks, run in order.
+    /// All registered built-in Swift health checks, run in order.
     static let checks: [any HealthCheck] = [
         DenyListSecurityCheck(),
         BroadAllowRulesCheck(),
@@ -357,9 +357,16 @@ enum ConfigHealthCheckService {
     ]
 
     /// Runs all health checks and returns findings sorted by severity.
+    ///
+    /// This synchronous version only runs built-in Swift checks.
+    /// Use `runAllChecksAsync` to include plugin health checks.
+    ///
+    /// - Parameter context: The health check context
+    /// - Returns: Array of findings from built-in Swift checks only
     static func runAllChecks(context: HealthCheckContext) -> [Finding] {
         var findings: [Finding] = []
 
+        // Run built-in Swift checks
         for check in self.checks {
             let results = check.check(context: context)
             findings.append(contentsOf: results)
@@ -369,6 +376,34 @@ enum ConfigHealthCheckService {
         findings.sort { $0.severity < $1.severity }
 
         Log.general.info("Health check completed: \(findings.count) findings")
+        return findings
+    }
+
+    /// Runs all health checks including plugin-registered checks.
+    ///
+    /// This async method runs both built-in Swift checks and any health checks
+    /// registered by Lua plugins through `LuaPluginService`.
+    ///
+    /// - Parameter context: The health check context
+    /// - Returns: Array of findings from all checks, sorted by severity
+    static func runAllChecksAsync(context: HealthCheckContext) async -> [Finding] {
+        var findings: [Finding] = []
+
+        // Run built-in Swift checks
+        for check in self.checks {
+            let results = check.check(context: context)
+            findings.append(contentsOf: results)
+        }
+
+        // Run plugin health checks
+        let pluginFindings = await LuaPluginService.shared.executeHealthChecks(context: context)
+        findings.append(contentsOf: pluginFindings)
+
+        // Sort by severity (security first, then warning, suggestion, good)
+        findings.sort { $0.severity < $1.severity }
+
+        let pluginCount = pluginFindings.count
+        Log.general.info("Health check completed: \(findings.count) findings (\(pluginCount) from plugins)")
         return findings
     }
 }
