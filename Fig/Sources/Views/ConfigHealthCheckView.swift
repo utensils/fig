@@ -23,7 +23,7 @@ struct ConfigHealthCheckView: View {
                 // Summary header
                 HealthCheckHeaderView(
                     healthVM: self.healthCheckVM,
-                    onRunChecks: { self.runChecks() }
+                    onRunChecks: { Task { await self.runChecks() } }
                 )
 
                 if self.healthCheckVM.isRunning {
@@ -54,7 +54,7 @@ struct ConfigHealthCheckView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .task {
-            self.runChecks()
+            await self.runChecks()
         }
     }
 
@@ -62,8 +62,8 @@ struct ConfigHealthCheckView: View {
 
     @State private var healthCheckVM: ConfigHealthCheckViewModel
 
-    private func runChecks() {
-        self.healthCheckVM.runChecks(
+    private func runChecks() async {
+        await self.healthCheckVM.runChecks(
             globalSettings: self.viewModel.globalSettings,
             projectSettings: self.viewModel.projectSettings,
             projectLocalSettings: self.viewModel.projectLocalSettings,

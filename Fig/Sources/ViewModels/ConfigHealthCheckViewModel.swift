@@ -49,6 +49,9 @@ final class ConfigHealthCheckViewModel {
     }
 
     /// Runs all health checks against the current project configuration.
+    ///
+    /// This method runs both built-in Swift health checks and any health checks
+    /// registered by Lua plugins.
     func runChecks(
         globalSettings: ClaudeSettings?,
         projectSettings: ClaudeSettings?,
@@ -57,7 +60,7 @@ final class ConfigHealthCheckViewModel {
         legacyConfig: LegacyConfig?,
         localSettingsExists: Bool,
         mcpConfigExists: Bool
-    ) {
+    ) async {
         self.isRunning = true
 
         let context = HealthCheckContext(
@@ -72,7 +75,7 @@ final class ConfigHealthCheckViewModel {
             globalConfigFileSize: self.getGlobalConfigFileSize()
         )
 
-        self.findings = ConfigHealthCheckService.runAllChecks(context: context)
+        self.findings = await ConfigHealthCheckService.runAllChecksAsync(context: context)
         self.lastRunDate = Date()
         self.isRunning = false
     }
