@@ -12,6 +12,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             NSApp.activate(ignoringOtherApps: true)
             NSApp.windows.first?.makeKeyAndOrderFront(nil)
         }
+
+        // Initialize the plugin system
+        Task {
+            await LuaPluginService.shared.initialize()
+        }
     }
 }
 
