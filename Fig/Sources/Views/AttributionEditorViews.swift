@@ -12,9 +12,9 @@ struct AttributionSettingsEditorView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Target selector
-                if !viewModel.isGlobalMode {
+                if !self.viewModel.isGlobalMode {
                     HStack {
-                        EditingTargetPicker(selection: $viewModel.editingTarget)
+                        EditingTargetPicker(selection: self.$viewModel.editingTarget)
                         Spacer()
                     }
                 }
@@ -22,7 +22,7 @@ struct AttributionSettingsEditorView: View {
                 // Attribution settings
                 GroupBox("Attribution") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle(isOn: commitBinding) {
+                        Toggle(isOn: self.commitBinding) {
                             VStack(alignment: .leading) {
                                 Text("Commit Attribution")
                                     .font(.body)
@@ -34,7 +34,7 @@ struct AttributionSettingsEditorView: View {
 
                         Divider()
 
-                        Toggle(isOn: pullRequestBinding) {
+                        Toggle(isOn: self.pullRequestBinding) {
                             VStack(alignment: .leading) {
                                 Text("Pull Request Attribution")
                                     .font(.body)
@@ -56,31 +56,31 @@ struct AttributionSettingsEditorView: View {
 
                         // Tag input area
                         FlowLayout(spacing: 8) {
-                            ForEach(viewModel.disallowedTools, id: \.self) { tool in
+                            ForEach(self.viewModel.disallowedTools, id: \.self) { tool in
                                 DisallowedToolTag(tool: tool) {
-                                    viewModel.removeDisallowedTool(tool)
+                                    self.viewModel.removeDisallowedTool(tool)
                                 }
                             }
 
                             // Add new tag
-                            if isAddingTool {
+                            if self.isAddingTool {
                                 AddToolInput(
-                                    toolName: $newToolName,
-                                    onAdd: addNewTool,
+                                    toolName: self.$newToolName,
+                                    onAdd: self.addNewTool,
                                     onCancel: {
-                                        isAddingTool = false
-                                        newToolName = ""
+                                        self.isAddingTool = false
+                                        self.newToolName = ""
                                     }
                                 )
                             } else {
                                 AddToolButton {
-                                    isAddingTool = true
+                                    self.isAddingTool = true
                                 }
                             }
                         }
                         .padding(.vertical, 4)
 
-                        if viewModel.disallowedTools.isEmpty, !isAddingTool {
+                        if self.viewModel.disallowedTools.isEmpty, !self.isAddingTool {
                             Text("No tools are disallowed")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -103,11 +103,11 @@ struct AttributionSettingsEditorView: View {
 
     private var commitBinding: Binding<Bool> {
         Binding(
-            get: { viewModel.attribution?.commits ?? false },
+            get: { self.viewModel.attribution?.commits ?? false },
             set: { newValue in
-                viewModel.updateAttribution(
+                self.viewModel.updateAttribution(
                     commits: newValue,
-                    pullRequests: viewModel.attribution?.pullRequests
+                    pullRequests: self.viewModel.attribution?.pullRequests
                 )
             }
         )
@@ -115,10 +115,10 @@ struct AttributionSettingsEditorView: View {
 
     private var pullRequestBinding: Binding<Bool> {
         Binding(
-            get: { viewModel.attribution?.pullRequests ?? false },
+            get: { self.viewModel.attribution?.pullRequests ?? false },
             set: { newValue in
-                viewModel.updateAttribution(
-                    commits: viewModel.attribution?.commits,
+                self.viewModel.updateAttribution(
+                    commits: self.viewModel.attribution?.commits,
                     pullRequests: newValue
                 )
             }
@@ -126,10 +126,12 @@ struct AttributionSettingsEditorView: View {
     }
 
     private func addNewTool() {
-        guard !newToolName.isEmpty else { return }
-        viewModel.addDisallowedTool(newToolName)
-        newToolName = ""
-        isAddingTool = false
+        guard !self.newToolName.isEmpty else {
+            return
+        }
+        self.viewModel.addDisallowedTool(self.newToolName)
+        self.newToolName = ""
+        self.isAddingTool = false
     }
 }
 
@@ -142,9 +144,9 @@ struct DisallowedToolTag: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(tool)
+            Text(self.tool)
                 .font(.system(.caption, design: .monospaced))
-            Button(action: onRemove) {
+            Button(action: self.onRemove) {
                 Image(systemName: "xmark")
                     .font(.caption2)
             }
@@ -161,27 +163,28 @@ struct DisallowedToolTag: View {
 /// Input field for adding a new disallowed tool.
 struct AddToolInput: View {
     @Binding var toolName: String
+
     let onAdd: () -> Void
     let onCancel: () -> Void
 
     var body: some View {
         HStack(spacing: 4) {
-            TextField("Tool name", text: $toolName)
+            TextField("Tool name", text: self.$toolName)
                 .textFieldStyle(.plain)
                 .font(.system(.caption, design: .monospaced))
                 .frame(minWidth: 80, maxWidth: 120)
                 .onSubmit {
-                    onAdd()
+                    self.onAdd()
                 }
 
-            Button(action: onAdd) {
+            Button(action: self.onAdd) {
                 Image(systemName: "checkmark")
                     .font(.caption2)
             }
             .buttonStyle(.plain)
-            .disabled(toolName.isEmpty)
+            .disabled(self.toolName.isEmpty)
 
-            Button(action: onCancel) {
+            Button(action: self.onCancel) {
                 Image(systemName: "xmark")
                     .font(.caption2)
             }
@@ -200,7 +203,7 @@ struct AddToolButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: self.action) {
             HStack(spacing: 4) {
                 Image(systemName: "plus")
                     .font(.caption2)

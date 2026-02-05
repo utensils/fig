@@ -1,21 +1,27 @@
 import SwiftUI
 
-// MARK: - Focused Value Keys
+// MARK: - NavigationSelectionKey
 
 /// Key for the navigation selection binding.
 private struct NavigationSelectionKey: FocusedValueKey {
     typealias Value = Binding<NavigationSelection?>
 }
 
+// MARK: - ProjectDetailTabKey
+
 /// Key for the project detail tab binding.
 private struct ProjectDetailTabKey: FocusedValueKey {
     typealias Value = Binding<ProjectDetailTab>
 }
 
+// MARK: - GlobalSettingsTabKey
+
 /// Key for the global settings tab binding.
 private struct GlobalSettingsTabKey: FocusedValueKey {
     typealias Value = Binding<GlobalSettingsTab>
 }
+
+// MARK: - AddMCPServerActionKey
 
 /// Key for the add MCP server action.
 private struct AddMCPServerActionKey: FocusedValueKey {

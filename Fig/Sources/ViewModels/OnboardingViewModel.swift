@@ -32,6 +32,9 @@ final class OnboardingViewModel {
         case completion = 4
     }
 
+    /// Total number of tour pages.
+    static let tourPageCount = 4
+
     /// The current onboarding step.
     private(set) var currentStep: Step = .welcome
 
@@ -46,9 +49,6 @@ final class OnboardingViewModel {
 
     /// Current page index within the feature tour (0-based).
     var currentTourPage: Int = 0
-
-    /// Total number of tour pages.
-    static let tourPageCount = 4
 
     /// Whether the current step is the first step.
     var isFirstStep: Bool {

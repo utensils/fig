@@ -13,13 +13,11 @@ struct MCPServerEditorView: View {
     }
 
     @Bindable var viewModel: MCPServerEditorViewModel
-    @Environment(\.dismiss) private var dismiss
-    @FocusState private var focusedField: Field?
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            header
+            self.header
 
             Divider()
 
@@ -27,20 +25,20 @@ struct MCPServerEditorView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Server identity section
-                    identitySection
+                    self.identitySection
 
                     // Target location section
-                    scopeSection
+                    self.scopeSection
 
                     // Type-specific configuration
-                    if viewModel.formData.serverType == .stdio {
-                        stdioSection
+                    if self.viewModel.formData.serverType == .stdio {
+                        self.stdioSection
                     } else {
-                        httpSection
+                        self.httpSection
                     }
 
                     // Import section
-                    importSection
+                    self.importSection
                 }
                 .padding()
             }
@@ -48,39 +46,46 @@ struct MCPServerEditorView: View {
             Divider()
 
             // Footer with buttons
-            footer
+            self.footer
         }
         .frame(width: 550, height: 600)
-        .onChange(of: viewModel.formData.name) { _, _ in viewModel.validate() }
-        .onChange(of: viewModel.formData.command) { _, _ in viewModel.validate() }
-        .onChange(of: viewModel.formData.url) { _, _ in viewModel.validate() }
-        .onChange(of: viewModel.formData.scope) { _, _ in viewModel.validate() }
+        .onChange(of: self.viewModel.formData.name) { _, _ in self.viewModel.validate() }
+        .onChange(of: self.viewModel.formData.command) { _, _ in self.viewModel.validate() }
+        .onChange(of: self.viewModel.formData.url) { _, _ in self.viewModel.validate() }
+        .onChange(of: self.viewModel.formData.scope) { _, _ in self.viewModel.validate() }
         .onAppear {
-            viewModel.validate()
-            focusedField = viewModel.isEditing ? .command : .name
+            self.viewModel.validate()
+            self.focusedField = self.viewModel.isEditing ? .command : .name
         }
     }
 
     // MARK: Private
 
-    @State private var showImportSheet = false
-    @State private var importText = ""
-    @State private var importType: ImportType = .json
-
     private enum ImportType: String, CaseIterable, Identifiable {
         case json = "JSON"
         case cli = "CLI Command"
 
-        var id: String { rawValue }
+        // MARK: Internal
+
+        var id: String {
+            rawValue
+        }
     }
+
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
+
+    @State private var showImportSheet = false
+    @State private var importText = ""
+    @State private var importType: ImportType = .json
 
     private var header: some View {
         HStack {
-            Image(systemName: viewModel.formData.serverType.icon)
+            Image(systemName: self.viewModel.formData.serverType.icon)
                 .font(.title2)
-                .foregroundStyle(viewModel.formData.serverType == .http ? .blue : .green)
+                .foregroundStyle(self.viewModel.formData.serverType == .http ? .blue : .green)
 
-            Text(viewModel.formTitle)
+            Text(self.viewModel.formTitle)
                 .font(.headline)
 
             Spacer()
@@ -97,9 +102,9 @@ struct MCPServerEditorView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
 
-                    TextField("my-server", text: $viewModel.formData.name)
+                    TextField("my-server", text: self.$viewModel.formData.name)
                         .textFieldStyle(.roundedBorder)
-                        .focused($focusedField, equals: .name)
+                        .focused(self.$focusedField, equals: .name)
                         .accessibilityLabel("Server name")
 
                     if let error = viewModel.error(for: "name") {
@@ -115,7 +120,7 @@ struct MCPServerEditorView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
 
-                    Picker("Type", selection: $viewModel.formData.serverType) {
+                    Picker("Type", selection: self.$viewModel.formData.serverType) {
                         ForEach(MCPServerType.allCases) { type in
                             Label(type.displayName, systemImage: type.icon)
                                 .tag(type)
@@ -137,14 +142,14 @@ struct MCPServerEditorView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
 
-                Picker("Scope", selection: $viewModel.formData.scope) {
+                Picker("Scope", selection: self.$viewModel.formData.scope) {
                     ForEach(MCPServerScope.allCases) { scope in
                         Label(scope.displayName, systemImage: scope.icon)
                             .tag(scope)
                     }
                 }
                 .pickerStyle(.radioGroup)
-                .disabled(viewModel.projectPath == nil && viewModel.formData.scope == .project)
+                .disabled(self.viewModel.projectPath == nil && self.viewModel.formData.scope == .project)
             }
             .padding(.vertical, 4)
         } label: {
@@ -161,10 +166,10 @@ struct MCPServerEditorView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
 
-                    TextField("npx", text: $viewModel.formData.command)
+                    TextField("npx", text: self.$viewModel.formData.command)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
-                        .focused($focusedField, equals: .command)
+                        .focused(self.$focusedField, equals: .command)
                         .accessibilityLabel("Command")
 
                     if let error = viewModel.error(for: "command") {
@@ -184,7 +189,7 @@ struct MCPServerEditorView: View {
                     }
 
                     TagInputView(
-                        tags: $viewModel.formData.args,
+                        tags: self.$viewModel.formData.args,
                         placeholder: "Add argument..."
                     )
                 }
@@ -197,7 +202,7 @@ struct MCPServerEditorView: View {
                             .fontWeight(.medium)
                         Spacer()
                         Button {
-                            viewModel.formData.addEnvVar()
+                            self.viewModel.formData.addEnvVar()
                         } label: {
                             Image(systemName: "plus.circle")
                         }
@@ -205,19 +210,19 @@ struct MCPServerEditorView: View {
                         .accessibilityLabel("Add environment variable")
                     }
 
-                    if viewModel.formData.envVars.isEmpty {
+                    if self.viewModel.formData.envVars.isEmpty {
                         Text("No environment variables")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(Array(viewModel.formData.envVars.enumerated()), id: \.element.id) { index, _ in
+                        ForEach(Array(self.viewModel.formData.envVars.enumerated()), id: \.element.id) { index, _ in
                             KeyValueRow(
-                                key: $viewModel.formData.envVars[index].key,
-                                value: $viewModel.formData.envVars[index].value,
+                                key: self.$viewModel.formData.envVars[index].key,
+                                value: self.$viewModel.formData.envVars[index].value,
                                 keyPlaceholder: "KEY",
                                 valuePlaceholder: "value",
                                 onDelete: {
-                                    viewModel.formData.removeEnvVar(at: index)
+                                    self.viewModel.formData.removeEnvVar(at: index)
                                 }
                             )
                         }
@@ -239,10 +244,10 @@ struct MCPServerEditorView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
 
-                    TextField("https://mcp.example.com/api", text: $viewModel.formData.url)
+                    TextField("https://mcp.example.com/api", text: self.$viewModel.formData.url)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
-                        .focused($focusedField, equals: .url)
+                        .focused(self.$focusedField, equals: .url)
                         .accessibilityLabel("Server URL")
 
                     if let error = viewModel.error(for: "url") {
@@ -260,7 +265,7 @@ struct MCPServerEditorView: View {
                             .fontWeight(.medium)
                         Spacer()
                         Button {
-                            viewModel.formData.addHeader()
+                            self.viewModel.formData.addHeader()
                         } label: {
                             Image(systemName: "plus.circle")
                         }
@@ -268,19 +273,19 @@ struct MCPServerEditorView: View {
                         .accessibilityLabel("Add header")
                     }
 
-                    if viewModel.formData.headers.isEmpty {
+                    if self.viewModel.formData.headers.isEmpty {
                         Text("No headers")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(Array(viewModel.formData.headers.enumerated()), id: \.element.id) { index, _ in
+                        ForEach(Array(self.viewModel.formData.headers.enumerated()), id: \.element.id) { index, _ in
                             KeyValueRow(
-                                key: $viewModel.formData.headers[index].key,
-                                value: $viewModel.formData.headers[index].value,
+                                key: self.$viewModel.formData.headers[index].key,
+                                value: self.$viewModel.formData.headers[index].value,
                                 keyPlaceholder: "Header-Name",
                                 valuePlaceholder: "value",
                                 onDelete: {
-                                    viewModel.formData.removeHeader(at: index)
+                                    self.viewModel.formData.removeHeader(at: index)
                                 }
                             )
                         }
@@ -296,14 +301,14 @@ struct MCPServerEditorView: View {
     private var importSection: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 12) {
-                Picker("Import Type", selection: $importType) {
+                Picker("Import Type", selection: self.$importType) {
                     ForEach(ImportType.allCases) { type in
                         Text(type.rawValue).tag(type)
                     }
                 }
                 .pickerStyle(.segmented)
 
-                TextEditor(text: $importText)
+                TextEditor(text: self.$importText)
                     .font(.system(.caption, design: .monospaced))
                     .frame(height: 80)
                     .overlay(
@@ -314,16 +319,16 @@ struct MCPServerEditorView: View {
                 HStack {
                     Spacer()
                     Button("Import") {
-                        let success = if importType == .json {
-                            viewModel.importFromJSON(importText)
+                        let success = if self.importType == .json {
+                            self.viewModel.importFromJSON(self.importText)
                         } else {
-                            viewModel.importFromCLICommand(importText)
+                            self.viewModel.importFromCLICommand(self.importText)
                         }
                         if success {
-                            importText = ""
+                            self.importText = ""
                         }
                     }
-                    .disabled(importText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(self.importText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .padding(.top, 8)
@@ -336,21 +341,21 @@ struct MCPServerEditorView: View {
     private var footer: some View {
         HStack {
             Button("Cancel") {
-                dismiss()
+                self.dismiss()
             }
             .keyboardShortcut(.cancelAction)
 
             Spacer()
 
-            Button(viewModel.isEditing ? "Save" : "Add Server") {
+            Button(self.viewModel.isEditing ? "Save" : "Add Server") {
                 Task {
-                    if await viewModel.save() {
-                        dismiss()
+                    if await self.viewModel.save() {
+                        self.dismiss()
                     }
                 }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(!viewModel.canSave)
+            .disabled(!self.viewModel.canSave)
             .keyboardShortcut(.defaultAction)
         }
         .padding()
@@ -361,47 +366,54 @@ struct MCPServerEditorView: View {
 
 /// A view for entering tags/arguments with add/remove functionality.
 struct TagInputView: View {
-    @Binding var tags: [String]
-    var placeholder: String = "Add tag..."
+    // MARK: Internal
 
-    @State private var newTagText = ""
+    @Binding var tags: [String]
+
+    var placeholder: String = "Add tag..."
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Tag display
             FlowLayout(spacing: 4) {
-                ForEach(Array(tags.enumerated()), id: \.offset) { index, tag in
+                ForEach(Array(self.tags.enumerated()), id: \.offset) { index, tag in
                     TagChip(text: tag) {
-                        tags.remove(at: index)
+                        self.tags.remove(at: index)
                     }
                 }
             }
 
             // Input field
             HStack {
-                TextField(placeholder, text: $newTagText)
+                TextField(self.placeholder, text: self.$newTagText)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
                     .onSubmit {
-                        addTag()
+                        self.addTag()
                     }
 
                 Button {
-                    addTag()
+                    self.addTag()
                 } label: {
                     Image(systemName: "plus.circle.fill")
                 }
                 .buttonStyle(.plain)
-                .disabled(newTagText.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(self.newTagText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
     }
 
+    // MARK: Private
+
+    @State private var newTagText = ""
+
     private func addTag() {
-        let trimmed = newTagText.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        tags.append(trimmed)
-        newTagText = ""
+        let trimmed = self.newTagText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            return
+        }
+        self.tags.append(trimmed)
+        self.newTagText = ""
     }
 }
 
@@ -414,17 +426,17 @@ struct TagChip: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(text)
+            Text(self.text)
                 .font(.system(.caption, design: .monospaced))
 
             Button {
-                onRemove()
+                self.onRemove()
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.caption2)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Remove \(text)")
+            .accessibilityLabel("Remove \(self.text)")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
@@ -438,13 +450,14 @@ struct TagChip: View {
 struct KeyValueRow: View {
     @Binding var key: String
     @Binding var value: String
+
     var keyPlaceholder: String = "Key"
     var valuePlaceholder: String = "Value"
     var onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            TextField(keyPlaceholder, text: $key)
+            TextField(self.keyPlaceholder, text: self.$key)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(.caption, design: .monospaced))
                 .frame(width: 150)
@@ -452,12 +465,12 @@ struct KeyValueRow: View {
             Text("=")
                 .foregroundStyle(.secondary)
 
-            TextField(valuePlaceholder, text: $value)
+            TextField(self.valuePlaceholder, text: self.$value)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(.caption, design: .monospaced))
 
             Button {
-                onDelete()
+                self.onDelete()
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .foregroundStyle(.red)

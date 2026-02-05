@@ -5,12 +5,16 @@ import OSLog
 
 /// Strategy for handling server name conflicts during copy.
 enum ConflictStrategy: String, CaseIterable, Identifiable {
-    case prompt    // Ask for each conflict
+    case prompt // Ask for each conflict
     case overwrite // Replace existing
-    case rename    // Auto-suffix with -copy
-    case skip      // Skip conflicts
+    case rename // Auto-suffix with -copy
+    case skip // Skip conflicts
 
-    var id: String { rawValue }
+    // MARK: Internal
+
+    var id: String {
+        rawValue
+    }
 
     var displayName: String {
         switch self {
@@ -26,17 +30,17 @@ enum ConflictStrategy: String, CaseIterable, Identifiable {
 
 /// Represents a conflict found during copy operation.
 struct CopyConflict: Identifiable {
-    let id = UUID()
-    let serverName: String
-    let existingServer: MCPServer
-    let newServer: MCPServer
-    var resolution: ConflictResolution = .skip
-
     enum ConflictResolution {
         case overwrite
         case rename(String)
         case skip
     }
+
+    let id = UUID()
+    let serverName: String
+    let existingServer: MCPServer
+    let newServer: MCPServer
+    var resolution: ConflictResolution = .skip
 }
 
 // MARK: - CopyDestination
@@ -45,6 +49,8 @@ struct CopyConflict: Identifiable {
 enum CopyDestination: Identifiable, Hashable {
     case global
     case project(path: String, name: String)
+
+    // MARK: Internal
 
     var id: String {
         switch self {
@@ -99,6 +105,10 @@ struct CopyResult {
 
 /// Service for copying MCP server configurations between projects and global config.
 actor MCPServerCopyService {
+    // MARK: Lifecycle
+
+    private init() {}
+
     // MARK: Internal
 
     static let shared = MCPServerCopyService()
@@ -194,7 +204,7 @@ actor MCPServerCopyService {
                 )
 
             case .overwrite:
-                return try await performCopy(
+                return try await self.performCopy(
                     name: name,
                     server: server,
                     to: destination,
@@ -202,14 +212,14 @@ actor MCPServerCopyService {
                 )
 
             case .rename:
-                let newName = generateUniqueName(
+                let newName = await self.generateUniqueName(
                     baseName: name,
-                    existingNames: Set(await getExistingServers(
+                    existingNames: Set(self.getExistingServers(
                         at: destination,
                         configManager: configManager
                     ).keys)
                 )
-                return try await performCopy(
+                return try await self.performCopy(
                     name: newName,
                     server: server,
                     to: destination,
@@ -232,7 +242,7 @@ actor MCPServerCopyService {
         }
 
         // No conflict, perform copy directly
-        return try await performCopy(
+        return try await self.performCopy(
             name: name,
             server: server,
             to: destination,
@@ -250,7 +260,7 @@ actor MCPServerCopyService {
     ) async throws -> CopyResult {
         switch resolution {
         case .skip:
-            return CopyResult(
+            CopyResult(
                 serverName: name,
                 destination: destination,
                 success: false,
@@ -260,7 +270,7 @@ actor MCPServerCopyService {
             )
 
         case .overwrite:
-            return try await performCopy(
+            try await self.performCopy(
                 name: name,
                 server: server,
                 to: destination,
@@ -268,7 +278,7 @@ actor MCPServerCopyService {
             )
 
         case let .rename(newName):
-            return try await performCopy(
+            try await self.performCopy(
                 name: newName,
                 server: server,
                 to: destination,
@@ -280,8 +290,6 @@ actor MCPServerCopyService {
     }
 
     // MARK: Private
-
-    private init() {}
 
     /// Generates a unique name by appending -copy, -copy-2, etc.
     private func generateUniqueName(baseName: String, existingNames: Set<String>) -> String {
@@ -328,7 +336,7 @@ actor MCPServerCopyService {
         originalName: String? = nil
     ) async throws -> CopyResult {
         // Deep copy the server (create new instance)
-        let copiedServer = deepCopy(server: server)
+        let copiedServer = self.deepCopy(server: server)
 
         switch destination {
         case .global:

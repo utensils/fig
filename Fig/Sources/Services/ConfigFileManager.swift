@@ -216,7 +216,7 @@ actor ConfigFileManager {
 
     /// Writes the global legacy config to ~/.claude.json.
     func writeGlobalConfig(_ config: LegacyConfig) async throws {
-        try await write(config, to: globalConfigURL)
+        try await self.write(config, to: self.globalConfigURL)
     }
 
     // MARK: - File Watching

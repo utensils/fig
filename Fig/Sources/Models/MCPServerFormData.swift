@@ -7,9 +7,11 @@ enum MCPServerType: String, CaseIterable, Identifiable, Sendable {
     case stdio
     case http
 
-    // MARK: Public
+    // MARK: Internal
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var displayName: String {
         switch self {
@@ -33,9 +35,11 @@ enum MCPServerScope: String, CaseIterable, Identifiable, Sendable {
     case project
     case global
 
-    // MARK: Public
+    // MARK: Internal
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var displayName: String {
         switch self {
@@ -56,9 +60,7 @@ enum MCPServerScope: String, CaseIterable, Identifiable, Sendable {
 
 /// A key-value pair for environment variables or headers.
 struct KeyValuePair: Identifiable, Equatable, Sendable {
-    let id: UUID
-    var key: String
-    var value: String
+    // MARK: Lifecycle
 
     init(id: UUID = UUID(), key: String = "", value: String = "") {
         self.id = id
@@ -66,25 +68,35 @@ struct KeyValuePair: Identifiable, Equatable, Sendable {
         self.value = value
     }
 
+    // MARK: Internal
+
+    let id: UUID
+    var key: String
+    var value: String
+
     /// Whether this pair has valid content.
     var isValid: Bool {
-        !key.trimmingCharacters(in: .whitespaces).isEmpty
+        !self.key.trimmingCharacters(in: .whitespaces).isEmpty
     }
 }
 
-// MARK: - ValidationError
+// MARK: - MCPValidationError
 
 /// Validation error for MCP server form.
 struct MCPValidationError: Identifiable, Equatable, Sendable {
-    let id: UUID
-    let field: String
-    let message: String
+    // MARK: Lifecycle
 
     init(field: String, message: String) {
-        id = UUID()
+        self.id = UUID()
         self.field = field
         self.message = message
     }
+
+    // MARK: Internal
+
+    let id: UUID
+    let field: String
+    let message: String
 }
 
 // MARK: - MCPServerFormData
@@ -119,7 +131,7 @@ final class MCPServerFormData {
         self.originalName = originalName
     }
 
-    // MARK: Public
+    // MARK: Internal
 
     /// Server name (key in the dictionary).
     var name: String
@@ -130,8 +142,6 @@ final class MCPServerFormData {
     /// Target scope for saving.
     var scope: MCPServerScope
 
-    // MARK: - Stdio Properties
-
     /// Command to execute for stdio servers.
     var command: String
 
@@ -140,8 +150,6 @@ final class MCPServerFormData {
 
     /// Environment variables.
     var envVars: [KeyValuePair]
-
-    // MARK: - HTTP Properties
 
     /// URL for HTTP servers.
     var url: String
@@ -157,15 +165,13 @@ final class MCPServerFormData {
     /// Original name when editing (for rename detection).
     var originalName: String?
 
-    // MARK: - Computed Properties
+    /// Input for adding a new argument.
+    var newArgInput: String = ""
 
     /// Whether the form has valid data to save.
     var isValid: Bool {
-        validate(existingNames: []).isEmpty
+        self.validate(existingNames: []).isEmpty
     }
-
-    /// Input for adding a new argument.
-    var newArgInput: String = ""
 
     // MARK: - Factory Methods
 
@@ -199,32 +205,32 @@ final class MCPServerFormData {
         var errors: [MCPValidationError] = []
 
         // Name validation
-        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        let trimmedName = self.name.trimmingCharacters(in: .whitespaces)
         if trimmedName.isEmpty {
             errors.append(MCPValidationError(field: "name", message: "Server name is required"))
-        } else if !isValidServerName(trimmedName) {
+        } else if !self.isValidServerName(trimmedName) {
             errors.append(MCPValidationError(
                 field: "name",
                 message: "Name can only contain letters, numbers, hyphens, and underscores"
             ))
         } else if existingNames.contains(trimmedName) {
             // Only check for duplicates if not editing or if name changed
-            if !isEditing || (originalName != trimmedName) {
+            if !self.isEditing || (self.originalName != trimmedName) {
                 errors.append(MCPValidationError(field: "name", message: "A server with this name already exists"))
             }
         }
 
         // Type-specific validation
-        switch serverType {
+        switch self.serverType {
         case .stdio:
-            if command.trimmingCharacters(in: .whitespaces).isEmpty {
+            if self.command.trimmingCharacters(in: .whitespaces).isEmpty {
                 errors.append(MCPValidationError(field: "command", message: "Command is required"))
             }
         case .http:
-            let trimmedURL = url.trimmingCharacters(in: .whitespaces)
+            let trimmedURL = self.url.trimmingCharacters(in: .whitespaces)
             if trimmedURL.isEmpty {
                 errors.append(MCPValidationError(field: "url", message: "URL is required"))
-            } else if !isValidURL(trimmedURL) {
+            } else if !self.isValidURL(trimmedURL) {
                 errors.append(MCPValidationError(field: "url", message: "URL must start with http:// or https://"))
             }
         }
@@ -234,26 +240,26 @@ final class MCPServerFormData {
 
     /// Converts form data to an MCPServer model.
     func toMCPServer() -> MCPServer {
-        switch serverType {
+        switch self.serverType {
         case .stdio:
-            let envDict = envVars
+            let envDict = self.envVars
                 .filter(\.isValid)
                 .reduce(into: [String: String]()) { dict, pair in
                     dict[pair.key] = pair.value
                 }
             return MCPServer.stdio(
-                command: command.trimmingCharacters(in: .whitespaces),
-                args: args.isEmpty ? nil : args,
+                command: self.command.trimmingCharacters(in: .whitespaces),
+                args: self.args.isEmpty ? nil : self.args,
                 env: envDict.isEmpty ? nil : envDict
             )
         case .http:
-            let headersDict = headers
+            let headersDict = self.headers
                 .filter(\.isValid)
                 .reduce(into: [String: String]()) { dict, pair in
                     dict[pair.key] = pair.value
                 }
             return MCPServer.http(
-                url: url.trimmingCharacters(in: .whitespaces),
+                url: self.url.trimmingCharacters(in: .whitespaces),
                 headers: headersDict.isEmpty ? nil : headersDict
             )
         }
@@ -264,40 +270,48 @@ final class MCPServerFormData {
     /// Adds a new argument.
     func addArg(_ arg: String) {
         let trimmed = arg.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        args.append(trimmed)
+        guard !trimmed.isEmpty else {
+            return
+        }
+        self.args.append(trimmed)
     }
 
     /// Removes an argument at the specified index.
     func removeArg(at index: Int) {
-        guard args.indices.contains(index) else { return }
-        args.remove(at: index)
+        guard self.args.indices.contains(index) else {
+            return
+        }
+        self.args.remove(at: index)
     }
 
     // MARK: - Environment Variable Management
 
     /// Adds an empty environment variable row.
     func addEnvVar() {
-        envVars.append(KeyValuePair())
+        self.envVars.append(KeyValuePair())
     }
 
     /// Removes an environment variable at the specified index.
     func removeEnvVar(at index: Int) {
-        guard envVars.indices.contains(index) else { return }
-        envVars.remove(at: index)
+        guard self.envVars.indices.contains(index) else {
+            return
+        }
+        self.envVars.remove(at: index)
     }
 
     // MARK: - Header Management
 
     /// Adds an empty header row.
     func addHeader() {
-        headers.append(KeyValuePair())
+        self.headers.append(KeyValuePair())
     }
 
     /// Removes a header at the specified index.
     func removeHeader(at index: Int) {
-        guard headers.indices.contains(index) else { return }
-        headers.remove(at: index)
+        guard self.headers.indices.contains(index) else {
+            return
+        }
+        self.headers.remove(at: index)
     }
 
     // MARK: - Import Methods
@@ -309,7 +323,7 @@ final class MCPServerFormData {
 
         // Try parsing as MCPServer directly
         if let server = try? decoder.decode(MCPServer.self, from: data) {
-            populateFrom(server: server)
+            self.populateFrom(server: server)
             return
         }
 
@@ -317,8 +331,8 @@ final class MCPServerFormData {
         if let dict = try? decoder.decode([String: MCPServer].self, from: data),
            let (serverName, server) = dict.first
         {
-            name = serverName
-            populateFrom(server: server)
+            self.name = serverName
+            self.populateFrom(server: server)
             return
         }
 
@@ -341,10 +355,11 @@ final class MCPServerFormData {
               let nameRange = Range(match.range(at: 1), in: command),
               let jsonRange = Range(match.range(at: 2), in: command)
         else {
-            throw MCPParseError.invalidCLICommand("Could not parse CLI command. Expected: claude mcp add-json 'name' '{...}'")
+            throw MCPParseError
+                .invalidCLICommand("Could not parse CLI command. Expected: claude mcp add-json 'name' '{...}'")
         }
 
-        name = String(command[nameRange])
+        self.name = String(command[nameRange])
         let jsonString = String(command[jsonRange])
 
         try parseFromJSON(jsonString)
@@ -363,15 +378,15 @@ final class MCPServerFormData {
 
     private func populateFrom(server: MCPServer) {
         if server.isHTTP {
-            serverType = .http
-            url = server.url ?? ""
-            headers = (server.headers ?? [:]).map { KeyValuePair(key: $0.key, value: $0.value) }
+            self.serverType = .http
+            self.url = server.url ?? ""
+            self.headers = (server.headers ?? [:]).map { KeyValuePair(key: $0.key, value: $0.value) }
                 .sorted { $0.key < $1.key }
         } else {
-            serverType = .stdio
-            command = server.command ?? ""
-            args = server.args ?? []
-            envVars = (server.env ?? [:]).map { KeyValuePair(key: $0.key, value: $0.value) }
+            self.serverType = .stdio
+            self.command = server.command ?? ""
+            self.args = server.args ?? []
+            self.envVars = (server.env ?? [:]).map { KeyValuePair(key: $0.key, value: $0.value) }
                 .sorted { $0.key < $1.key }
         }
     }
@@ -384,7 +399,7 @@ enum MCPParseError: Error, LocalizedError {
     case invalidJSON(String)
     case invalidCLICommand(String)
 
-    // MARK: Public
+    // MARK: Internal
 
     var errorDescription: String? {
         switch self {
