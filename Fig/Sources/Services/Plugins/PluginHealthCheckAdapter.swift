@@ -29,7 +29,7 @@ enum PluginHealthCheckAdapter {
         context: HealthCheckContext
     ) throws -> [Finding] {
         // Convert context to Lua table using the sandbox
-        let contextTable = createContextTable(sandbox: sandbox, context: context)
+        let contextTable = self.createContextTable(sandbox: sandbox, context: context)
 
         // Call the check function
         let result = function.call([contextTable])
@@ -39,7 +39,7 @@ enum PluginHealthCheckAdapter {
             guard let findingsTable = values.first as? Table else {
                 return []
             }
-            return parseFindingsTable(findingsTable, checkId: checkId)
+            return self.parseFindingsTable(findingsTable, checkId: checkId)
 
         case let .error(message):
             throw PluginError.executionFailed(
@@ -140,7 +140,7 @@ enum PluginHealthCheckAdapter {
         guard let severityString = table["severity"] as? String else {
             return nil
         }
-        let severity = parseSeverity(severityString)
+        let severity = self.parseSeverity(severityString)
 
         // Extract title
         guard let title = table["title"] as? String else {
@@ -153,7 +153,7 @@ enum PluginHealthCheckAdapter {
         }
 
         // Extract optional autoFix
-        let autoFix = parseAutoFix(table["autoFix"])
+        let autoFix = self.parseAutoFix(table["autoFix"])
 
         return Finding(
             severity: severity,
@@ -166,16 +166,18 @@ enum PluginHealthCheckAdapter {
     /// Converts a Lua severity string to a Swift Severity.
     private static func parseSeverity(_ string: String) -> Severity {
         switch string.lowercased() {
-        case "critical", "security":
-            return .security
+        case "critical",
+             "security":
+            .security
         case "warning":
-            return .warning
+            .warning
         case "suggestion":
-            return .suggestion
-        case "info", "good":
-            return .good
+            .suggestion
+        case "info",
+             "good":
+            .good
         default:
-            return .suggestion
+            .suggestion
         }
     }
 

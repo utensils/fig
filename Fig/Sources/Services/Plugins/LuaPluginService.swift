@@ -394,45 +394,6 @@ public actor LuaPluginService {
         self.registrations.getPresets()
     }
 
-    // MARK: - Health Check Execution
-
-    /// Executes all registered plugin health checks.
-    ///
-    /// This method iterates through all health checks registered by plugins and
-    /// executes them with the provided context, returning the combined findings.
-    ///
-    /// - Parameter context: The health check context containing configuration data
-    /// - Returns: Array of findings from all plugin health checks
-    func executeHealthChecks(context: HealthCheckContext) -> [Finding] {
-        var findings: [Finding] = []
-        let healthChecks = self.registrations.getHealthChecks()
-
-        for (checkId, (pluginId, checkFunction)) in healthChecks {
-            // Get the sandbox for this plugin
-            guard let sandbox = pluginSandboxes[pluginId] else {
-                Log.general.warning("Plugin \(pluginId) has no active sandbox for health check \(checkId)")
-                continue
-            }
-
-            do {
-                let checkFindings = try PluginHealthCheckAdapter.executeCheck(
-                    checkId: checkId,
-                    pluginId: pluginId,
-                    function: checkFunction,
-                    sandbox: sandbox,
-                    context: context
-                )
-                findings.append(contentsOf: checkFindings)
-            } catch {
-                Log.general.warning(
-                    "Plugin health check \(checkId) from \(pluginId) failed: \(error.localizedDescription)"
-                )
-            }
-        }
-
-        return findings
-    }
-
     /// Grants capabilities to a plugin.
     ///
     /// - Parameters:
@@ -505,6 +466,47 @@ public actor LuaPluginService {
         } catch {
             Log.general.error("Plugin discovery failed: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: Internal
+
+    // MARK: - Health Check Execution
+
+    /// Executes all registered plugin health checks.
+    ///
+    /// This method iterates through all health checks registered by plugins and
+    /// executes them with the provided context, returning the combined findings.
+    ///
+    /// - Parameter context: The health check context containing configuration data
+    /// - Returns: Array of findings from all plugin health checks
+    func executeHealthChecks(context: HealthCheckContext) -> [Finding] {
+        var findings: [Finding] = []
+        let healthChecks = self.registrations.getHealthChecks()
+
+        for (checkId, (pluginId, checkFunction)) in healthChecks {
+            // Get the sandbox for this plugin
+            guard let sandbox = pluginSandboxes[pluginId] else {
+                Log.general.warning("Plugin \(pluginId) has no active sandbox for health check \(checkId)")
+                continue
+            }
+
+            do {
+                let checkFindings = try PluginHealthCheckAdapter.executeCheck(
+                    checkId: checkId,
+                    pluginId: pluginId,
+                    function: checkFunction,
+                    sandbox: sandbox,
+                    context: context
+                )
+                findings.append(contentsOf: checkFindings)
+            } catch {
+                Log.general.warning(
+                    "Plugin health check \(checkId) from \(pluginId) failed: \(error.localizedDescription)"
+                )
+            }
+        }
+
+        return findings
     }
 
     // MARK: Private
