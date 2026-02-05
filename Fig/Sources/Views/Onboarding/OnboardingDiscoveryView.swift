@@ -82,27 +82,6 @@ struct OnboardingDiscoveryView: View {
         }
     }
 
-    private func errorContent(_ error: String) -> some View {
-        VStack(spacing: 16) {
-            Text("Discovery Issue")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-
-            Text(error)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 400)
-
-            Button("Retry") {
-                Task {
-                    await self.viewModel.runDiscovery()
-                }
-            }
-            .buttonStyle(.bordered)
-        }
-    }
-
     private var emptyContent: some View {
         VStack(spacing: 16) {
             Text("No Projects Found")
@@ -160,6 +139,27 @@ struct OnboardingDiscoveryView: View {
         .frame(maxHeight: 250)
         .background(.quaternary.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func errorContent(_ error: String) -> some View {
+        VStack(spacing: 16) {
+            Text("Discovery Issue")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            Text(error)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 400)
+
+            Button("Retry") {
+                Task {
+                    await self.viewModel.runDiscovery()
+                }
+            }
+            .buttonStyle(.bordered)
+        }
     }
 
     private func projectRow(_ project: DiscoveredProject) -> some View {

@@ -8,12 +8,10 @@ struct ConfigExportView: View {
 
     @Bindable var viewModel: ConfigExportViewModel
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            header
+            self.header
 
             Divider()
 
@@ -21,21 +19,21 @@ struct ConfigExportView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Component selection
-                    componentSelectionSection
+                    self.componentSelectionSection
 
                     // Sensitive data warning
-                    if viewModel.includeLocalSettings {
-                        sensitiveDataWarning
+                    if self.viewModel.includeLocalSettings {
+                        self.sensitiveDataWarning
                     }
 
                     // Error message
                     if let error = viewModel.errorMessage {
-                        errorSection(error: error)
+                        self.errorSection(error: error)
                     }
 
                     // Success message
-                    if viewModel.exportSuccessful {
-                        successSection
+                    if self.viewModel.exportSuccessful {
+                        self.successSection
                     }
                 }
                 .padding()
@@ -44,15 +42,17 @@ struct ConfigExportView: View {
             Divider()
 
             // Footer
-            footer
+            self.footer
         }
         .frame(width: 450, height: 400)
         .task {
-            await viewModel.loadAvailableComponents()
+            await self.viewModel.loadAvailableComponents()
         }
     }
 
     // MARK: Private
+
+    @Environment(\.dismiss) private var dismiss
 
     private var header: some View {
         HStack {
@@ -63,7 +63,7 @@ struct ConfigExportView: View {
             VStack(alignment: .leading) {
                 Text("Export Configuration")
                     .font(.headline)
-                Text(viewModel.projectName)
+                Text(self.viewModel.projectName)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -80,22 +80,22 @@ struct ConfigExportView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
 
-                if viewModel.availableComponents.isEmpty {
+                if self.viewModel.availableComponents.isEmpty {
                     Text("No configuration found in this project.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(ConfigBundleComponent.allCases) { component in
-                        if viewModel.availableComponents.contains(component) {
+                        if self.viewModel.availableComponents.contains(component) {
                             ComponentToggle(
                                 component: component,
                                 isSelected: Binding(
-                                    get: { viewModel.selectedComponents.contains(component) },
+                                    get: { self.viewModel.selectedComponents.contains(component) },
                                     set: { selected in
                                         if selected {
-                                            viewModel.selectedComponents.insert(component)
+                                            self.viewModel.selectedComponents.insert(component)
                                         } else {
-                                            viewModel.selectedComponents.remove(component)
+                                            self.viewModel.selectedComponents.remove(component)
                                         }
                                     }
                                 )
@@ -123,13 +123,13 @@ struct ConfigExportView: View {
 
                 Text(
                     "The local settings file (settings.local.json) may contain API keys, " +
-                    "tokens, or other sensitive information. Only share this export " +
-                    "file with trusted parties."
+                        "tokens, or other sensitive information. Only share this export " +
+                        "file with trusted parties."
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-                Toggle(isOn: $viewModel.acknowledgedSensitiveData) {
+                Toggle(isOn: self.$viewModel.acknowledgedSensitiveData) {
                     Text("I understand the risks")
                         .font(.subheadline)
                 }
@@ -137,21 +137,6 @@ struct ConfigExportView: View {
             .padding(.vertical, 4)
         } label: {
             Label("Security Warning", systemImage: "lock.shield")
-        }
-    }
-
-    @ViewBuilder
-    private func errorSection(error: String) -> some View {
-        GroupBox {
-            HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
-                Text(error)
-                    .foregroundStyle(.red)
-            }
-            .padding(.vertical, 4)
-        } label: {
-            Label("Error", systemImage: "xmark.octagon")
         }
     }
 
@@ -181,30 +166,44 @@ struct ConfigExportView: View {
     private var footer: some View {
         HStack {
             Button("Cancel") {
-                dismiss()
+                self.dismiss()
             }
             .keyboardShortcut(.cancelAction)
 
             Spacer()
 
-            if viewModel.exportSuccessful {
+            if self.viewModel.exportSuccessful {
                 Button("Done") {
-                    dismiss()
+                    self.dismiss()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
             } else {
                 Button("Export...") {
                     Task {
-                        await viewModel.performExport()
+                        await self.viewModel.performExport()
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.canExport)
+                .disabled(!self.viewModel.canExport)
                 .keyboardShortcut(.defaultAction)
             }
         }
         .padding()
+    }
+
+    private func errorSection(error: String) -> some View {
+        GroupBox {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Text(error)
+                    .foregroundStyle(.red)
+            }
+            .padding(.vertical, 4)
+        } label: {
+            Label("Error", systemImage: "xmark.octagon")
+        }
     }
 }
 
@@ -213,15 +212,16 @@ struct ConfigExportView: View {
 /// Toggle for selecting a component with info.
 private struct ComponentToggle: View {
     let component: ConfigBundleComponent
+
     @Binding var isSelected: Bool
 
     var body: some View {
-        Toggle(isOn: $isSelected) {
+        Toggle(isOn: self.$isSelected) {
             HStack {
-                Image(systemName: component.icon)
+                Image(systemName: self.component.icon)
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(component.displayName)
+                    Text(self.component.displayName)
                         .font(.subheadline)
                     if let warning = component.sensitiveWarning {
                         Text(warning)

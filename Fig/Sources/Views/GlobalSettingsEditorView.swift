@@ -6,38 +6,41 @@ import SwiftUI
 struct GlobalSettingsEditorView: View {
     // MARK: Internal
 
+    /// Callback when editor is dismissed (for parent to reload data).
+    var onDismiss: (() -> Void)?
+
     var body: some View {
         VStack(spacing: 0) {
             // Header with save button and dirty indicator
-            editorHeader
+            self.editorHeader
 
             Divider()
 
             // Tab content
-            if viewModel.isLoading {
+            if self.viewModel.isLoading {
                 ProgressView("Loading settings...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                TabView(selection: $selectedTab) {
-                    PermissionRuleEditorView(viewModel: viewModel)
+                TabView(selection: self.$selectedTab) {
+                    PermissionRuleEditorView(viewModel: self.viewModel)
                         .tabItem {
                             Label("Permissions", systemImage: "lock.shield")
                         }
                         .tag(EditorTab.permissions)
 
-                    EnvironmentVariableEditorView(viewModel: viewModel)
+                    EnvironmentVariableEditorView(viewModel: self.viewModel)
                         .tabItem {
                             Label("Environment", systemImage: "list.bullet.rectangle")
                         }
                         .tag(EditorTab.environment)
 
-                    HookEditorView(viewModel: viewModel)
+                    HookEditorView(viewModel: self.viewModel)
                         .tabItem {
                             Label("Hooks", systemImage: "bolt.horizontal")
                         }
                         .tag(EditorTab.hooks)
 
-                    AttributionSettingsEditorView(viewModel: viewModel)
+                    AttributionSettingsEditorView(viewModel: self.viewModel)
                         .tabItem {
                             Label("General", systemImage: "gearshape")
                         }
@@ -47,60 +50,57 @@ struct GlobalSettingsEditorView: View {
             }
         }
         .frame(minWidth: 600, minHeight: 500)
-        .interactiveDismissDisabled(viewModel.isDirty)
+        .interactiveDismissDisabled(self.viewModel.isDirty)
         .task {
-            await viewModel.loadSettings()
+            await self.viewModel.loadSettings()
         }
         .onDisappear {
-            if viewModel.isDirty {
+            if self.viewModel.isDirty {
                 Log.general.warning("Global editor closed with unsaved changes")
             }
-            onDismiss?()
+            self.onDismiss?()
         }
         .confirmationDialog(
             "Unsaved Changes",
-            isPresented: $showingCloseConfirmation,
+            isPresented: self.$showingCloseConfirmation,
             titleVisibility: .visible
         ) {
             Button("Save and Close") {
                 Task {
                     do {
-                        try await viewModel.save()
-                        dismiss()
+                        try await self.viewModel.save()
+                        self.dismiss()
                     } catch {
                         NotificationManager.shared.showError(error)
                     }
                 }
             }
             Button("Discard Changes", role: .destructive) {
-                dismiss()
+                self.dismiss()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("You have unsaved changes. Would you like to save them before closing?")
         }
-        .sheet(isPresented: $showingConflictSheet) {
+        .sheet(isPresented: self.$showingConflictSheet) {
             if let url = viewModel.externalChangeURL {
                 ConflictResolutionSheet(fileName: url.lastPathComponent) { resolution in
                     Task {
-                        await viewModel.resolveConflict(resolution)
+                        await self.viewModel.resolveConflict(resolution)
                     }
-                    showingConflictSheet = false
+                    self.showingConflictSheet = false
                 }
             }
         }
-        .onChange(of: viewModel.hasExternalChanges) { _, hasChanges in
+        .onChange(of: self.viewModel.hasExternalChanges) { _, hasChanges in
             if hasChanges {
-                showingConflictSheet = true
+                self.showingConflictSheet = true
             }
         }
         .onAppear {
-            viewModel.undoManager = undoManager
+            self.viewModel.undoManager = self.undoManager
         }
     }
-
-    /// Callback when editor is dismissed (for parent to reload data).
-    var onDismiss: (() -> Void)?
 
     // MARK: Private
 
@@ -110,7 +110,11 @@ struct GlobalSettingsEditorView: View {
         case hooks
         case general
 
-        var id: String { rawValue }
+        // MARK: Internal
+
+        var id: String {
+            rawValue
+        }
     }
 
     @State private var viewModel = SettingsEditorViewModel.forGlobal()
@@ -138,7 +142,7 @@ struct GlobalSettingsEditorView: View {
                             .font(.title3)
                             .fontWeight(.semibold)
 
-                        DirtyStateIndicator(isDirty: viewModel.isDirty)
+                        DirtyStateIndicator(isDirty: self.viewModel.isDirty)
                     }
 
                     Text("~/.claude/settings.json")
@@ -152,20 +156,20 @@ struct GlobalSettingsEditorView: View {
             // Undo/Redo buttons
             HStack(spacing: 4) {
                 Button {
-                    undoManager?.undo()
+                    self.undoManager?.undo()
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
                 }
-                .disabled(!viewModel.canUndo)
+                .disabled(!self.viewModel.canUndo)
                 .keyboardShortcut("z", modifiers: .command)
                 .help("Undo")
 
                 Button {
-                    undoManager?.redo()
+                    self.undoManager?.redo()
                 } label: {
                     Image(systemName: "arrow.uturn.forward")
                 }
-                .disabled(!viewModel.canRedo)
+                .disabled(!self.viewModel.canRedo)
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .help("Redo")
             }
@@ -176,12 +180,12 @@ struct GlobalSettingsEditorView: View {
 
             // Save button
             SaveButton(
-                isDirty: viewModel.isDirty,
-                isSaving: viewModel.isSaving
+                isDirty: self.viewModel.isDirty,
+                isSaving: self.viewModel.isSaving
             ) {
                 Task {
                     do {
-                        try await viewModel.save()
+                        try await self.viewModel.save()
                         NotificationManager.shared.showSuccess("Global Settings Saved")
                     } catch {
                         NotificationManager.shared.showError(error)

@@ -139,7 +139,7 @@ struct GlobalSettingsDetailView: View {
         VStack(spacing: 0) {
             // Header
             GlobalSettingsHeaderView(viewModel: self.viewModel) {
-                showingEditor = true
+                self.showingEditor = true
             }
 
             Divider()
@@ -166,7 +166,7 @@ struct GlobalSettingsDetailView: View {
         .task {
             await self.viewModel.load()
         }
-        .sheet(isPresented: $showingEditor) {
+        .sheet(isPresented: self.$showingEditor) {
             GlobalSettingsEditorView {
                 Task {
                     await self.viewModel.load()
@@ -212,6 +212,7 @@ struct GlobalSettingsDetailView: View {
 /// Header view for global settings.
 struct GlobalSettingsHeaderView: View {
     @Bindable var viewModel: GlobalSettingsViewModel
+
     var onEditSettings: (() -> Void)?
 
     var body: some View {
@@ -390,7 +391,7 @@ struct FileStatusBadge: View {
         .padding(.vertical, 4)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label), \(exists ? "file exists" : "file not found")")
+        .accessibilityLabel("\(self.label), \(self.exists ? "file exists" : "file not found")")
     }
 }
 

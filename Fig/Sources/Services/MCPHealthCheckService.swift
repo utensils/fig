@@ -23,7 +23,9 @@ struct MCPHealthCheckResult: Sendable {
 
     /// Whether the check was successful.
     var isSuccess: Bool {
-        if case .success = status { return true }
+        if case .success = self.status {
+            return true
+        }
         return false
     }
 }
@@ -60,7 +62,11 @@ enum MCPHealthCheckError: Error, LocalizedError, Sendable {
         case let .invalidHandshakeResponse(details):
             "Invalid MCP response: \(details)"
         case let .httpRequestFailed(code, msg):
-            if let code { "HTTP \(code): \(msg)" } else { "HTTP error: \(msg)" }
+            if let code {
+                "HTTP \(code): \(msg)"
+            } else {
+                "HTTP error: \(msg)"
+            }
         case let .networkError(msg):
             "Network error: \(msg)"
         case .timeout:
@@ -106,13 +112,12 @@ actor MCPHealthCheckService {
     func checkHealth(name: String, server: MCPServer) async -> MCPHealthCheckResult {
         let startTime = Date()
 
-        let status: MCPHealthCheckResult.Status
-        if server.isHTTP {
-            status = await checkHTTPServer(server)
+        let status: MCPHealthCheckResult.Status = if server.isHTTP {
+            await self.checkHTTPServer(server)
         } else if server.isStdio {
-            status = await checkStdioServer(server)
+            await self.checkStdioServer(server)
         } else {
-            status = .failure(error: .noCommandOrURL)
+            .failure(error: .noCommandOrURL)
         }
 
         let duration = Date().timeIntervalSince(startTime)
@@ -232,7 +237,7 @@ actor MCPHealthCheckService {
 
         switch responseResult {
         case let .success(data):
-            return parseInitializeResponse(data)
+            return self.parseInitializeResponse(data)
         case let .failure(error):
             return .failure(error: error)
         }
@@ -374,7 +379,7 @@ actor MCPHealthCheckService {
             }
 
             // Try to parse MCP response
-            return parseInitializeResponse(data)
+            return self.parseInitializeResponse(data)
         } catch let error as URLError {
             return .failure(error: .networkError(message: error.localizedDescription))
         } catch {

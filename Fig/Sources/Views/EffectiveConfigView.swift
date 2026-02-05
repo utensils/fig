@@ -16,12 +16,12 @@ struct EffectiveConfigView: View {
             HStack {
                 Spacer()
 
-                Toggle("View as JSON", isOn: $showJSON)
+                Toggle("View as JSON", isOn: self.$showJSON)
                     .toggleStyle(.switch)
                     .controlSize(.small)
 
                 Button {
-                    exportToClipboard()
+                    self.exportToClipboard()
                 } label: {
                     Label("Copy to Clipboard", systemImage: "doc.on.clipboard")
                 }
@@ -33,12 +33,12 @@ struct EffectiveConfigView: View {
 
             Divider()
 
-            if showJSON {
-                EffectiveConfigJSONView(mergedSettings: mergedSettings)
+            if self.showJSON {
+                EffectiveConfigJSONView(mergedSettings: self.mergedSettings)
             } else {
                 EffectiveConfigStructuredView(
-                    mergedSettings: mergedSettings,
-                    envOverrides: envOverrides
+                    mergedSettings: self.mergedSettings,
+                    envOverrides: self.envOverrides
                 )
             }
         }
@@ -49,7 +49,7 @@ struct EffectiveConfigView: View {
     @State private var showJSON = false
 
     private func exportToClipboard() {
-        let json = EffectiveConfigSerializer.toJSON(mergedSettings)
+        let json = EffectiveConfigSerializer.toJSON(self.mergedSettings)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(json, forType: .string)
         NotificationManager.shared.showSuccess(
@@ -71,11 +71,11 @@ struct EffectiveConfigStructuredView: View {
             VStack(alignment: .leading, spacing: 20) {
                 SourceLegend()
 
-                EffectivePermissionsSection(permissions: mergedSettings.permissions)
-                EffectiveEnvSection(env: mergedSettings.env, overrides: envOverrides)
-                EffectiveHooksSection(hooks: mergedSettings.hooks)
-                EffectiveDisallowedToolsSection(tools: mergedSettings.disallowedTools)
-                EffectiveAttributionSection(attribution: mergedSettings.attribution)
+                EffectivePermissionsSection(permissions: self.mergedSettings.permissions)
+                EffectiveEnvSection(env: self.mergedSettings.env, overrides: self.envOverrides)
+                EffectiveHooksSection(hooks: self.mergedSettings.hooks)
+                EffectiveDisallowedToolsSection(tools: self.mergedSettings.disallowedTools)
+                EffectiveAttributionSection(attribution: self.mergedSettings.attribution)
 
                 Spacer()
             }
@@ -91,7 +91,7 @@ struct EffectiveConfigJSONView: View {
     let mergedSettings: MergedSettings
 
     var body: some View {
-        let jsonString = EffectiveConfigSerializer.toJSON(mergedSettings)
+        let jsonString = EffectiveConfigSerializer.toJSON(self.mergedSettings)
         ScrollView {
             Text(jsonString)
                 .font(.system(.body, design: .monospaced))
@@ -111,19 +111,19 @@ struct EffectivePermissionsSection: View {
 
     var body: some View {
         GroupBox("Permissions") {
-            if permissions.allow.isEmpty, permissions.deny.isEmpty {
+            if self.permissions.allow.isEmpty, self.permissions.deny.isEmpty {
                 Text("No permission rules configured.")
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    if !permissions.allow.isEmpty {
+                    if !self.permissions.allow.isEmpty {
                         Label("Allow", systemImage: "checkmark.circle.fill")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundStyle(.green)
 
-                        ForEach(Array(permissions.allow.enumerated()), id: \.offset) { _, entry in
+                        ForEach(Array(self.permissions.allow.enumerated()), id: \.offset) { _, entry in
                             EffectiveRuleRow(
                                 rule: entry.value,
                                 source: entry.source,
@@ -133,17 +133,17 @@ struct EffectivePermissionsSection: View {
                         }
                     }
 
-                    if !permissions.allow.isEmpty, !permissions.deny.isEmpty {
+                    if !self.permissions.allow.isEmpty, !self.permissions.deny.isEmpty {
                         Divider()
                     }
 
-                    if !permissions.deny.isEmpty {
+                    if !self.permissions.deny.isEmpty {
                         Label("Deny", systemImage: "xmark.circle.fill")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundStyle(.red)
 
-                        ForEach(Array(permissions.deny.enumerated()), id: \.offset) { _, entry in
+                        ForEach(Array(self.permissions.deny.enumerated()), id: \.offset) { _, entry in
                             EffectiveRuleRow(
                                 rule: entry.value,
                                 source: entry.source,
@@ -168,19 +168,19 @@ struct EffectiveEnvSection: View {
 
     var body: some View {
         GroupBox("Environment Variables") {
-            if env.isEmpty {
+            if self.env.isEmpty {
                 Text("No environment variables configured.")
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(env.keys.sorted().enumerated()), id: \.offset) { index, key in
+                    ForEach(Array(self.env.keys.sorted().enumerated()), id: \.offset) { index, key in
                         if index > 0 {
                             Divider()
                         }
 
-                        let entry = env[key]!
-                        let keyOverrides = overrides[key]
+                        let entry = self.env[key]!
+                        let keyOverrides = self.overrides[key]
 
                         EffectiveEnvRow(
                             key: key,
@@ -204,13 +204,13 @@ struct EffectiveHooksSection: View {
 
     var body: some View {
         GroupBox("Hooks") {
-            if hooks.eventNames.isEmpty {
+            if self.hooks.eventNames.isEmpty {
                 Text("No hooks configured.")
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(hooks.eventNames, id: \.self) { event in
+                    ForEach(self.hooks.eventNames, id: \.self) { event in
                         if let groups = hooks.groups(for: event) {
                             EffectiveHookEventView(event: event, groups: groups)
                         }
@@ -231,11 +231,11 @@ struct EffectiveHookEventView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(event)
+            Text(self.event)
                 .font(.subheadline)
                 .fontWeight(.medium)
 
-            ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+            ForEach(Array(self.groups.enumerated()), id: \.offset) { _, group in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         if let matcher = group.value.matcher {
@@ -274,13 +274,13 @@ struct EffectiveDisallowedToolsSection: View {
 
     var body: some View {
         GroupBox("Disallowed Tools") {
-            if tools.isEmpty {
+            if self.tools.isEmpty {
                 Text("No tools are disallowed.")
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
-                    ForEach(Array(tools.enumerated()), id: \.offset) { _, entry in
+                    ForEach(Array(self.tools.enumerated()), id: \.offset) { _, entry in
                         HStack {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.red)
@@ -347,15 +347,15 @@ struct EffectiveRuleRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: icon)
-                .foregroundStyle(iconColor)
+            Image(systemName: self.icon)
+                .foregroundStyle(self.iconColor)
                 .frame(width: 20)
-            Text(rule)
+            Text(self.rule)
                 .font(.system(.body, design: .monospaced))
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer()
-            SourceBadge(source: source)
+            SourceBadge(source: self.source)
         }
         .padding(.vertical, 2)
     }
@@ -375,21 +375,21 @@ struct EffectiveEnvRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             EffectiveEnvValueRow(
-                key: key,
-                value: effectiveValue,
-                source: effectiveSource,
-                isSensitive: isSensitive,
-                isValueVisible: $isValueVisible
+                key: self.key,
+                value: self.effectiveValue,
+                source: self.effectiveSource,
+                isSensitive: self.isSensitive,
+                isValueVisible: self.$isValueVisible
             )
 
-            if !overriddenEntries.isEmpty {
-                ForEach(Array(overriddenEntries.enumerated()), id: \.offset) { _, entry in
+            if !self.overriddenEntries.isEmpty {
+                ForEach(Array(self.overriddenEntries.enumerated()), id: \.offset) { _, entry in
                     EffectiveEnvOverriddenRow(
-                        key: key,
+                        key: self.key,
                         value: entry.value,
                         source: entry.source,
-                        isSensitive: isSensitive,
-                        isValueVisible: isValueVisible
+                        isSensitive: self.isSensitive,
+                        isValueVisible: self.isValueVisible
                     )
                 }
             }
@@ -403,7 +403,7 @@ struct EffectiveEnvRow: View {
 
     private var isSensitive: Bool {
         let sensitivePatterns = ["token", "key", "secret", "password", "credential", "api"]
-        let lowercaseKey = key.lowercased()
+        let lowercaseKey = self.key.lowercased()
         return sensitivePatterns.contains { lowercaseKey.contains($0) }
     }
 }
@@ -416,11 +416,12 @@ struct EffectiveEnvValueRow: View {
     let value: String
     let source: ConfigSource
     let isSensitive: Bool
+
     @Binding var isValueVisible: Bool
 
     var body: some View {
         HStack(alignment: .top) {
-            Text(key)
+            Text(self.key)
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.medium)
                 .frame(minWidth: 200, alignment: .leading)
@@ -429,29 +430,29 @@ struct EffectiveEnvValueRow: View {
                 .foregroundStyle(.secondary)
 
             Group {
-                if isValueVisible || !isSensitive {
-                    Text(value)
+                if self.isValueVisible || !self.isSensitive {
+                    Text(self.value)
                         .font(.system(.body, design: .monospaced))
                         .lineLimit(2)
                         .truncationMode(.middle)
                 } else {
-                    Text(String(repeating: "\u{2022}", count: min(value.count, 20)))
+                    Text(String(repeating: "\u{2022}", count: min(self.value.count, 20)))
                         .font(.system(.body, design: .monospaced))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if isSensitive {
+            if self.isSensitive {
                 Button {
-                    isValueVisible.toggle()
+                    self.isValueVisible.toggle()
                 } label: {
-                    Image(systemName: isValueVisible ? "eye.slash" : "eye")
+                    Image(systemName: self.isValueVisible ? "eye.slash" : "eye")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
             }
 
-            SourceBadge(source: source)
+            SourceBadge(source: self.source)
         }
     }
 }
@@ -468,7 +469,7 @@ struct EffectiveEnvOverriddenRow: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            Text(key)
+            Text(self.key)
                 .font(.system(.caption, design: .monospaced))
                 .strikethrough()
                 .foregroundStyle(.secondary)
@@ -479,14 +480,14 @@ struct EffectiveEnvOverriddenRow: View {
                 .font(.caption)
 
             Group {
-                if isValueVisible || !isSensitive {
-                    Text(value)
+                if self.isValueVisible || !self.isSensitive {
+                    Text(self.value)
                         .font(.system(.caption, design: .monospaced))
                         .strikethrough()
                         .lineLimit(1)
                         .truncationMode(.middle)
                 } else {
-                    Text(String(repeating: "\u{2022}", count: min(value.count, 20)))
+                    Text(String(repeating: "\u{2022}", count: min(self.value.count, 20)))
                         .font(.system(.caption, design: .monospaced))
                         .strikethrough()
                 }
@@ -499,7 +500,7 @@ struct EffectiveEnvOverriddenRow: View {
                 .foregroundStyle(.orange)
                 .italic()
 
-            SourceBadge(source: source)
+            SourceBadge(source: self.source)
         }
         .padding(.leading, 8)
     }
@@ -509,19 +510,25 @@ struct EffectiveEnvOverriddenRow: View {
 
 /// Serializes merged settings to JSON format.
 enum EffectiveConfigSerializer {
+    // MARK: Internal
+
     static func toJSON(_ settings: MergedSettings) -> String {
         var result: [String: Any] = [:]
 
-        result["permissions"] = permissionsDict(settings.permissions)
-        result["env"] = envDict(settings)
-        result["hooks"] = hooksDict(settings.hooks)
-        result["disallowedTools"] = toolsArray(settings)
-        result["attribution"] = attributionDict(settings.attribution)
+        result["permissions"] = self.permissionsDict(settings.permissions)
+        result["env"] = self.envDict(settings)
+        result["hooks"] = self.hooksDict(settings.hooks)
+        result["disallowedTools"] = self.toolsArray(settings)
+        result["attribution"] = self.attributionDict(settings.attribution)
 
         // Remove nil/empty entries
         result = result.compactMapValues { value in
-            if let dict = value as? [String: Any], dict.isEmpty { return nil }
-            if let arr = value as? [Any], arr.isEmpty { return nil }
+            if let dict = value as? [String: Any], dict.isEmpty {
+                return nil
+            }
+            if let arr = value as? [Any], arr.isEmpty {
+                return nil
+            }
             return value
         }
 
@@ -542,8 +549,12 @@ enum EffectiveConfigSerializer {
         var perms: [String: Any] = [:]
         let allow = permissions.allowPatterns
         let deny = permissions.denyPatterns
-        if !allow.isEmpty { perms["allow"] = allow }
-        if !deny.isEmpty { perms["deny"] = deny }
+        if !allow.isEmpty {
+            perms["allow"] = allow
+        }
+        if !deny.isEmpty {
+            perms["deny"] = deny
+        }
         return perms.isEmpty ? nil : perms
     }
 
@@ -555,15 +566,23 @@ enum EffectiveConfigSerializer {
     private static func hooksDict(_ hooks: MergedHooks) -> [String: Any]? {
         var dict: [String: [[String: Any]]] = [:]
         for event in hooks.eventNames {
-            guard let groups = hooks.groups(for: event) else { continue }
+            guard let groups = hooks.groups(for: event) else {
+                continue
+            }
             dict[event] = groups.map { group in
                 var groupDict: [String: Any] = [:]
-                if let matcher = group.value.matcher { groupDict["matcher"] = matcher }
+                if let matcher = group.value.matcher {
+                    groupDict["matcher"] = matcher
+                }
                 if let hookDefs = group.value.hooks {
                     groupDict["hooks"] = hookDefs.map { hook in
                         var hookDict: [String: Any] = [:]
-                        if let type = hook.type { hookDict["type"] = type }
-                        if let command = hook.command { hookDict["command"] = command }
+                        if let type = hook.type {
+                            hookDict["type"] = type
+                        }
+                        if let command = hook.command {
+                            hookDict["command"] = command
+                        }
                         return hookDict
                     }
                 }
@@ -579,10 +598,16 @@ enum EffectiveConfigSerializer {
     }
 
     private static func attributionDict(_ attribution: MergedValue<Attribution>?) -> [String: Any]? {
-        guard let attr = attribution else { return nil }
+        guard let attr = attribution else {
+            return nil
+        }
         var dict: [String: Any] = [:]
-        if let commits = attr.value.commits { dict["commits"] = commits }
-        if let prs = attr.value.pullRequests { dict["pullRequests"] = prs }
+        if let commits = attr.value.commits {
+            dict["commits"] = commits
+        }
+        if let prs = attr.value.pullRequests {
+            dict["pullRequests"] = prs
+        }
         return dict.isEmpty ? nil : dict
     }
 }
@@ -593,18 +618,18 @@ enum EffectiveConfigSerializer {
             permissions: MergedPermissions(
                 allow: [
                     MergedValue(value: "Bash(npm run *)", source: .global),
-                    MergedValue(value: "Read(src/**)", source: .projectShared)
+                    MergedValue(value: "Read(src/**)", source: .projectShared),
                 ],
                 deny: [
-                    MergedValue(value: "Read(.env)", source: .projectLocal)
+                    MergedValue(value: "Read(.env)", source: .projectLocal),
                 ]
             ),
             env: [
                 "CLAUDE_CODE_MAX_OUTPUT_TOKENS": MergedValue(value: "16384", source: .projectLocal),
-                "ANTHROPIC_MODEL": MergedValue(value: "claude-sonnet-4-20250514", source: .global)
+                "ANTHROPIC_MODEL": MergedValue(value: "claude-sonnet-4-20250514", source: .global),
             ],
             disallowedTools: [
-                MergedValue(value: "WebFetch", source: .projectShared)
+                MergedValue(value: "WebFetch", source: .projectShared),
             ],
             attribution: MergedValue(
                 value: Attribution(commits: true, pullRequests: false),
@@ -614,8 +639,8 @@ enum EffectiveConfigSerializer {
         envOverrides: [
             "CLAUDE_CODE_MAX_OUTPUT_TOKENS": [
                 ("8192", .global),
-                ("16384", .projectLocal)
-            ]
+                ("16384", .projectLocal),
+            ],
         ]
     )
     .padding()

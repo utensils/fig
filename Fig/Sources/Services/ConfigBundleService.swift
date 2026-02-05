@@ -12,6 +12,8 @@ enum ConfigBundleError: Error, LocalizedError {
     case noComponentsSelected
     case projectNotFound(String)
 
+    // MARK: Internal
+
     var errorDescription: String? {
         switch self {
         case .invalidBundleFormat:
@@ -34,6 +36,10 @@ enum ConfigBundleError: Error, LocalizedError {
 
 /// Service for exporting and importing project configuration bundles.
 actor ConfigBundleService {
+    // MARK: Lifecycle
+
+    private init() {}
+
     // MARK: Internal
 
     static let shared = ConfigBundleService()
@@ -175,7 +181,7 @@ actor ConfigBundleService {
                 skipped.append(.settings)
             } else {
                 do {
-                    try await importSettings(
+                    try await self.importSettings(
                         settings,
                         to: projectPath,
                         resolution: resolution,
@@ -195,7 +201,7 @@ actor ConfigBundleService {
                 skipped.append(.localSettings)
             } else {
                 do {
-                    try await importLocalSettings(
+                    try await self.importLocalSettings(
                         localSettings,
                         to: projectPath,
                         resolution: resolution,
@@ -215,7 +221,7 @@ actor ConfigBundleService {
                 skipped.append(.mcpServers)
             } else {
                 do {
-                    try await importMCPServers(
+                    try await self.importMCPServers(
                         mcpConfig,
                         to: projectPath,
                         resolution: resolution,
@@ -229,13 +235,12 @@ actor ConfigBundleService {
         }
 
         let success = errors.isEmpty && !imported.isEmpty
-        let message: String
-        if success {
-            message = "Successfully imported \(imported.count) component(s)"
+        let message = if success {
+            "Successfully imported \(imported.count) component(s)"
         } else if !errors.isEmpty {
-            message = "Import completed with errors"
+            "Import completed with errors"
         } else {
-            message = "No components were imported"
+            "No components were imported"
         }
 
         Log.general.info("Import: \(imported.count) imported, \(skipped.count) skipped, \(errors.count) errors")
@@ -251,8 +256,6 @@ actor ConfigBundleService {
 
     // MARK: Private
 
-    private init() {}
-
     // MARK: - Import Helpers
 
     private func importSettings(
@@ -263,11 +266,10 @@ actor ConfigBundleService {
     ) async throws {
         let existing = try await configManager.readProjectSettings(for: projectPath)
 
-        let finalSettings: ClaudeSettings
-        if resolution == .merge, let existing {
-            finalSettings = mergeSettings(existing: existing, incoming: settings)
+        let finalSettings: ClaudeSettings = if resolution == .merge, let existing {
+            self.mergeSettings(existing: existing, incoming: settings)
         } else {
-            finalSettings = settings
+            settings
         }
 
         try await configManager.writeProjectSettings(finalSettings, for: projectPath)
@@ -281,11 +283,10 @@ actor ConfigBundleService {
     ) async throws {
         let existing = try await configManager.readProjectLocalSettings(for: projectPath)
 
-        let finalSettings: ClaudeSettings
-        if resolution == .merge, let existing {
-            finalSettings = mergeSettings(existing: existing, incoming: settings)
+        let finalSettings: ClaudeSettings = if resolution == .merge, let existing {
+            self.mergeSettings(existing: existing, incoming: settings)
         } else {
-            finalSettings = settings
+            settings
         }
 
         try await configManager.writeProjectLocalSettings(finalSettings, for: projectPath)

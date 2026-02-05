@@ -1,0 +1,143 @@
+---
+title: Built-in Plugins
+description: Health checks and features included with Fig out of the box.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Fig ships with three built-in Lua plugins that provide comprehensive health check coverage for your Claude Code configuration.
+
+## Security Plugin
+
+**Plugin ID:** `com.fig.builtin.security`
+
+The security plugin checks for common security issues in your Claude Code configuration.
+
+### Checks Included
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| **Deny List Security** | Critical | Ensures `.env` files and `secrets/` directories are protected with deny rules |
+| **Broad Allow Rules** | Warning | Flags overly permissive rules like `Bash(*)`, `Read(*)`, `Write(*)`, `Edit(*)` |
+| **MCP Hardcoded Secrets** | Warning | Detects API keys, tokens, and secrets hardcoded in MCP server configurations |
+| **Global Config Size** | Warning | Warns when `~/.claude.json` exceeds 5 MB, indicating potential performance issues |
+
+### Example Findings
+
+**Deny List Security** triggers when your deny list doesn't include protection for sensitive files:
+
+```
+❌ .env files not in deny list
+
+Environment files often contain secrets like API keys and passwords.
+Add a deny rule to prevent Claude from reading them.
+
+Auto-fix: Add Read(.env) to deny list
+```
+
+**Broad Allow Rules** triggers for overly permissive patterns:
+
+```
+⚠️ Overly broad allow rule: Bash(*)
+
+Allows any Bash command without restriction. Consider using
+more specific patterns to limit what Claude can access.
+```
+
+---
+
+## Suggestions Plugin
+
+**Plugin ID:** `com.fig.builtin.suggestions`
+
+The suggestions plugin recommends configuration improvements to enhance your Claude Code setup.
+
+### Checks Included
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| **Local Settings** | Suggestion | Recommends creating `settings.local.json` for personal overrides |
+| **MCP Scoping** | Suggestion | Suggests scoping MCP servers to projects when only global servers exist |
+| **Hook Suggestions** | Suggestion | Recommends hooks when none are configured |
+
+### Example Findings
+
+**Local Settings** triggers when no local settings file exists:
+
+```
+💡 No settings.local.json
+
+Create a local settings file for personal overrides that won't be
+committed to version control. This is useful for developer-specific
+environment variables or permission tweaks.
+
+Auto-fix: Create settings.local.json
+```
+
+**MCP Scoping** triggers when you have global MCP servers but no project-level configuration:
+
+```
+💡 Global MCP servers without project scoping
+
+You have global MCP servers configured but no project-level .mcp.json.
+Consider creating a project-scoped MCP configuration for better isolation.
+```
+
+---
+
+## Good Practices Plugin
+
+**Plugin ID:** `com.fig.builtin.good-practices`
+
+The good practices plugin provides positive feedback about well-configured aspects of your setup.
+
+### Checks Included
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| **Sensitive Files Protected** | Good | Confirms `.env` files are in the deny list |
+| **Secrets Directory Protected** | Good | Confirms `secrets/` is in the deny list |
+| **Local Settings Configured** | Good | Confirms `settings.local.json` exists |
+| **Project-Scoped MCP Servers** | Good | Confirms project-level MCP configuration |
+| **Hooks Configured** | Good | Confirms lifecycle hooks are set up |
+| **Scoped Permission Rules** | Good | Confirms use of path-specific permission patterns |
+
+### Example Findings
+
+```
+✓ Sensitive files protected
+
+Your deny list includes rules to protect .env files from being read.
+```
+
+```
+✓ Project-scoped MCP servers
+
+MCP servers are configured at the project level for better isolation.
+```
+
+---
+
+## Capabilities Required
+
+All built-in plugins request the following capabilities:
+
+| Capability | Purpose |
+|------------|---------|
+| `health:register` | Register health check functions |
+| `health:findings` | Create health check findings |
+| `config:read:global` | Read global settings for analysis |
+| `config:read:project` | Read project settings for analysis |
+
+<Aside type="tip">
+Built-in plugins are automatically granted their required capabilities since they ship with Fig and are trusted.
+</Aside>
+
+## Viewing Health Check Results
+
+Open the **Health** tab (**Cmd+7**) in any project's detail view to see findings from all plugins. Results are sorted by severity, with critical issues first.
+
+Each finding includes:
+- A clear description of the issue
+- Why it matters
+- Guidance on resolution (and auto-fix where available)

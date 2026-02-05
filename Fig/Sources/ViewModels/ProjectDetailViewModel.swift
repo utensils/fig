@@ -363,20 +363,27 @@ final class ProjectDetailViewModel {
             switch source {
             case .projectShared:
                 // Delete from .mcp.json
-                guard var config = mcpConfig else { return }
+                guard var config = mcpConfig else {
+                    return
+                }
                 config.mcpServers?.removeValue(forKey: name)
-                try await configManager.writeMCPConfig(config, for: projectURL)
-                mcpConfig = config
+                try await self.configManager.writeMCPConfig(config, for: self.projectURL)
+                self.mcpConfig = config
                 NotificationManager.shared.showSuccess("Server deleted", message: "'\(name)' removed from project")
 
             case .global:
                 // Delete from ~/.claude.json
-                guard var globalConfig = try await configManager.readGlobalConfig() else { return }
+                guard var globalConfig = try await configManager.readGlobalConfig() else {
+                    return
+                }
                 globalConfig.mcpServers?.removeValue(forKey: name)
-                try await configManager.writeGlobalConfig(globalConfig)
+                try await self.configManager.writeGlobalConfig(globalConfig)
                 // Also update projectEntry if it exists
-                projectEntry = globalConfig.project(at: projectPath)
-                NotificationManager.shared.showSuccess("Server deleted", message: "'\(name)' removed from global config")
+                self.projectEntry = globalConfig.project(at: self.projectPath)
+                NotificationManager.shared.showSuccess(
+                    "Server deleted",
+                    message: "'\(name)' removed from global config"
+                )
 
             case .projectLocal:
                 // Local settings don't typically have MCP servers, but handle gracefully
@@ -405,7 +412,9 @@ final class ProjectDetailViewModel {
         ]
 
         for (settings, source) in sources {
-            guard let env = settings?.env else { continue }
+            guard let env = settings?.env else {
+                continue
+            }
             for (key, value) in env {
                 allValues[key, default: []].append((value, source))
             }

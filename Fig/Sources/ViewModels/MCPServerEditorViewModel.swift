@@ -21,7 +21,7 @@ final class MCPServerEditorViewModel {
         self.notificationManager = notificationManager
     }
 
-    // MARK: Public
+    // MARK: Internal
 
     /// The form data being edited.
     var formData: MCPServerFormData
@@ -37,17 +37,17 @@ final class MCPServerEditorViewModel {
 
     /// Whether we're editing an existing server.
     var isEditing: Bool {
-        formData.isEditing
+        self.formData.isEditing
     }
 
     /// Title for the form.
     var formTitle: String {
-        isEditing ? "Edit MCP Server" : "Add MCP Server"
+        self.isEditing ? "Edit MCP Server" : "Add MCP Server"
     }
 
     /// Whether the form can be saved.
     var canSave: Bool {
-        validationErrors.isEmpty && !isSaving
+        self.validationErrors.isEmpty && !self.isSaving
     }
 
     // MARK: - Factory Methods
@@ -79,13 +79,13 @@ final class MCPServerEditorViewModel {
     func validate() {
         Task {
             let existingNames = await getExistingServerNames()
-            validationErrors = formData.validate(existingNames: existingNames)
+            self.validationErrors = self.formData.validate(existingNames: existingNames)
         }
     }
 
     /// Returns the validation error for a specific field.
     func error(for field: String) -> MCPValidationError? {
-        validationErrors.first { $0.field == field }
+        self.validationErrors.first { $0.field == field }
     }
 
     // MARK: - Save
@@ -95,33 +95,33 @@ final class MCPServerEditorViewModel {
     func save() async -> Bool {
         // Validate first
         let existingNames = await getExistingServerNames()
-        validationErrors = formData.validate(existingNames: existingNames)
+        self.validationErrors = self.formData.validate(existingNames: existingNames)
 
-        guard validationErrors.isEmpty else {
+        guard self.validationErrors.isEmpty else {
             return false
         }
 
-        isSaving = true
+        self.isSaving = true
         defer { isSaving = false }
 
         do {
-            let server = formData.toMCPServer()
-            let serverName = formData.name.trimmingCharacters(in: .whitespaces)
+            let server = self.formData.toMCPServer()
+            let serverName = self.formData.name.trimmingCharacters(in: .whitespaces)
 
-            switch formData.scope {
+            switch self.formData.scope {
             case .project:
-                try await saveToProject(name: serverName, server: server)
+                try await self.saveToProject(name: serverName, server: server)
             case .global:
-                try await saveToGlobal(name: serverName, server: server)
+                try await self.saveToGlobal(name: serverName, server: server)
             }
 
-            let action = isEditing ? "updated" : "added"
-            notificationManager.showSuccess("Server \(action)", message: "'\(serverName)' saved successfully")
+            let action = self.isEditing ? "updated" : "added"
+            self.notificationManager.showSuccess("Server \(action)", message: "'\(serverName)' saved successfully")
             Log.general.info("MCP server \(action): \(serverName)")
 
             return true
         } catch {
-            notificationManager.showError(error)
+            self.notificationManager.showError(error)
             Log.general.error("Failed to save MCP server: \(error.localizedDescription)")
             return false
         }
@@ -132,11 +132,11 @@ final class MCPServerEditorViewModel {
     /// Imports configuration from JSON.
     func importFromJSON(_ json: String) -> Bool {
         do {
-            try formData.parseFromJSON(json)
-            validate()
+            try self.formData.parseFromJSON(json)
+            self.validate()
             return true
         } catch {
-            notificationManager.showError("Import failed", message: error.localizedDescription)
+            self.notificationManager.showError("Import failed", message: error.localizedDescription)
             return false
         }
     }
@@ -144,11 +144,11 @@ final class MCPServerEditorViewModel {
     /// Imports configuration from a CLI command.
     func importFromCLICommand(_ command: String) -> Bool {
         do {
-            try formData.parseFromCLICommand(command)
-            validate()
+            try self.formData.parseFromCLICommand(command)
+            self.validate()
             return true
         } catch {
-            notificationManager.showError("Import failed", message: error.localizedDescription)
+            self.notificationManager.showError("Import failed", message: error.localizedDescription)
             return false
         }
     }
@@ -162,7 +162,7 @@ final class MCPServerEditorViewModel {
         var names = Set<String>()
 
         do {
-            switch formData.scope {
+            switch self.formData.scope {
             case .project:
                 if let projectPath {
                     let config = try await configManager.readMCPConfig(for: projectPath)
@@ -196,7 +196,7 @@ final class MCPServerEditorViewModel {
         var config = try await configManager.readMCPConfig(for: projectPath) ?? MCPConfig()
 
         // If editing and name changed, remove old entry
-        if isEditing, let originalName = formData.originalName, originalName != name {
+        if self.isEditing, let originalName = formData.originalName, originalName != name {
             config.mcpServers?.removeValue(forKey: originalName)
         }
 
@@ -205,14 +205,14 @@ final class MCPServerEditorViewModel {
         }
         config.mcpServers?[name] = server
 
-        try await configManager.writeMCPConfig(config, for: projectPath)
+        try await self.configManager.writeMCPConfig(config, for: projectPath)
     }
 
     private func saveToGlobal(name: String, server: MCPServer) async throws {
         var config = try await configManager.readGlobalConfig() ?? LegacyConfig()
 
         // If editing and name changed, remove old entry
-        if isEditing, let originalName = formData.originalName, originalName != name {
+        if self.isEditing, let originalName = formData.originalName, originalName != name {
             config.mcpServers?.removeValue(forKey: originalName)
         }
 
@@ -221,6 +221,6 @@ final class MCPServerEditorViewModel {
         }
         config.mcpServers?[name] = server
 
-        try await configManager.writeGlobalConfig(config)
+        try await self.configManager.writeGlobalConfig(config)
     }
 }

@@ -70,10 +70,6 @@ struct OnboardingTourView: View {
         .animation(.easeInOut(duration: 0.25), value: self.viewModel.currentTourPage)
     }
 
-    private var isLastTourPage: Bool {
-        self.viewModel.currentTourPage == OnboardingViewModel.tourPageCount - 1
-    }
-
     // MARK: Private
 
     private struct TourPageData {
@@ -103,8 +99,27 @@ struct OnboardingTourView: View {
             icon: "globe",
             title: "Global Settings",
             description: "Manage global Claude Code settings that apply across all your projects. Set default permissions, environment variables, and hooks in one place."
-        )
+        ),
     ]
+
+    private var isLastTourPage: Bool {
+        self.viewModel.currentTourPage == OnboardingViewModel.tourPageCount - 1
+    }
+
+    private var pageIndicator: some View {
+        HStack(spacing: 8) {
+            ForEach(0 ..< OnboardingViewModel.tourPageCount, id: \.self) { index in
+                Circle()
+                    .fill(
+                        index == self.viewModel.currentTourPage
+                            ? Color.accentColor
+                            : Color.secondary.opacity(0.3)
+                    )
+                    .frame(width: 8, height: 8)
+            }
+        }
+    }
+
     // swiftlint:enable line_length
 
     @ViewBuilder
@@ -125,20 +140,6 @@ struct OnboardingTourView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 500)
-        }
-    }
-
-    private var pageIndicator: some View {
-        HStack(spacing: 8) {
-            ForEach(0 ..< OnboardingViewModel.tourPageCount, id: \.self) { index in
-                Circle()
-                    .fill(
-                        index == self.viewModel.currentTourPage
-                            ? Color.accentColor
-                            : Color.secondary.opacity(0.3)
-                    )
-                    .frame(width: 8, height: 8)
-            }
         }
     }
 }

@@ -16,15 +16,15 @@ struct ClaudeMDView: View {
     var body: some View {
         HSplitView {
             // File hierarchy sidebar
-            claudeMDSidebar
+            self.claudeMDSidebar
                 .frame(minWidth: 180, idealWidth: 220, maxWidth: 280)
 
             // Content area
-            contentArea
+            self.contentArea
                 .frame(minWidth: 300)
         }
         .task {
-            await viewModel.loadFiles()
+            await self.viewModel.loadFiles()
         }
     }
 
@@ -44,7 +44,7 @@ struct ClaudeMDView: View {
                 Spacer()
                 Button {
                     Task {
-                        await viewModel.loadFiles()
+                        await self.viewModel.loadFiles()
                     }
                 } label: {
                     Image(systemName: "arrow.clockwise")
@@ -58,14 +58,14 @@ struct ClaudeMDView: View {
 
             Divider()
 
-            if viewModel.isLoading {
+            if self.viewModel.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(selection: $viewModel.selectedFileID) {
+                List(selection: self.$viewModel.selectedFileID) {
                     // Global section
                     Section("Global") {
-                        ForEach(viewModel.files.filter { $0.level == .global }) { file in
+                        ForEach(self.viewModel.files.filter { $0.level == .global }) { file in
                             ClaudeMDFileRow(file: file)
                                 .tag(file.id)
                         }
@@ -74,7 +74,7 @@ struct ClaudeMDView: View {
                     // Project section
                     Section("Project") {
                         ForEach(
-                            viewModel.files.filter { $0.level != .global }
+                            self.viewModel.files.filter { $0.level != .global }
                         ) { file in
                             ClaudeMDFileRow(file: file)
                                 .tag(file.id)
@@ -82,8 +82,8 @@ struct ClaudeMDView: View {
                     }
                 }
                 .listStyle(.sidebar)
-                .onChange(of: viewModel.selectedFileID) { _, _ in
-                    viewModel.cancelEditing()
+                .onChange(of: self.viewModel.selectedFileID) { _, _ in
+                    self.viewModel.cancelEditing()
                 }
             }
         }
@@ -95,17 +95,17 @@ struct ClaudeMDView: View {
         VStack(spacing: 0) {
             if let file = viewModel.selectedFile {
                 // Toolbar
-                contentToolbar(for: file)
+                self.contentToolbar(for: file)
 
                 Divider()
 
                 // Content
-                if viewModel.isEditing {
-                    editorView
+                if self.viewModel.isEditing {
+                    self.editorView
                 } else if file.exists {
-                    previewView(for: file)
+                    self.previewView(for: file)
                 } else {
-                    emptyFileView(for: file)
+                    self.emptyFileView(for: file)
                 }
             } else {
                 ContentUnavailableView(
@@ -115,6 +115,15 @@ struct ClaudeMDView: View {
                 )
             }
         }
+    }
+
+    // MARK: - Editor
+
+    private var editorView: some View {
+        TextEditor(text: self.$viewModel.editContent)
+            .font(.system(.body, design: .monospaced))
+            .scrollContentBackground(.hidden)
+            .padding(4)
     }
 
     private func contentToolbar(for file: ClaudeMDFile) -> some View {
@@ -136,28 +145,28 @@ struct ClaudeMDView: View {
             }
 
             // Action buttons
-            if viewModel.isEditing {
+            if self.viewModel.isEditing {
                 Button("Cancel") {
-                    viewModel.cancelEditing()
+                    self.viewModel.cancelEditing()
                 }
 
                 Button("Save") {
                     Task {
-                        await viewModel.saveSelectedFile()
+                        await self.viewModel.saveSelectedFile()
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(viewModel.editContent == file.content)
+                .disabled(self.viewModel.editContent == file.content)
             } else if file.exists {
                 Button {
-                    viewModel.startEditing()
+                    self.viewModel.startEditing()
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
             } else {
                 Button {
                     Task {
-                        await viewModel.createFile(at: file.level)
+                        await self.viewModel.createFile(at: file.level)
                     }
                 } label: {
                     Label("Create", systemImage: "plus")
@@ -181,15 +190,6 @@ struct ClaudeMDView: View {
         }
     }
 
-    // MARK: - Editor
-
-    private var editorView: some View {
-        TextEditor(text: $viewModel.editContent)
-            .font(.system(.body, design: .monospaced))
-            .scrollContentBackground(.hidden)
-            .padding(4)
-    }
-
     // MARK: - Empty State
 
     private func emptyFileView(for file: ClaudeMDFile) -> some View {
@@ -200,13 +200,12 @@ struct ClaudeMDView: View {
         } actions: {
             Button("Create File") {
                 Task {
-                    await viewModel.createFile(at: file.level)
+                    await self.viewModel.createFile(at: file.level)
                 }
             }
             .buttonStyle(.borderedProminent)
         }
     }
-
 }
 
 // MARK: - ClaudeMDFileRow
@@ -217,12 +216,12 @@ struct ClaudeMDFileRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: file.exists ? "doc.text.fill" : "doc.badge.plus")
-                .foregroundStyle(file.exists ? .blue : .secondary)
+            Image(systemName: self.file.exists ? "doc.text.fill" : "doc.badge.plus")
+                .foregroundStyle(self.file.exists ? .blue : .secondary)
                 .frame(width: 16)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(file.level.displayName)
+                Text(self.file.level.displayName)
                     .font(.body)
                     .lineLimit(1)
 
@@ -236,8 +235,8 @@ struct ClaudeMDFileRow: View {
 
             Spacer()
 
-            if file.exists {
-                if file.isTrackedByGit {
+            if self.file.exists {
+                if self.file.isTrackedByGit {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption2)
                         .foregroundStyle(.green)
@@ -262,10 +261,10 @@ struct GitStatusBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: isTracked ? "checkmark.circle.fill" : "circle.dashed")
-                .foregroundStyle(isTracked ? .green : .orange)
+            Image(systemName: self.isTracked ? "checkmark.circle.fill" : "circle.dashed")
+                .foregroundStyle(self.isTracked ? .green : .orange)
                 .font(.caption)
-            Text(isTracked ? "In git" : "Untracked")
+            Text(self.isTracked ? "In git" : "Untracked")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

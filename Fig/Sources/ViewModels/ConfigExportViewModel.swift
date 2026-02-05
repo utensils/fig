@@ -15,7 +15,7 @@ final class ConfigExportViewModel {
         self.projectName = projectName
 
         // Default to all non-sensitive components
-        selectedComponents = [.settings, .mcpServers]
+        self.selectedComponents = [.settings, .mcpServers]
     }
 
     // MARK: Internal
@@ -28,18 +28,6 @@ final class ConfigExportViewModel {
 
     /// Selected components to export.
     var selectedComponents: Set<ConfigBundleComponent> = []
-
-    /// Whether to include local settings (requires acknowledgment).
-    var includeLocalSettings: Bool {
-        get { selectedComponents.contains(.localSettings) }
-        set {
-            if newValue {
-                selectedComponents.insert(.localSettings)
-            } else {
-                selectedComponents.remove(.localSettings)
-            }
-        }
-    }
 
     /// Whether the user has acknowledged sensitive data warning.
     var acknowledgedSensitiveData = false
@@ -59,13 +47,29 @@ final class ConfigExportViewModel {
     /// Available components based on what exists in the project.
     private(set) var availableComponents: Set<ConfigBundleComponent> = []
 
+    /// Whether to include local settings (requires acknowledgment).
+    var includeLocalSettings: Bool {
+        get { self.selectedComponents.contains(.localSettings) }
+        set {
+            if newValue {
+                self.selectedComponents.insert(.localSettings)
+            } else {
+                self.selectedComponents.remove(.localSettings)
+            }
+        }
+    }
+
     /// Whether the export can proceed.
     var canExport: Bool {
-        guard !selectedComponents.isEmpty else { return false }
-        guard !isExporting else { return false }
+        guard !self.selectedComponents.isEmpty else {
+            return false
+        }
+        guard !self.isExporting else {
+            return false
+        }
 
         // Must acknowledge if sensitive data is included
-        if includeLocalSettings && !acknowledgedSensitiveData {
+        if self.includeLocalSettings, !self.acknowledgedSensitiveData {
             return false
         }
 
@@ -74,7 +78,7 @@ final class ConfigExportViewModel {
 
     /// Loads available components from the project.
     func loadAvailableComponents() async {
-        availableComponents = []
+        self.availableComponents = []
 
         do {
             let configManager = ConfigFileManager.shared
@@ -83,25 +87,25 @@ final class ConfigExportViewModel {
             if let settings = try await configManager.readProjectSettings(for: projectPath),
                !isSettingsEmpty(settings)
             {
-                availableComponents.insert(.settings)
+                self.availableComponents.insert(.settings)
             }
 
             // Check for local settings
             if let localSettings = try await configManager.readProjectLocalSettings(for: projectPath),
                !isSettingsEmpty(localSettings)
             {
-                availableComponents.insert(.localSettings)
+                self.availableComponents.insert(.localSettings)
             }
 
             // Check for MCP config
             if let mcpConfig = try await configManager.readMCPConfig(for: projectPath),
                mcpConfig.mcpServers?.isEmpty == false
             {
-                availableComponents.insert(.mcpServers)
+                self.availableComponents.insert(.mcpServers)
             }
 
             // Update selected to only include available
-            selectedComponents = selectedComponents.intersection(availableComponents)
+            self.selectedComponents = self.selectedComponents.intersection(self.availableComponents)
 
         } catch {
             // Ignore errors, just show what's available
@@ -110,23 +114,23 @@ final class ConfigExportViewModel {
 
     /// Performs the export with a save panel.
     func performExport() async {
-        isExporting = true
-        errorMessage = nil
-        exportSuccessful = false
-        exportedURL = nil
+        self.isExporting = true
+        self.errorMessage = nil
+        self.exportSuccessful = false
+        self.exportedURL = nil
 
         do {
             // Create bundle
             let bundle = try await ConfigBundleService.shared.exportBundle(
-                projectPath: projectPath,
-                projectName: projectName,
-                components: selectedComponents
+                projectPath: self.projectPath,
+                projectName: self.projectName,
+                components: self.selectedComponents
             )
 
             // Show save panel
             let savePanel = NSSavePanel()
             savePanel.title = "Export Configuration"
-            savePanel.nameFieldStringValue = "\(projectName).\(ConfigBundle.fileExtension)"
+            savePanel.nameFieldStringValue = "\(self.projectName).\(ConfigBundle.fileExtension)"
             savePanel.allowedContentTypes = [.json]
             savePanel.canCreateDirectories = true
 
@@ -134,8 +138,8 @@ final class ConfigExportViewModel {
 
             if response == .OK, let url = savePanel.url {
                 try ConfigBundleService.shared.writeBundle(bundle, to: url)
-                exportedURL = url
-                exportSuccessful = true
+                self.exportedURL = url
+                self.exportSuccessful = true
 
                 NotificationManager.shared.showSuccess(
                     "Export successful",
@@ -144,14 +148,14 @@ final class ConfigExportViewModel {
             }
 
         } catch {
-            errorMessage = error.localizedDescription
+            self.errorMessage = error.localizedDescription
             NotificationManager.shared.showError(
                 "Export failed",
                 message: error.localizedDescription
             )
         }
 
-        isExporting = false
+        self.isExporting = false
     }
 
     // MARK: Private

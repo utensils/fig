@@ -60,7 +60,7 @@ struct ClaudeMDFile: Identifiable, Sendable {
     var isTrackedByGit: Bool
 
     var displayPath: String {
-        switch level {
+        switch self.level {
         case .global:
             "~/.claude/CLAUDE.md"
         case .projectRoot:
@@ -106,13 +106,15 @@ final class ClaudeMDViewModel {
 
     /// The currently selected file.
     var selectedFile: ClaudeMDFile? {
-        guard let selectedFileID else { return nil }
-        return files.first { $0.id == selectedFileID }
+        guard let selectedFileID else {
+            return nil
+        }
+        return self.files.first { $0.id == selectedFileID }
     }
 
     /// Discovers and loads all CLAUDE.md files in the hierarchy.
     func loadFiles() async {
-        isLoading = true
+        self.isLoading = true
         var discovered: [ClaudeMDFile] = []
 
         // 1. Global CLAUDE.md (~/.claude/CLAUDE.md)
@@ -123,7 +125,7 @@ final class ClaudeMDViewModel {
         discovered.append(globalFile)
 
         // 2. Project root CLAUDE.md
-        let projectRootURL = projectURL.appendingPathComponent("CLAUDE.md")
+        let projectRootURL = self.projectURL.appendingPathComponent("CLAUDE.md")
         let projectFile = await loadFile(url: projectRootURL, level: .projectRoot)
         discovered.append(projectFile)
 
@@ -131,15 +133,15 @@ final class ClaudeMDViewModel {
         let subdirFiles = await discoverSubdirectoryFiles()
         discovered.append(contentsOf: subdirFiles)
 
-        files = discovered
+        self.files = discovered
 
         // Auto-select the first existing file, or the project root
-        if selectedFileID == nil {
-            let firstExisting = files.first { $0.exists }
-            selectedFileID = firstExisting?.id ?? files.first { $0.level == .projectRoot }?.id
+        if self.selectedFileID == nil {
+            let firstExisting = self.files.first { $0.exists }
+            self.selectedFileID = firstExisting?.id ?? self.files.first { $0.level == .projectRoot }?.id
         }
 
-        isLoading = false
+        self.isLoading = false
     }
 
     /// Saves content to the selected file.
@@ -150,7 +152,7 @@ final class ClaudeMDViewModel {
             return
         }
 
-        let url = files[fileIndex].url
+        let url = self.files[fileIndex].url
 
         do {
             // Ensure parent directory exists
@@ -162,13 +164,13 @@ final class ClaudeMDViewModel {
                 )
             }
 
-            try editContent.write(to: url, atomically: true, encoding: .utf8)
+            try self.editContent.write(to: url, atomically: true, encoding: .utf8)
 
-            files[fileIndex].content = editContent
-            files[fileIndex].exists = true
-            files[fileIndex].isTrackedByGit = await checkGitStatus(for: url)
+            self.files[fileIndex].content = self.editContent
+            self.files[fileIndex].exists = true
+            self.files[fileIndex].isTrackedByGit = await self.checkGitStatus(for: url)
 
-            isEditing = false
+            self.isEditing = false
             NotificationManager.shared.showSuccess(
                 "Saved",
                 message: "CLAUDE.md saved successfully"
@@ -182,16 +184,15 @@ final class ClaudeMDViewModel {
 
     /// Creates a new CLAUDE.md file at the given level.
     func createFile(at level: ClaudeMDLevel) async {
-        let url: URL
-        switch level {
+        let url: URL = switch level {
         case .global:
-            url = FileManager.default.homeDirectoryForCurrentUser
+            FileManager.default.homeDirectoryForCurrentUser
                 .appendingPathComponent(".claude")
                 .appendingPathComponent("CLAUDE.md")
         case .projectRoot:
-            url = projectURL.appendingPathComponent("CLAUDE.md")
+            self.projectURL.appendingPathComponent("CLAUDE.md")
         case let .subdirectory(relativePath):
-            url = projectURL
+            self.projectURL
                 .appendingPathComponent(relativePath)
                 .appendingPathComponent("CLAUDE.md")
         }
@@ -208,10 +209,10 @@ final class ClaudeMDViewModel {
             let defaultContent = "# CLAUDE.md\n\n"
             try defaultContent.write(to: url, atomically: true, encoding: .utf8)
 
-            await loadFiles()
-            selectedFileID = url.path
-            editContent = defaultContent
-            isEditing = true
+            await self.loadFiles()
+            self.selectedFileID = url.path
+            self.editContent = defaultContent
+            self.isEditing = true
 
             Log.fileIO.info("Created CLAUDE.md at \(url.path)")
         } catch {
@@ -222,15 +223,17 @@ final class ClaudeMDViewModel {
 
     /// Starts editing the selected file.
     func startEditing() {
-        guard let selectedFile else { return }
-        editContent = selectedFile.content
-        isEditing = true
+        guard let selectedFile else {
+            return
+        }
+        self.editContent = selectedFile.content
+        self.isEditing = true
     }
 
     /// Cancels editing and discards changes.
     func cancelEditing() {
-        isEditing = false
-        editContent = ""
+        self.isEditing = false
+        self.editContent = ""
     }
 
     /// Reloads the content of the selected file from disk.
@@ -241,12 +244,12 @@ final class ClaudeMDViewModel {
             return
         }
 
-        let url = files[fileIndex].url
+        let url = self.files[fileIndex].url
         let reloaded = await loadFile(url: url, level: files[fileIndex].level)
-        files[fileIndex] = reloaded
+        self.files[fileIndex] = reloaded
 
-        if isEditing {
-            editContent = reloaded.content
+        if self.isEditing {
+            self.editContent = reloaded.content
         }
     }
 
@@ -259,7 +262,7 @@ final class ClaudeMDViewModel {
         ".venv", "venv", "__pycache__", ".tox",
         "Pods", "Carthage",
         ".next", ".nuxt",
-        "vendor", "target"
+        "vendor", "target",
     ]
 
     private func loadFile(url: URL, level: ClaudeMDLevel) async -> ClaudeMDFile {
@@ -269,7 +272,7 @@ final class ClaudeMDViewModel {
 
         if exists {
             content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-            isTracked = await checkGitStatus(for: url)
+            isTracked = await self.checkGitStatus(for: url)
         }
 
         return ClaudeMDFile(
@@ -318,7 +321,9 @@ final class ClaudeMDViewModel {
 
                 // Check for CLAUDE.md in this directory
                 let resourceValues = try? itemURL.resourceValues(forKeys: [.isDirectoryKey])
-                guard resourceValues?.isDirectory == true else { continue }
+                guard resourceValues?.isDirectory == true else {
+                    continue
+                }
 
                 let claudeMDURL = itemURL.appendingPathComponent("CLAUDE.md")
                 if fm.fileExists(atPath: claudeMDURL.path) {
@@ -352,7 +357,7 @@ final class ClaudeMDViewModel {
             FileManager.default.homeDirectoryForCurrentUser
                 .appendingPathComponent(".claude").path
         )
-        let workingDir = isGlobal ? url.deletingLastPathComponent() : projectURL
+        let workingDir = isGlobal ? url.deletingLastPathComponent() : self.projectURL
         let filePath = url.path
 
         return await Task.detached {

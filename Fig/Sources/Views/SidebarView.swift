@@ -186,7 +186,9 @@ struct SidebarView: View {
                         self.selection = nil
                     }
                     let projectsToDelete = self.viewModel.projects.filter { project in
-                        guard let path = project.path else { return false }
+                        guard let path = project.path else {
+                            return false
+                        }
                         return self.selectedProjectPaths.contains(path)
                     }
                     await self.viewModel.deleteProjects(projectsToDelete)
@@ -221,33 +223,6 @@ struct SidebarView: View {
     private var allProjectsSelected: Bool {
         let visible = self.visibleProjectPaths
         return !visible.isEmpty && visible.isSubset(of: self.selectedProjectPaths)
-    }
-
-    private func toggleSelectMode() {
-        withAnimation {
-            self.isSelectMode.toggle()
-            if !self.isSelectMode {
-                self.selectedProjectPaths.removeAll()
-            }
-        }
-    }
-
-    private func toggleProjectSelection(_ project: ProjectEntry) {
-        guard let path = project.path else { return }
-        if self.selectedProjectPaths.contains(path) {
-            self.selectedProjectPaths.remove(path)
-        } else {
-            self.selectedProjectPaths.insert(path)
-        }
-    }
-
-    private func isProjectSelected(_ project: ProjectEntry) -> Bool {
-        guard let path = project.path else { return false }
-        return self.selectedProjectPaths.contains(path)
-    }
-
-    private func selectAllProjects() {
-        self.selectedProjectPaths = self.visibleProjectPaths
     }
 
     @ViewBuilder
@@ -317,6 +292,37 @@ struct SidebarView: View {
                 }
         }
     }
+
+    private func toggleSelectMode() {
+        withAnimation {
+            self.isSelectMode.toggle()
+            if !self.isSelectMode {
+                self.selectedProjectPaths.removeAll()
+            }
+        }
+    }
+
+    private func toggleProjectSelection(_ project: ProjectEntry) {
+        guard let path = project.path else {
+            return
+        }
+        if self.selectedProjectPaths.contains(path) {
+            self.selectedProjectPaths.remove(path)
+        } else {
+            self.selectedProjectPaths.insert(path)
+        }
+    }
+
+    private func isProjectSelected(_ project: ProjectEntry) -> Bool {
+        guard let path = project.path else {
+            return false
+        }
+        return self.selectedProjectPaths.contains(path)
+    }
+
+    private func selectAllProjects() {
+        self.selectedProjectPaths = self.visibleProjectPaths
+    }
 }
 
 // MARK: - ProjectRowView
@@ -385,22 +391,22 @@ struct ProjectRowView: View {
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityDescription)
+        .accessibilityLabel(self.accessibilityDescription)
     }
 
     // MARK: Private
 
     private var accessibilityDescription: String {
         var parts: [String] = []
-        parts.append(project.name ?? "Unknown project")
-        if !exists {
+        parts.append(self.project.name ?? "Unknown project")
+        if !self.exists {
             parts.append("directory not found")
         }
-        if isFavorite {
+        if self.isFavorite {
             parts.append("favorite")
         }
-        if mcpCount > 0 {
-            parts.append("\(mcpCount) MCP server\(mcpCount == 1 ? "" : "s")")
+        if self.mcpCount > 0 {
+            parts.append("\(self.mcpCount) MCP server\(self.mcpCount == 1 ? "" : "s")")
         }
         return parts.joined(separator: ", ")
     }

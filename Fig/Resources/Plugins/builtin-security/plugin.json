@@ -1,0 +1,19 @@
+{
+  "id": "com.fig.builtin.security",
+  "name": "Security Checks",
+  "version": "1.0.0",
+  "author": {
+    "name": "Fig Team",
+    "email": "fig@anthropic.com"
+  },
+  "summary": "Built-in security health checks for Claude Code configuration",
+  "description": "Checks for common security issues in your Claude Code configuration, including missing deny list entries for sensitive files, overly broad allow rules, and hardcoded secrets in MCP server configurations.",
+  "category": "health-checks",
+  "main": "init.lua",
+  "capabilities": [
+    "health:register",
+    "health:findings",
+    "config:read:global",
+    "config:read:project"
+  ]
+}

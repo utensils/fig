@@ -258,7 +258,7 @@ final class ProjectExplorerViewModel {
                 return
             }
             config.projects?.removeValue(forKey: path)
-            try await configManager.writeGlobalConfig(config)
+            try await self.configManager.writeGlobalConfig(config)
 
             self.projects.removeAll { $0.path == path }
             self.favoritesStorage.removeProject(path)
@@ -296,7 +296,7 @@ final class ProjectExplorerViewModel {
                 config.projects?.removeValue(forKey: path)
             }
 
-            try await configManager.writeGlobalConfig(config)
+            try await self.configManager.writeGlobalConfig(config)
 
             let pathSet = Set(paths)
             self.projects.removeAll { pathSet.contains($0.path ?? "") }

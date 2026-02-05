@@ -12,6 +12,8 @@ enum ImportWizardStep: Int, CaseIterable {
     case preview
     case complete
 
+    // MARK: Internal
+
     var title: String {
         switch self {
         case .selectFile: "Select File"
@@ -78,31 +80,39 @@ final class ConfigImportViewModel {
     /// Available components in the bundle.
     var availableComponents: [ConfigBundleComponent] {
         var components: [ConfigBundleComponent] = []
-        if bundle?.settings != nil { components.append(.settings) }
-        if bundle?.localSettings != nil { components.append(.localSettings) }
-        if bundle?.mcpServers != nil { components.append(.mcpServers) }
+        if self.bundle?.settings != nil {
+            components.append(.settings)
+        }
+        if self.bundle?.localSettings != nil {
+            components.append(.localSettings)
+        }
+        if self.bundle?.mcpServers != nil {
+            components.append(.mcpServers)
+        }
         return components
     }
 
     /// Whether the bundle contains sensitive data.
     var hasSensitiveData: Bool {
-        bundle?.containsSensitiveData ?? false
+        self.bundle?.containsSensitiveData ?? false
     }
 
     /// Whether the current step can proceed.
     var canProceed: Bool {
-        switch currentStep {
+        switch self.currentStep {
         case .selectFile:
-            return bundle != nil
+            return self.bundle != nil
         case .selectComponents:
-            guard !selectedComponents.isEmpty else { return false }
-            if selectedComponents.contains(.localSettings) && !acknowledgedSensitiveData {
+            guard !self.selectedComponents.isEmpty else {
+                return false
+            }
+            if self.selectedComponents.contains(.localSettings), !self.acknowledgedSensitiveData {
                 return false
             }
             return true
         case .resolveConflicts:
             // All conflicts must have resolutions
-            return conflicts.allSatisfy { resolutions[$0.component] != nil }
+            return self.conflicts.allSatisfy { self.resolutions[$0.component] != nil }
         case .preview:
             return true
         case .complete:
@@ -112,10 +122,8 @@ final class ConfigImportViewModel {
 
     /// Whether we can go back from the current step.
     var canGoBack: Bool {
-        currentStep != .selectFile && currentStep != .complete
+        self.currentStep != .selectFile && self.currentStep != .complete
     }
-
-    // MARK: - Actions
 
     /// Shows the open panel to select a file.
     func selectFile() async {
@@ -129,52 +137,52 @@ final class ConfigImportViewModel {
         let response = await openPanel.begin()
 
         if response == .OK, let url = openPanel.url {
-            await loadBundle(from: url)
+            await self.loadBundle(from: url)
         }
     }
 
     /// Loads a bundle from a URL.
     func loadBundle(from url: URL) async {
-        isLoading = true
-        errorMessage = nil
+        self.isLoading = true
+        self.errorMessage = nil
 
         do {
-            bundle = try ConfigBundleService.shared.readBundle(from: url)
-            selectedFileURL = url
+            self.bundle = try ConfigBundleService.shared.readBundle(from: url)
+            self.selectedFileURL = url
 
             // Pre-select all available components
-            selectedComponents = Set(availableComponents)
+            self.selectedComponents = Set(self.availableComponents)
 
         } catch {
-            errorMessage = error.localizedDescription
-            bundle = nil
-            selectedFileURL = nil
+            self.errorMessage = error.localizedDescription
+            self.bundle = nil
+            self.selectedFileURL = nil
         }
 
-        isLoading = false
+        self.isLoading = false
     }
 
     /// Advances to the next step.
     func nextStep() async {
-        switch currentStep {
+        switch self.currentStep {
         case .selectFile:
-            currentStep = .selectComponents
+            self.currentStep = .selectComponents
 
         case .selectComponents:
             // Detect conflicts
-            await detectConflicts()
-            if conflicts.isEmpty {
-                currentStep = .preview
+            await self.detectConflicts()
+            if self.conflicts.isEmpty {
+                self.currentStep = .preview
             } else {
-                currentStep = .resolveConflicts
+                self.currentStep = .resolveConflicts
             }
 
         case .resolveConflicts:
-            currentStep = .preview
+            self.currentStep = .preview
 
         case .preview:
-            await performImport()
-            currentStep = .complete
+            await self.performImport()
+            self.currentStep = .complete
 
         case .complete:
             break
@@ -183,18 +191,18 @@ final class ConfigImportViewModel {
 
     /// Goes back to the previous step.
     func previousStep() {
-        switch currentStep {
+        switch self.currentStep {
         case .selectFile:
             break
         case .selectComponents:
-            currentStep = .selectFile
+            self.currentStep = .selectFile
         case .resolveConflicts:
-            currentStep = .selectComponents
+            self.currentStep = .selectComponents
         case .preview:
-            if conflicts.isEmpty {
-                currentStep = .selectComponents
+            if self.conflicts.isEmpty {
+                self.currentStep = .selectComponents
             } else {
-                currentStep = .resolveConflicts
+                self.currentStep = .resolveConflicts
             }
         case .complete:
             break
@@ -203,46 +211,50 @@ final class ConfigImportViewModel {
 
     /// Resets the wizard.
     func reset() {
-        currentStep = .selectFile
-        bundle = nil
-        selectedFileURL = nil
-        selectedComponents = []
-        conflicts = []
-        resolutions = [:]
-        acknowledgedSensitiveData = false
-        errorMessage = nil
-        importResult = nil
+        self.currentStep = .selectFile
+        self.bundle = nil
+        self.selectedFileURL = nil
+        self.selectedComponents = []
+        self.conflicts = []
+        self.resolutions = [:]
+        self.acknowledgedSensitiveData = false
+        self.errorMessage = nil
+        self.importResult = nil
     }
 
     // MARK: Private
 
     private func detectConflicts() async {
-        guard let bundle else { return }
+        guard let bundle else {
+            return
+        }
 
-        conflicts = await ConfigBundleService.shared.detectConflicts(
+        self.conflicts = await ConfigBundleService.shared.detectConflicts(
             bundle: bundle,
-            projectPath: projectPath,
-            components: selectedComponents
+            projectPath: self.projectPath,
+            components: self.selectedComponents
         )
 
         // Set default resolutions
-        for conflict in conflicts {
-            resolutions[conflict.component] = .merge
+        for conflict in self.conflicts {
+            self.resolutions[conflict.component] = .merge
         }
     }
 
     private func performImport() async {
-        guard let bundle else { return }
+        guard let bundle else {
+            return
+        }
 
-        isImporting = true
-        errorMessage = nil
+        self.isImporting = true
+        self.errorMessage = nil
 
         do {
-            importResult = try await ConfigBundleService.shared.importBundle(
+            self.importResult = try await ConfigBundleService.shared.importBundle(
                 bundle,
-                to: projectPath,
-                components: selectedComponents,
-                resolutions: resolutions
+                to: self.projectPath,
+                components: self.selectedComponents,
+                resolutions: self.resolutions
             )
 
             if let result = importResult, result.success {
@@ -258,13 +270,13 @@ final class ConfigImportViewModel {
             }
 
         } catch {
-            errorMessage = error.localizedDescription
+            self.errorMessage = error.localizedDescription
             NotificationManager.shared.showError(
                 "Import failed",
                 message: error.localizedDescription
             )
         }
 
-        isImporting = false
+        self.isImporting = false
     }
 }

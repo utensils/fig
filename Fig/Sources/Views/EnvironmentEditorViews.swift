@@ -13,14 +13,14 @@ struct EnvironmentVariableEditorView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Target selector and add button
                 HStack {
-                    if !viewModel.isGlobalMode {
-                        EditingTargetPicker(selection: $viewModel.editingTarget)
+                    if !self.viewModel.isGlobalMode {
+                        EditingTargetPicker(selection: self.$viewModel.editingTarget)
                     }
 
                     Spacer()
 
                     Button {
-                        showingAddVariable = true
+                        self.showingAddVariable = true
                     } label: {
                         Label("Add Variable", systemImage: "plus")
                     }
@@ -32,9 +32,9 @@ struct EnvironmentVariableEditorView: View {
                         ForEach(KnownEnvironmentVariable.allVariables) { variable in
                             KnownVariableRow(
                                 variable: variable,
-                                isAdded: viewModel.environmentVariables.contains { $0.key == variable.name }
+                                isAdded: self.viewModel.environmentVariables.contains { $0.key == variable.name }
                             ) {
-                                showingAddVariable = true
+                                self.showingAddVariable = true
                             }
                         }
                     }
@@ -71,31 +71,32 @@ struct EnvironmentVariableEditorView: View {
 
                         Divider()
 
-                        if viewModel.environmentVariables.isEmpty {
+                        if self.viewModel.environmentVariables.isEmpty {
                             Text("No environment variables configured.")
                                 .foregroundStyle(.secondary)
                                 .padding(.vertical, 16)
                                 .frame(maxWidth: .infinity, alignment: .center)
                         } else {
-                            ForEach(viewModel.environmentVariables) { envVar in
+                            ForEach(self.viewModel.environmentVariables) { envVar in
                                 EditableEnvironmentVariableRow(
                                     envVar: envVar,
                                     description: KnownEnvironmentVariable.description(for: envVar.key),
                                     onUpdate: { newKey, newValue in
-                                        viewModel.updateEnvironmentVariable(
+                                        self.viewModel.updateEnvironmentVariable(
                                             envVar,
                                             newKey: newKey,
                                             newValue: newValue
                                         )
                                     },
                                     onDelete: {
-                                        viewModel.removeEnvironmentVariable(envVar)
+                                        self.viewModel.removeEnvironmentVariable(envVar)
                                     },
                                     isDuplicateKey: { key in
-                                        key != envVar.key && viewModel.environmentVariables.contains { $0.key == key }
+                                        key != envVar.key && self.viewModel.environmentVariables
+                                            .contains { $0.key == key }
                                     }
                                 )
-                                if envVar.id != viewModel.environmentVariables.last?.id {
+                                if envVar.id != self.viewModel.environmentVariables.last?.id {
                                     Divider()
                                 }
                             }
@@ -108,11 +109,11 @@ struct EnvironmentVariableEditorView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .sheet(isPresented: $showingAddVariable) {
+        .sheet(isPresented: self.$showingAddVariable) {
             AddEnvironmentVariableSheet { key, value in
-                viewModel.addEnvironmentVariable(key: key, value: value)
+                self.viewModel.addEnvironmentVariable(key: key, value: value)
             } isDuplicateKey: { key in
-                viewModel.environmentVariables.contains { $0.key == key }
+                self.viewModel.environmentVariables.contains { $0.key == key }
             }
         }
     }
@@ -133,20 +134,20 @@ struct KnownVariableRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
-                Text(variable.name)
+                Text(self.variable.name)
                     .font(.system(.caption, design: .monospaced))
                     .fontWeight(.medium)
 
                 Button {
-                    onAddTapped()
+                    self.onAddTapped()
                 } label: {
                     Image(systemName: "plus.circle")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
-                .disabled(isAdded)
+                .disabled(self.isAdded)
             }
-            Text(variable.description)
+            Text(self.variable.description)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -167,25 +168,25 @@ struct EditableEnvironmentVariableRow: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            if isEditing {
-                editingContent
+            if self.isEditing {
+                self.editingContent
             } else {
-                displayContent
+                self.displayContent
             }
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 8)
         .confirmationDialog(
             "Delete Variable",
-            isPresented: $showingDeleteConfirmation,
+            isPresented: self.$showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
-                onDelete()
+                self.onDelete()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Are you sure you want to delete \(envVar.key)?")
+            Text("Are you sure you want to delete \(self.envVar.key)?")
         }
     }
 
@@ -199,33 +200,33 @@ struct EditableEnvironmentVariableRow: View {
 
     private var isSensitive: Bool {
         let sensitivePatterns = ["token", "key", "secret", "password", "credential", "api"]
-        let lowercaseKey = envVar.key.lowercased()
+        let lowercaseKey = self.envVar.key.lowercased()
         return sensitivePatterns.contains { lowercaseKey.contains($0) }
     }
 
     private var canSave: Bool {
-        !editedKey.isEmpty && !isDuplicateKey(editedKey)
+        !self.editedKey.isEmpty && !self.isDuplicateKey(self.editedKey)
     }
 
     @ViewBuilder private var editingContent: some View {
-        TextField("Key", text: $editedKey)
+        TextField("Key", text: self.$editedKey)
             .textFieldStyle(.roundedBorder)
             .font(.system(.body, design: .monospaced))
             .frame(minWidth: 200, alignment: .leading)
 
-        TextField("Value", text: $editedValue)
+        TextField("Value", text: self.$editedValue)
             .textFieldStyle(.roundedBorder)
             .font(.system(.body, design: .monospaced))
             .frame(maxWidth: .infinity)
 
         HStack(spacing: 4) {
             Button("Save") {
-                saveEdit()
+                self.saveEdit()
             }
-            .disabled(!canSave)
+            .disabled(!self.canSave)
 
             Button("Cancel") {
-                cancelEdit()
+                self.cancelEdit()
             }
         }
         .frame(width: 120)
@@ -233,7 +234,7 @@ struct EditableEnvironmentVariableRow: View {
 
     @ViewBuilder private var displayContent: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(envVar.key)
+            Text(self.envVar.key)
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.medium)
             if let description {
@@ -248,11 +249,11 @@ struct EditableEnvironmentVariableRow: View {
             .foregroundStyle(.secondary)
 
         Group {
-            if isValueVisible || !isSensitive {
-                Text(envVar.value)
+            if self.isValueVisible || !self.isSensitive {
+                Text(self.envVar.value)
                     .font(.system(.body, design: .monospaced))
             } else {
-                Text(String(repeating: "\u{2022}", count: min(envVar.value.count, 20)))
+                Text(String(repeating: "\u{2022}", count: min(self.envVar.value.count, 20)))
                     .font(.system(.body, design: .monospaced))
             }
         }
@@ -260,18 +261,18 @@ struct EditableEnvironmentVariableRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
 
         HStack(spacing: 8) {
-            if isSensitive {
+            if self.isSensitive {
                 Button {
-                    isValueVisible.toggle()
+                    self.isValueVisible.toggle()
                 } label: {
-                    Image(systemName: isValueVisible ? "eye.slash" : "eye")
+                    Image(systemName: self.isValueVisible ? "eye.slash" : "eye")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
             }
 
             Button {
-                startEditing()
+                self.startEditing()
             } label: {
                 Image(systemName: "pencil")
                     .font(.caption)
@@ -279,7 +280,7 @@ struct EditableEnvironmentVariableRow: View {
             .buttonStyle(.plain)
 
             Button {
-                showingDeleteConfirmation = true
+                self.showingDeleteConfirmation = true
             } label: {
                 Image(systemName: "trash")
                     .font(.caption)
@@ -291,21 +292,23 @@ struct EditableEnvironmentVariableRow: View {
     }
 
     private func startEditing() {
-        editedKey = envVar.key
-        editedValue = envVar.value
-        isEditing = true
+        self.editedKey = self.envVar.key
+        self.editedValue = self.envVar.value
+        self.isEditing = true
     }
 
     private func saveEdit() {
-        guard canSave else { return }
-        onUpdate(editedKey, editedValue)
-        isEditing = false
+        guard self.canSave else {
+            return
+        }
+        self.onUpdate(self.editedKey, self.editedValue)
+        self.isEditing = false
     }
 
     private func cancelEdit() {
-        isEditing = false
-        editedKey = envVar.key
-        editedValue = envVar.value
+        self.isEditing = false
+        self.editedKey = self.envVar.key
+        self.editedValue = self.envVar.value
     }
 }
 
@@ -337,13 +340,13 @@ struct AddEnvironmentVariableSheet: View {
                 Text("Key")
                     .font(.headline)
 
-                TextField("VARIABLE_NAME", text: $key)
+                TextField("VARIABLE_NAME", text: self.$key)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
 
                 // Autocomplete suggestions
-                if !key.isEmpty {
-                    autocompleteView
+                if !self.key.isEmpty {
+                    self.autocompleteView
                 }
 
                 // Show description for known variables
@@ -359,7 +362,7 @@ struct AddEnvironmentVariableSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Value")
                     .font(.headline)
-                TextField("value", text: $value)
+                TextField("value", text: self.$value)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
             }
@@ -380,18 +383,18 @@ struct AddEnvironmentVariableSheet: View {
             // Buttons
             HStack {
                 Button("Cancel") {
-                    dismiss()
+                    self.dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
                 Button("Add Variable") {
-                    onAdd(key, value)
-                    dismiss()
+                    self.onAdd(self.key, self.value)
+                    self.dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(!isValid)
+                .disabled(!self.isValid)
             }
         }
         .padding()
@@ -406,16 +409,33 @@ struct AddEnvironmentVariableSheet: View {
     @State private var key = ""
     @State private var value = ""
 
+    private var validationError: String? {
+        if self.key.isEmpty {
+            return nil // Don't show error until they try to submit
+        }
+        if self.isDuplicateKey(self.key) {
+            return "A variable with this key already exists"
+        }
+        if self.key.contains(" ") {
+            return "Key cannot contain spaces"
+        }
+        return nil
+    }
+
+    private var isValid: Bool {
+        !self.key.isEmpty && !self.isDuplicateKey(self.key) && !self.key.contains(" ")
+    }
+
     @ViewBuilder private var autocompleteView: some View {
         let suggestions = KnownEnvironmentVariable.allVariables.filter {
-            $0.name.localizedCaseInsensitiveContains(key)
+            $0.name.localizedCaseInsensitiveContains(self.key)
         }
         if !suggestions.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(suggestions) { variable in
                         Button {
-                            key = variable.name
+                            self.key = variable.name
                         } label: {
                             Text(variable.name)
                                 .font(.caption)
@@ -429,30 +449,13 @@ struct AddEnvironmentVariableSheet: View {
             }
         }
     }
-
-    private var validationError: String? {
-        if key.isEmpty {
-            return nil // Don't show error until they try to submit
-        }
-        if isDuplicateKey(key) {
-            return "A variable with this key already exists"
-        }
-        if key.contains(" ") {
-            return "Key cannot contain spaces"
-        }
-        return nil
-    }
-
-    private var isValid: Bool {
-        !key.isEmpty && !isDuplicateKey(key) && !key.contains(" ")
-    }
 }
 
 #Preview("Environment Variable Editor") {
     let viewModel = SettingsEditorViewModel(projectPath: "/Users/test/project")
     viewModel.environmentVariables = [
         EditableEnvironmentVariable(key: "CLAUDE_CODE_MAX_OUTPUT_TOKENS", value: "16384"),
-        EditableEnvironmentVariable(key: "API_KEY", value: "sk-1234567890")
+        EditableEnvironmentVariable(key: "API_KEY", value: "sk-1234567890"),
     ]
 
     return EnvironmentVariableEditorView(viewModel: viewModel)

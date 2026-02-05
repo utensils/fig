@@ -8,19 +8,17 @@ struct ConfigImportView: View {
 
     @Bindable var viewModel: ConfigImportViewModel
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
         VStack(spacing: 0) {
             // Header with step indicator
-            header
+            self.header
 
             Divider()
 
             // Step content
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    stepContent
+                    self.stepContent
                 }
                 .padding()
             }
@@ -28,12 +26,14 @@ struct ConfigImportView: View {
             Divider()
 
             // Footer
-            footer
+            self.footer
         }
         .frame(width: 500, height: 500)
     }
 
     // MARK: Private
+
+    @Environment(\.dismiss) private var dismiss
 
     private var header: some View {
         VStack(spacing: 12) {
@@ -45,7 +45,7 @@ struct ConfigImportView: View {
                 VStack(alignment: .leading) {
                     Text("Import Configuration")
                         .font(.headline)
-                    Text(viewModel.projectName)
+                    Text(self.viewModel.projectName)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -58,13 +58,13 @@ struct ConfigImportView: View {
                 ForEach(Array(ImportWizardStep.allCases.enumerated()), id: \.element) { index, step in
                     if index > 0 {
                         Rectangle()
-                            .fill(step.rawValue <= viewModel.currentStep.rawValue
+                            .fill(step.rawValue <= self.viewModel.currentStep.rawValue
                                 ? Color.accentColor : Color.secondary.opacity(0.3))
                             .frame(height: 2)
                     }
 
                     Circle()
-                        .fill(step.rawValue <= viewModel.currentStep.rawValue
+                        .fill(step.rawValue <= self.viewModel.currentStep.rawValue
                             ? Color.accentColor : Color.secondary.opacity(0.3))
                         .frame(width: 10, height: 10)
                 }
@@ -76,17 +76,17 @@ struct ConfigImportView: View {
 
     @ViewBuilder
     private var stepContent: some View {
-        switch viewModel.currentStep {
+        switch self.viewModel.currentStep {
         case .selectFile:
-            selectFileStep
+            self.selectFileStep
         case .selectComponents:
-            selectComponentsStep
+            self.selectComponentsStep
         case .resolveConflicts:
-            resolveConflictsStep
+            self.resolveConflictsStep
         case .preview:
-            previewStep
+            self.previewStep
         case .complete:
-            completeStep
+            self.completeStep
         }
     }
 
@@ -143,13 +143,13 @@ struct ConfigImportView: View {
 
                 Button("Choose Different File...") {
                     Task {
-                        await viewModel.selectFile()
+                        await self.viewModel.selectFile()
                     }
                 }
             } else {
                 Button {
                     Task {
-                        await viewModel.selectFile()
+                        await self.viewModel.selectFile()
                     }
                 } label: {
                     VStack(spacing: 8) {
@@ -163,7 +163,7 @@ struct ConfigImportView: View {
                 .buttonStyle(.bordered)
             }
 
-            if viewModel.isLoading {
+            if self.viewModel.isLoading {
                 ProgressView("Loading bundle...")
             }
 
@@ -186,14 +186,14 @@ struct ConfigImportView: View {
 
             GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(viewModel.availableComponents) { component in
+                    ForEach(self.viewModel.availableComponents) { component in
                         Toggle(isOn: Binding(
-                            get: { viewModel.selectedComponents.contains(component) },
+                            get: { self.viewModel.selectedComponents.contains(component) },
                             set: { selected in
                                 if selected {
-                                    viewModel.selectedComponents.insert(component)
+                                    self.viewModel.selectedComponents.insert(component)
                                 } else {
-                                    viewModel.selectedComponents.remove(component)
+                                    self.viewModel.selectedComponents.remove(component)
                                 }
                             }
                         )) {
@@ -218,7 +218,7 @@ struct ConfigImportView: View {
             }
 
             // Sensitive data warning
-            if viewModel.selectedComponents.contains(.localSettings) {
+            if self.viewModel.selectedComponents.contains(.localSettings) {
                 GroupBox {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -229,7 +229,7 @@ struct ConfigImportView: View {
                         }
                         .font(.subheadline)
 
-                        Toggle(isOn: $viewModel.acknowledgedSensitiveData) {
+                        Toggle(isOn: self.$viewModel.acknowledgedSensitiveData) {
                             Text("I trust this bundle and want to import it")
                                 .font(.subheadline)
                         }
@@ -247,7 +247,7 @@ struct ConfigImportView: View {
             Text("The following conflicts were detected. Choose how to resolve them.")
                 .font(.subheadline)
 
-            ForEach(viewModel.conflicts) { conflict in
+            ForEach(self.viewModel.conflicts) { conflict in
                 GroupBox {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -257,8 +257,8 @@ struct ConfigImportView: View {
                         }
 
                         Picker("Resolution", selection: Binding(
-                            get: { viewModel.resolutions[conflict.component] ?? .merge },
-                            set: { viewModel.resolutions[conflict.component] = $0 }
+                            get: { self.viewModel.resolutions[conflict.component] ?? .merge },
+                            set: { self.viewModel.resolutions[conflict.component] = $0 }
                         )) {
                             ForEach(ImportConflict.ImportResolution.allCases) { resolution in
                                 Text(resolution.displayName).tag(resolution)
@@ -281,7 +281,7 @@ struct ConfigImportView: View {
 
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
-                    ForEach(Array(viewModel.selectedComponents)) { component in
+                    ForEach(Array(self.viewModel.selectedComponents)) { component in
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(.green)
@@ -299,7 +299,7 @@ struct ConfigImportView: View {
                 Label("Components to Import", systemImage: "list.bullet")
             }
 
-            if viewModel.hasSensitiveData {
+            if self.viewModel.hasSensitiveData {
                 HStack {
                     Image(systemName: "lock.shield")
                         .foregroundStyle(.orange)
@@ -408,33 +408,33 @@ struct ConfigImportView: View {
 
     private var footer: some View {
         HStack {
-            if viewModel.canGoBack {
+            if self.viewModel.canGoBack {
                 Button("Back") {
-                    viewModel.previousStep()
+                    self.viewModel.previousStep()
                 }
             }
 
             Spacer()
 
-            if viewModel.currentStep == .complete {
+            if self.viewModel.currentStep == .complete {
                 Button("Done") {
-                    dismiss()
+                    self.dismiss()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
             } else {
                 Button("Cancel") {
-                    dismiss()
+                    self.dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
-                Button(viewModel.currentStep == .preview ? "Import" : "Next") {
+                Button(self.viewModel.currentStep == .preview ? "Import" : "Next") {
                     Task {
-                        await viewModel.nextStep()
+                        await self.viewModel.nextStep()
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.canProceed || viewModel.isImporting)
+                .disabled(!self.viewModel.canProceed || self.viewModel.isImporting)
                 .keyboardShortcut(.defaultAction)
             }
         }

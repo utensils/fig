@@ -15,41 +15,41 @@ struct ProjectSettingsEditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header with save button and dirty indicator
-            editorHeader
+            self.editorHeader
 
             Divider()
 
             // Tab content
-            if viewModel.isLoading {
+            if self.viewModel.isLoading {
                 ProgressView("Loading configuration...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                TabView(selection: $selectedTab) {
+                TabView(selection: self.$selectedTab) {
                     PermissionRuleEditorView(
-                        viewModel: viewModel,
+                        viewModel: self.viewModel,
                         onPromoteToGlobal: { rule, type in
-                            ruleToPromote = RulePromotionInfo(rule: rule, type: type)
-                            showPromoteConfirmation = true
+                            self.ruleToPromote = RulePromotionInfo(rule: rule, type: type)
+                            self.showPromoteConfirmation = true
                         }
                     )
-                        .tabItem {
-                            Label("Permissions", systemImage: "lock.shield")
-                        }
-                        .tag(EditorTab.permissions)
+                    .tabItem {
+                        Label("Permissions", systemImage: "lock.shield")
+                    }
+                    .tag(EditorTab.permissions)
 
-                    EnvironmentVariableEditorView(viewModel: viewModel)
+                    EnvironmentVariableEditorView(viewModel: self.viewModel)
                         .tabItem {
                             Label("Environment", systemImage: "list.bullet.rectangle")
                         }
                         .tag(EditorTab.environment)
 
-                    HookEditorView(viewModel: viewModel)
+                    HookEditorView(viewModel: self.viewModel)
                         .tabItem {
                             Label("Hooks", systemImage: "bolt.horizontal")
                         }
                         .tag(EditorTab.hooks)
 
-                    AttributionSettingsEditorView(viewModel: viewModel)
+                    AttributionSettingsEditorView(viewModel: self.viewModel)
                         .tabItem {
                             Label("General", systemImage: "gearshape")
                         }
@@ -59,61 +59,61 @@ struct ProjectSettingsEditorView: View {
             }
         }
         .frame(minWidth: 600, minHeight: 500)
-        .interactiveDismissDisabled(viewModel.isDirty)
-        .navigationTitle(windowTitle)
+        .interactiveDismissDisabled(self.viewModel.isDirty)
+        .navigationTitle(self.windowTitle)
         .task {
-            await viewModel.loadSettings()
+            await self.viewModel.loadSettings()
         }
         .onDisappear {
-            if viewModel.isDirty {
+            if self.viewModel.isDirty {
                 // The confirmation dialog should have been shown before navigation
                 Log.general.warning("Editor closed with unsaved changes")
             }
         }
         .confirmationDialog(
             "Unsaved Changes",
-            isPresented: $showingCloseConfirmation,
+            isPresented: self.$showingCloseConfirmation,
             titleVisibility: .visible
         ) {
             Button("Save and Close") {
                 Task {
                     do {
-                        try await viewModel.save()
-                        closeAction?()
+                        try await self.viewModel.save()
+                        self.closeAction?()
                     } catch {
                         NotificationManager.shared.showError(error)
                     }
                 }
             }
             Button("Discard Changes", role: .destructive) {
-                closeAction?()
+                self.closeAction?()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("You have unsaved changes. Would you like to save them before closing?")
         }
-        .sheet(isPresented: $showingConflictSheet) {
+        .sheet(isPresented: self.$showingConflictSheet) {
             if let url = viewModel.externalChangeURL {
                 ConflictResolutionSheet(fileName: url.lastPathComponent) { resolution in
                     Task {
-                        await viewModel.resolveConflict(resolution)
+                        await self.viewModel.resolveConflict(resolution)
                     }
-                    showingConflictSheet = false
+                    self.showingConflictSheet = false
                 }
             }
         }
-        .onChange(of: viewModel.hasExternalChanges) { _, hasChanges in
+        .onChange(of: self.viewModel.hasExternalChanges) { _, hasChanges in
             if hasChanges {
-                showingConflictSheet = true
+                self.showingConflictSheet = true
             }
         }
         .onAppear {
-            viewModel.undoManager = undoManager
+            self.viewModel.undoManager = self.undoManager
         }
         .promoteToGlobalAlert(
-            isPresented: $showPromoteConfirmation,
-            ruleToPromote: $ruleToPromote,
-            projectURL: viewModel.projectURL
+            isPresented: self.$showPromoteConfirmation,
+            ruleToPromote: self.$ruleToPromote,
+            projectURL: self.viewModel.projectURL
         )
     }
 
@@ -125,7 +125,11 @@ struct ProjectSettingsEditorView: View {
         case hooks
         case general
 
-        var id: String { rawValue }
+        // MARK: Internal
+
+        var id: String {
+            rawValue
+        }
     }
 
     @State private var viewModel: SettingsEditorViewModel
@@ -140,8 +144,8 @@ struct ProjectSettingsEditorView: View {
     private var undoManager
 
     private var windowTitle: String {
-        var title = viewModel.displayName
-        if viewModel.isDirty {
+        var title = self.viewModel.displayName
+        if self.viewModel.isDirty {
             title += " \u{2022}" // bullet point
         }
         return title
@@ -157,14 +161,14 @@ struct ProjectSettingsEditorView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(viewModel.displayName)
+                        Text(self.viewModel.displayName)
                             .font(.title3)
                             .fontWeight(.semibold)
 
-                        DirtyStateIndicator(isDirty: viewModel.isDirty)
+                        DirtyStateIndicator(isDirty: self.viewModel.isDirty)
                     }
 
-                    Text(abbreviatePath(viewModel.projectPath ?? ""))
+                    Text(self.abbreviatePath(self.viewModel.projectPath ?? ""))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -175,20 +179,20 @@ struct ProjectSettingsEditorView: View {
             // Undo/Redo buttons
             HStack(spacing: 4) {
                 Button {
-                    undoManager?.undo()
+                    self.undoManager?.undo()
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
                 }
-                .disabled(!viewModel.canUndo)
+                .disabled(!self.viewModel.canUndo)
                 .keyboardShortcut("z", modifiers: .command)
                 .help("Undo")
 
                 Button {
-                    undoManager?.redo()
+                    self.undoManager?.redo()
                 } label: {
                     Image(systemName: "arrow.uturn.forward")
                 }
-                .disabled(!viewModel.canRedo)
+                .disabled(!self.viewModel.canRedo)
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .help("Redo")
             }
@@ -199,12 +203,12 @@ struct ProjectSettingsEditorView: View {
 
             // Save button
             SaveButton(
-                isDirty: viewModel.isDirty,
-                isSaving: viewModel.isSaving
+                isDirty: self.viewModel.isDirty,
+                isSaving: self.viewModel.isSaving
             ) {
                 Task {
                     do {
-                        try await viewModel.save()
+                        try await self.viewModel.save()
                         NotificationManager.shared.showSuccess("Settings Saved")
                     } catch {
                         NotificationManager.shared.showError(error)

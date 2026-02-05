@@ -58,15 +58,9 @@ struct DenyListSecurityCheck: HealthCheck {
 
 /// Checks for overly broad allow rules that may pose security risks.
 struct BroadAllowRulesCheck: HealthCheck {
-    let name = "Broad Allow Rules"
+    // MARK: Internal
 
-    /// Patterns considered overly broad.
-    private static let broadPatterns: [(pattern: String, description: String)] = [
-        ("Bash(*)", "Allows any Bash command without restriction"),
-        ("Read(*)", "Allows reading any file without restriction"),
-        ("Write(*)", "Allows writing to any file without restriction"),
-        ("Edit(*)", "Allows editing any file without restriction"),
-    ]
+    let name = "Broad Allow Rules"
 
     func check(context: HealthCheckContext) -> [Finding] {
         let allowRules = context.allAllowRules
@@ -83,16 +77,25 @@ struct BroadAllowRulesCheck: HealthCheck {
             return nil
         }
     }
+
+    // MARK: Private
+
+    /// Patterns considered overly broad.
+    private static let broadPatterns: [(pattern: String, description: String)] = [
+        ("Bash(*)", "Allows any Bash command without restriction"),
+        ("Read(*)", "Allows reading any file without restriction"),
+        ("Write(*)", "Allows writing to any file without restriction"),
+        ("Edit(*)", "Allows editing any file without restriction"),
+    ]
 }
 
 // MARK: - GlobalConfigSizeCheck
 
 /// Checks if the global config file is too large (performance issue).
 struct GlobalConfigSizeCheck: HealthCheck {
-    let name = "Global Config Size"
+    // MARK: Internal
 
-    /// Threshold in bytes (5 MB).
-    private static let sizeThreshold: Int64 = 5 * 1024 * 1024
+    let name = "Global Config Size"
 
     func check(context: HealthCheckContext) -> [Finding] {
         guard let size = context.globalConfigFileSize, size > Self.sizeThreshold else {
@@ -107,13 +110,58 @@ struct GlobalConfigSizeCheck: HealthCheck {
                 "Consider cleaning up old project entries or conversation history."
         )]
     }
+
+    // MARK: Private
+
+    /// Threshold in bytes (5 MB).
+    private static let sizeThreshold: Int64 = 5 * 1024 * 1024
 }
 
 // MARK: - MCPHardcodedSecretsCheck
 
 /// Checks for MCP servers with hardcoded secrets in their configuration.
 struct MCPHardcodedSecretsCheck: HealthCheck {
+    // MARK: Internal
+
     let name = "MCP Hardcoded Secrets"
+
+    func check(context: HealthCheckContext) -> [Finding] {
+        var findings: [Finding] = []
+
+        for (name, server) in context.allMCPServers {
+            // Check env vars for hardcoded secrets
+            if let env = server.env {
+                for (key, value) in env {
+                    if self.looksLikeSecret(key: key, value: value) {
+                        findings.append(Finding(
+                            severity: .warning,
+                            title: "Hardcoded secret in MCP server '\(name)'",
+                            description: "The environment variable '\(key)' appears to contain a " +
+                                "hardcoded secret. Consider using environment variable references instead."
+                        ))
+                    }
+                }
+            }
+
+            // Check HTTP headers for hardcoded secrets
+            if let headers = server.headers {
+                for (key, value) in headers {
+                    if self.looksLikeSecret(key: key, value: value) {
+                        findings.append(Finding(
+                            severity: .warning,
+                            title: "Hardcoded secret in MCP server '\(name)' headers",
+                            description: "The header '\(key)' appears to contain a hardcoded secret. " +
+                                "Consider using environment variable references instead."
+                        ))
+                    }
+                }
+            }
+        }
+
+        return findings
+    }
+
+    // MARK: Private
 
     /// Patterns that suggest a value is a secret.
     private static let secretPatterns: [String] = [
@@ -128,42 +176,6 @@ struct MCPHardcodedSecretsCheck: HealthCheck {
         "TOKEN", "SECRET", "KEY", "PASSWORD", "CREDENTIAL",
         "AUTH", "API_KEY", "APIKEY", "PRIVATE",
     ]
-
-    func check(context: HealthCheckContext) -> [Finding] {
-        var findings: [Finding] = []
-
-        for (name, server) in context.allMCPServers {
-            // Check env vars for hardcoded secrets
-            if let env = server.env {
-                for (key, value) in env {
-                    if looksLikeSecret(key: key, value: value) {
-                        findings.append(Finding(
-                            severity: .warning,
-                            title: "Hardcoded secret in MCP server '\(name)'",
-                            description: "The environment variable '\(key)' appears to contain a " +
-                                "hardcoded secret. Consider using environment variable references instead."
-                        ))
-                    }
-                }
-            }
-
-            // Check HTTP headers for hardcoded secrets
-            if let headers = server.headers {
-                for (key, value) in headers {
-                    if looksLikeSecret(key: key, value: value) {
-                        findings.append(Finding(
-                            severity: .warning,
-                            title: "Hardcoded secret in MCP server '\(name)' headers",
-                            description: "The header '\(key)' appears to contain a hardcoded secret. " +
-                                "Consider using environment variable references instead."
-                        ))
-                    }
-                }
-            }
-        }
-
-        return findings
-    }
 
     private func looksLikeSecret(key: String, value: String) -> Bool {
         let upperKey = key.uppercased()
@@ -332,7 +344,7 @@ struct GoodPracticesCheck: HealthCheck {
 
 /// Service that runs all health checks and returns aggregated findings.
 enum ConfigHealthCheckService {
-    /// All registered health checks, run in order.
+    /// All registered built-in Swift health checks, run in order.
     static let checks: [any HealthCheck] = [
         DenyListSecurityCheck(),
         BroadAllowRulesCheck(),
@@ -345,10 +357,17 @@ enum ConfigHealthCheckService {
     ]
 
     /// Runs all health checks and returns findings sorted by severity.
+    ///
+    /// This synchronous version only runs built-in Swift checks.
+    /// Use `runAllChecksAsync` to include plugin health checks.
+    ///
+    /// - Parameter context: The health check context
+    /// - Returns: Array of findings from built-in Swift checks only
     static func runAllChecks(context: HealthCheckContext) -> [Finding] {
         var findings: [Finding] = []
 
-        for check in checks {
+        // Run built-in Swift checks
+        for check in self.checks {
             let results = check.check(context: context)
             findings.append(contentsOf: results)
         }
@@ -357,6 +376,34 @@ enum ConfigHealthCheckService {
         findings.sort { $0.severity < $1.severity }
 
         Log.general.info("Health check completed: \(findings.count) findings")
+        return findings
+    }
+
+    /// Runs all health checks including plugin-registered checks.
+    ///
+    /// This async method runs both built-in Swift checks and any health checks
+    /// registered by Lua plugins through `LuaPluginService`.
+    ///
+    /// - Parameter context: The health check context
+    /// - Returns: Array of findings from all checks, sorted by severity
+    static func runAllChecksAsync(context: HealthCheckContext) async -> [Finding] {
+        var findings: [Finding] = []
+
+        // Run built-in Swift checks
+        for check in self.checks {
+            let results = check.check(context: context)
+            findings.append(contentsOf: results)
+        }
+
+        // Run plugin health checks
+        let pluginFindings = await LuaPluginService.shared.executeHealthChecks(context: context)
+        findings.append(contentsOf: pluginFindings)
+
+        // Sort by severity (security first, then warning, suggestion, good)
+        findings.sort { $0.severity < $1.severity }
+
+        let pluginCount = pluginFindings.count
+        Log.general.info("Health check completed: \(findings.count) findings (\(pluginCount) from plugins)")
         return findings
     }
 }

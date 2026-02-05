@@ -4,41 +4,44 @@ import Foundation
 
 /// A permission rule with editing metadata.
 struct EditablePermissionRule: Identifiable, Equatable, Hashable {
-    let id: UUID
-    var rule: String
-    var type: PermissionType
+    // MARK: Lifecycle
 
     init(id: UUID = UUID(), rule: String, type: PermissionType) {
         self.id = id
         self.rule = rule
         self.type = type
     }
+
+    // MARK: Internal
+
+    let id: UUID
+    var rule: String
+    var type: PermissionType
 }
 
 // MARK: - EditableEnvironmentVariable
 
 /// An environment variable with editing metadata.
 struct EditableEnvironmentVariable: Identifiable, Equatable, Hashable {
-    let id: UUID
-    var key: String
-    var value: String
+    // MARK: Lifecycle
 
     init(id: UUID = UUID(), key: String, value: String) {
         self.id = id
         self.key = key
         self.value = value
     }
+
+    // MARK: Internal
+
+    let id: UUID
+    var key: String
+    var value: String
 }
 
 // MARK: - KnownEnvironmentVariable
 
 /// Known Claude Code environment variables with descriptions.
 struct KnownEnvironmentVariable: Identifiable {
-    let id: String
-    let name: String
-    let description: String
-    let defaultValue: String?
-
     static let allVariables: [KnownEnvironmentVariable] = [
         KnownEnvironmentVariable(
             id: "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
@@ -99,11 +102,16 @@ struct KnownEnvironmentVariable: Identifiable {
             name: "ANTHROPIC_DEFAULT_HAIKU_MODEL",
             description: "Default Haiku model to use",
             defaultValue: nil
-        )
+        ),
     ]
 
+    let id: String
+    let name: String
+    let description: String
+    let defaultValue: String?
+
     static func description(for key: String) -> String? {
-        allVariables.first { $0.name == key }?.description
+        self.allVariables.first { $0.name == key }?.description
     }
 }
 
@@ -111,11 +119,6 @@ struct KnownEnvironmentVariable: Identifiable {
 
 /// Quick-add presets for common permission patterns.
 struct PermissionPreset: Identifiable {
-    let id: String
-    let name: String
-    let description: String
-    let rules: [(rule: String, type: PermissionType)]
-
     static let allPresets: [PermissionPreset] = [
         PermissionPreset(
             id: "protect-env",
@@ -123,7 +126,7 @@ struct PermissionPreset: Identifiable {
             description: "Prevent reading environment files",
             rules: [
                 ("Read(.env)", .deny),
-                ("Read(.env.*)", .deny)
+                ("Read(.env.*)", .deny),
             ]
         ),
         PermissionPreset(
@@ -131,7 +134,7 @@ struct PermissionPreset: Identifiable {
             name: "Allow npm scripts",
             description: "Allow running npm scripts",
             rules: [
-                ("Bash(npm run *)", .allow)
+                ("Bash(npm run *)", .allow),
             ]
         ),
         PermissionPreset(
@@ -139,7 +142,7 @@ struct PermissionPreset: Identifiable {
             name: "Allow git operations",
             description: "Allow running git commands",
             rules: [
-                ("Bash(git *)", .allow)
+                ("Bash(git *)", .allow),
             ]
         ),
         PermissionPreset(
@@ -148,7 +151,7 @@ struct PermissionPreset: Identifiable {
             description: "Deny all write and edit operations",
             rules: [
                 ("Write", .deny),
-                ("Edit", .deny)
+                ("Edit", .deny),
             ]
         ),
         PermissionPreset(
@@ -156,7 +159,7 @@ struct PermissionPreset: Identifiable {
             name: "Allow reading source",
             description: "Allow reading all files in src directory",
             rules: [
-                ("Read(src/**)", .allow)
+                ("Read(src/**)", .allow),
             ]
         ),
         PermissionPreset(
@@ -164,10 +167,15 @@ struct PermissionPreset: Identifiable {
             name: "Block curl commands",
             description: "Prevent curl network requests",
             rules: [
-                ("Bash(curl *)", .deny)
+                ("Bash(curl *)", .deny),
             ]
-        )
+        ),
     ]
+
+    let id: String
+    let name: String
+    let description: String
+    let rules: [(rule: String, type: PermissionType)]
 }
 
 // MARK: - ToolType
@@ -184,7 +192,11 @@ enum ToolType: String, CaseIterable, Identifiable {
     case notebook = "Notebook"
     case custom = "Custom"
 
-    var id: String { rawValue }
+    // MARK: Internal
+
+    var id: String {
+        rawValue
+    }
 
     var placeholder: String {
         switch self {
@@ -222,7 +234,16 @@ enum EditingTarget: String, CaseIterable, Identifiable {
     case projectShared
     case projectLocal
 
-    var id: String { rawValue }
+    // MARK: Internal
+
+    /// Targets available when editing project settings.
+    static var projectTargets: [EditingTarget] {
+        [.projectShared, .projectLocal]
+    }
+
+    var id: String {
+        rawValue
+    }
 
     var label: String {
         switch self {
@@ -256,21 +277,13 @@ enum EditingTarget: String, CaseIterable, Identifiable {
             .projectLocal
         }
     }
-
-    /// Targets available when editing project settings.
-    static var projectTargets: [EditingTarget] {
-        [.projectShared, .projectLocal]
-    }
 }
 
 // MARK: - EditableHookDefinition
 
 /// A hook definition with editing metadata.
 struct EditableHookDefinition: Identifiable, Equatable, Hashable {
-    let id: UUID
-    var type: String
-    var command: String
-    var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     init(id: UUID = UUID(), type: String = "command", command: String = "") {
         self.id = id
@@ -286,11 +299,18 @@ struct EditableHookDefinition: Identifiable, Equatable, Hashable {
         self.additionalProperties = definition.additionalProperties
     }
 
+    // MARK: Internal
+
+    let id: UUID
+    var type: String
+    var command: String
+    var additionalProperties: [String: AnyCodable]?
+
     func toHookDefinition() -> HookDefinition {
         HookDefinition(
-            type: type,
-            command: command.isEmpty ? nil : command,
-            additionalProperties: additionalProperties
+            type: self.type,
+            command: self.command.isEmpty ? nil : self.command,
+            additionalProperties: self.additionalProperties
         )
     }
 }
@@ -299,10 +319,7 @@ struct EditableHookDefinition: Identifiable, Equatable, Hashable {
 
 /// A hook group with editing metadata.
 struct EditableHookGroup: Identifiable, Equatable, Hashable {
-    let id: UUID
-    var matcher: String
-    var hooks: [EditableHookDefinition]
-    var additionalProperties: [String: AnyCodable]?
+    // MARK: Lifecycle
 
     init(id: UUID = UUID(), matcher: String = "", hooks: [EditableHookDefinition] = []) {
         self.id = id
@@ -318,11 +335,18 @@ struct EditableHookGroup: Identifiable, Equatable, Hashable {
         self.additionalProperties = group.additionalProperties
     }
 
+    // MARK: Internal
+
+    let id: UUID
+    var matcher: String
+    var hooks: [EditableHookDefinition]
+    var additionalProperties: [String: AnyCodable]?
+
     func toHookGroup() -> HookGroup {
         HookGroup(
-            matcher: matcher.isEmpty ? nil : matcher,
-            hooks: hooks.isEmpty ? nil : hooks.map { $0.toHookDefinition() },
-            additionalProperties: additionalProperties
+            matcher: self.matcher.isEmpty ? nil : self.matcher,
+            hooks: self.hooks.isEmpty ? nil : self.hooks.map { $0.toHookDefinition() },
+            additionalProperties: self.additionalProperties
         )
     }
 }
@@ -338,7 +362,9 @@ enum HookEvent: String, CaseIterable, Identifiable {
 
     // MARK: Internal
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var displayName: String {
         switch self {
@@ -378,8 +404,10 @@ enum HookEvent: String, CaseIterable, Identifiable {
 
     var supportsMatcher: Bool {
         switch self {
-        case .preToolUse, .postToolUse: true
-        case .notification, .stop: false
+        case .preToolUse,
+             .postToolUse: true
+        case .notification,
+             .stop: false
         }
     }
 }
@@ -388,13 +416,6 @@ enum HookEvent: String, CaseIterable, Identifiable {
 
 /// Quick-add templates for common hook configurations.
 struct HookTemplate: Identifiable {
-    let id: String
-    let name: String
-    let description: String
-    let event: HookEvent
-    let matcher: String?
-    let commands: [String]
-
     static let allTemplates: [HookTemplate] = [
         HookTemplate(
             id: "format-python",
@@ -447,6 +468,13 @@ struct HookTemplate: Identifiable {
             commands: ["swift-format format -i $CLAUDE_FILE_PATH"]
         ),
     ]
+
+    let id: String
+    let name: String
+    let description: String
+    let event: HookEvent
+    let matcher: String?
+    let commands: [String]
 }
 
 // MARK: - ConflictResolution

@@ -1,0 +1,19 @@
+{
+  "id": "com.fig.builtin.suggestions",
+  "name": "Configuration Suggestions",
+  "version": "1.0.0",
+  "author": {
+    "name": "Fig Team",
+    "email": "fig@anthropic.com"
+  },
+  "summary": "Built-in health checks that suggest configuration improvements",
+  "description": "Provides helpful suggestions for improving your Claude Code configuration, such as creating local settings files and scoping MCP servers to projects.",
+  "category": "health-checks",
+  "main": "init.lua",
+  "capabilities": [
+    "health:register",
+    "health:findings",
+    "config:read:global",
+    "config:read:project"
+  ]
+}

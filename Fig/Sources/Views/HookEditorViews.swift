@@ -13,8 +13,8 @@ struct HookEditorView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Target selector and templates
                 HStack {
-                    if !viewModel.isGlobalMode {
-                        EditingTargetPicker(selection: $viewModel.editingTarget)
+                    if !self.viewModel.isGlobalMode {
+                        EditingTargetPicker(selection: self.$viewModel.editingTarget)
                     }
 
                     Spacer()
@@ -22,7 +22,7 @@ struct HookEditorView: View {
                     Menu {
                         ForEach(HookTemplate.allTemplates) { template in
                             Button {
-                                viewModel.applyHookTemplate(template)
+                                self.viewModel.applyHookTemplate(template)
                             } label: {
                                 VStack(alignment: .leading) {
                                     Text(template.name)
@@ -41,18 +41,18 @@ struct HookEditorView: View {
                 ForEach(HookEvent.allCases) { event in
                     EditableHookEventSection(
                         event: event,
-                        groups: viewModel.hookGroups[event.rawValue] ?? [],
-                        viewModel: viewModel,
+                        groups: self.viewModel.hookGroups[event.rawValue] ?? [],
+                        viewModel: self.viewModel,
                         onAddGroup: {
-                            addingForEvent = event
-                            showingAddHookGroup = true
+                            self.addingForEvent = event
+                            self.showingAddHookGroup = true
                         }
                     )
                 }
 
                 // Show unrecognized hook events that exist in settings
                 // but aren't in the HookEvent enum (e.g., future event types)
-                let unrecognizedEvents = viewModel.hookGroups.keys
+                let unrecognizedEvents = self.viewModel.hookGroups.keys
                     .filter { key in !HookEvent.allCases.contains(where: { $0.rawValue == key }) }
                     .sorted()
 
@@ -69,7 +69,7 @@ struct HookEditorView: View {
                             .foregroundStyle(.secondary)
 
                             ForEach(unrecognizedEvents, id: \.self) { eventKey in
-                                let groupCount = viewModel.hookGroups[eventKey]?.count ?? 0
+                                let groupCount = self.viewModel.hookGroups[eventKey]?.count ?? 0
                                 HStack {
                                     Text(eventKey)
                                         .font(.system(.body, design: .monospaced))
@@ -92,10 +92,10 @@ struct HookEditorView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .sheet(isPresented: $showingAddHookGroup) {
-            AddHookGroupSheet(event: addingForEvent) { matcher, commands in
-                viewModel.addHookGroup(
-                    event: addingForEvent.rawValue,
+        .sheet(isPresented: self.$showingAddHookGroup) {
+            AddHookGroupSheet(event: self.addingForEvent) { matcher, commands in
+                self.viewModel.addHookGroup(
+                    event: self.addingForEvent.rawValue,
                     matcher: matcher,
                     commands: commands
                 )
@@ -113,46 +113,45 @@ struct HookEditorView: View {
 
 /// A section displaying hook groups for a specific lifecycle event.
 struct EditableHookEventSection: View {
-    // MARK: Internal
-
     let event: HookEvent
     let groups: [EditableHookGroup]
     @Bindable var viewModel: SettingsEditorViewModel
+
     let onAddGroup: () -> Void
 
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label(event.displayName, systemImage: event.icon)
+                    Label(self.event.displayName, systemImage: self.event.icon)
                         .font(.headline)
 
                     Spacer()
 
                     Button {
-                        onAddGroup()
+                        self.onAddGroup()
                     } label: {
                         Label("Add Group", systemImage: "plus")
                     }
                     .buttonStyle(.borderless)
                 }
 
-                Text(event.description)
+                Text(self.event.description)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                if groups.isEmpty {
+                if self.groups.isEmpty {
                     Text("No hooks configured.")
                         .foregroundStyle(.secondary)
                         .padding(.vertical, 8)
                 } else {
-                    ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
+                    ForEach(Array(self.groups.enumerated()), id: \.element.id) { index, group in
                         EditableHookGroupRow(
-                            event: event,
+                            event: self.event,
                             group: group,
                             groupIndex: index,
-                            groupCount: groups.count,
-                            viewModel: viewModel
+                            groupCount: self.groups.count,
+                            viewModel: self.viewModel
                         )
                     }
                 }
@@ -172,39 +171,40 @@ struct EditableHookGroupRow: View {
     let group: EditableHookGroup
     let groupIndex: Int
     let groupCount: Int
+
     @Bindable var viewModel: SettingsEditorViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             // Matcher row
             HStack {
-                if event.supportsMatcher {
-                    if isEditingMatcher {
-                        TextField("Matcher pattern", text: $editedMatcher)
+                if self.event.supportsMatcher {
+                    if self.isEditingMatcher {
+                        TextField("Matcher pattern", text: self.$editedMatcher)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                             .onSubmit {
-                                saveMatcher()
+                                self.saveMatcher()
                             }
 
                         Button("Save") {
-                            saveMatcher()
+                            self.saveMatcher()
                         }
 
                         Button("Cancel") {
-                            isEditingMatcher = false
-                            editedMatcher = group.matcher
+                            self.isEditingMatcher = false
+                            self.editedMatcher = self.group.matcher
                         }
                     } else {
                         Label(
-                            group.matcher.isEmpty ? "All tools" : group.matcher,
+                            self.group.matcher.isEmpty ? "All tools" : self.group.matcher,
                             systemImage: "target"
                         )
                         .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(group.matcher.isEmpty ? .secondary : .primary)
+                        .foregroundStyle(self.group.matcher.isEmpty ? .secondary : .primary)
 
                         Button {
-                            startEditingMatcher()
+                            self.startEditingMatcher()
                         } label: {
                             Image(systemName: "pencil")
                                 .font(.caption)
@@ -220,11 +220,11 @@ struct EditableHookGroupRow: View {
                 Spacer()
 
                 // Reorder buttons
-                if groupCount > 1 {
+                if self.groupCount > 1 {
                     Button {
-                        viewModel.moveHookGroup(
-                            event: event.rawValue,
-                            from: groupIndex,
+                        self.viewModel.moveHookGroup(
+                            event: self.event.rawValue,
+                            from: self.groupIndex,
                             direction: -1
                         )
                     } label: {
@@ -232,13 +232,13 @@ struct EditableHookGroupRow: View {
                             .font(.caption)
                     }
                     .buttonStyle(.plain)
-                    .disabled(groupIndex == 0)
+                    .disabled(self.groupIndex == 0)
                     .help("Move up")
 
                     Button {
-                        viewModel.moveHookGroup(
-                            event: event.rawValue,
-                            from: groupIndex,
+                        self.viewModel.moveHookGroup(
+                            event: self.event.rawValue,
+                            from: self.groupIndex,
                             direction: 1
                         )
                     } label: {
@@ -246,13 +246,13 @@ struct EditableHookGroupRow: View {
                             .font(.caption)
                     }
                     .buttonStyle(.plain)
-                    .disabled(groupIndex == groupCount - 1)
+                    .disabled(self.groupIndex == self.groupCount - 1)
                     .help("Move down")
                 }
 
                 // Add command button
                 Button {
-                    showingAddCommand = true
+                    self.showingAddCommand = true
                 } label: {
                     Image(systemName: "plus.circle")
                         .font(.caption)
@@ -262,7 +262,7 @@ struct EditableHookGroupRow: View {
 
                 // Delete group button
                 Button {
-                    showingDeleteConfirmation = true
+                    self.showingDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
                         .font(.caption)
@@ -272,30 +272,30 @@ struct EditableHookGroupRow: View {
             }
 
             // Hook definitions (commands)
-            ForEach(Array(group.hooks.enumerated()), id: \.element.id) { hookIndex, hook in
+            ForEach(Array(self.group.hooks.enumerated()), id: \.element.id) { hookIndex, hook in
                 HookDefinitionRow(
                     hook: hook,
                     hookIndex: hookIndex,
-                    hookCount: group.hooks.count,
+                    hookCount: self.group.hooks.count,
                     onUpdate: { newCommand in
-                        viewModel.updateHookDefinition(
-                            event: event.rawValue,
-                            groupID: group.id,
+                        self.viewModel.updateHookDefinition(
+                            event: self.event.rawValue,
+                            groupID: self.group.id,
                             hook: hook,
                             newCommand: newCommand
                         )
                     },
                     onDelete: {
-                        viewModel.removeHookDefinition(
-                            event: event.rawValue,
-                            groupID: group.id,
+                        self.viewModel.removeHookDefinition(
+                            event: self.event.rawValue,
+                            groupID: self.group.id,
                             hook: hook
                         )
                     },
                     onMove: { direction in
-                        viewModel.moveHookDefinition(
-                            event: event.rawValue,
-                            groupID: group.id,
+                        self.viewModel.moveHookDefinition(
+                            event: self.event.rawValue,
+                            groupID: self.group.id,
                             from: hookIndex,
                             direction: direction
                         )
@@ -311,21 +311,21 @@ struct EditableHookGroupRow: View {
         )
         .confirmationDialog(
             "Delete Hook Group",
-            isPresented: $showingDeleteConfirmation,
+            isPresented: self.$showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
-                viewModel.removeHookGroup(event: event.rawValue, group: group)
+                self.viewModel.removeHookGroup(event: self.event.rawValue, group: self.group)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete this hook group?")
         }
-        .sheet(isPresented: $showingAddCommand) {
+        .sheet(isPresented: self.$showingAddCommand) {
             AddHookCommandSheet { command in
-                viewModel.addHookDefinition(
-                    event: event.rawValue,
-                    groupID: group.id,
+                self.viewModel.addHookDefinition(
+                    event: self.event.rawValue,
+                    groupID: self.group.id,
                     command: command
                 )
             }
@@ -340,17 +340,17 @@ struct EditableHookGroupRow: View {
     @State private var showingAddCommand = false
 
     private func startEditingMatcher() {
-        editedMatcher = group.matcher
-        isEditingMatcher = true
+        self.editedMatcher = self.group.matcher
+        self.isEditingMatcher = true
     }
 
     private func saveMatcher() {
-        viewModel.updateHookGroupMatcher(
-            event: event.rawValue,
-            group: group,
-            newMatcher: editedMatcher
+        self.viewModel.updateHookGroupMatcher(
+            event: self.event.rawValue,
+            group: self.group,
+            newMatcher: self.editedMatcher
         )
-        isEditingMatcher = false
+        self.isEditingMatcher = false
     }
 }
 
@@ -373,25 +373,25 @@ struct HookDefinitionRow: View {
                 .foregroundStyle(.blue)
                 .frame(width: 20)
 
-            if isEditing {
-                TextField("Command", text: $editedCommand)
+            if self.isEditing {
+                TextField("Command", text: self.$editedCommand)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
                     .onSubmit {
-                        saveEdit()
+                        self.saveEdit()
                     }
 
                 Button("Save") {
-                    saveEdit()
+                    self.saveEdit()
                 }
-                .disabled(editedCommand.isEmpty)
+                .disabled(self.editedCommand.isEmpty)
 
                 Button("Cancel") {
-                    isEditing = false
-                    editedCommand = hook.command
+                    self.isEditing = false
+                    self.editedCommand = self.hook.command
                 }
             } else {
-                Text(hook.command)
+                Text(self.hook.command)
                     .font(.system(.body, design: .monospaced))
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -399,29 +399,29 @@ struct HookDefinitionRow: View {
                 Spacer()
 
                 // Reorder buttons
-                if hookCount > 1 {
+                if self.hookCount > 1 {
                     Button {
-                        onMove(-1)
+                        self.onMove(-1)
                     } label: {
                         Image(systemName: "chevron.up")
                             .font(.caption2)
                     }
                     .buttonStyle(.plain)
-                    .disabled(hookIndex == 0)
+                    .disabled(self.hookIndex == 0)
 
                     Button {
-                        onMove(1)
+                        self.onMove(1)
                     } label: {
                         Image(systemName: "chevron.down")
                             .font(.caption2)
                     }
                     .buttonStyle(.plain)
-                    .disabled(hookIndex == hookCount - 1)
+                    .disabled(self.hookIndex == self.hookCount - 1)
                 }
 
                 Button {
-                    isEditing = true
-                    editedCommand = hook.command
+                    self.isEditing = true
+                    self.editedCommand = self.hook.command
                 } label: {
                     Image(systemName: "pencil")
                         .font(.caption)
@@ -429,7 +429,7 @@ struct HookDefinitionRow: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    showingDeleteConfirmation = true
+                    self.showingDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
                         .font(.caption)
@@ -442,15 +442,15 @@ struct HookDefinitionRow: View {
         .padding(.leading, 20)
         .confirmationDialog(
             "Delete Command",
-            isPresented: $showingDeleteConfirmation,
+            isPresented: self.$showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
-                onDelete()
+                self.onDelete()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Are you sure you want to delete this command?\n\(hook.command)")
+            Text("Are you sure you want to delete this command?\n\(self.hook.command)")
         }
     }
 
@@ -461,9 +461,11 @@ struct HookDefinitionRow: View {
     @State private var showingDeleteConfirmation = false
 
     private func saveEdit() {
-        guard !editedCommand.isEmpty else { return }
-        onUpdate(editedCommand)
-        isEditing = false
+        guard !self.editedCommand.isEmpty else {
+            return
+        }
+        self.onUpdate(self.editedCommand)
+        self.isEditing = false
     }
 }
 
@@ -480,10 +482,10 @@ struct AddHookGroupSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             // Header
             HStack {
-                Image(systemName: event.icon)
+                Image(systemName: self.event.icon)
                     .foregroundStyle(.blue)
                     .font(.title2)
-                Text("Add Hook Group \u{2014} \(event.displayName)")
+                Text("Add Hook Group \u{2014} \(self.event.displayName)")
                     .font(.title2)
                     .fontWeight(.semibold)
             }
@@ -491,11 +493,11 @@ struct AddHookGroupSheet: View {
             Divider()
 
             // Matcher input (if supported)
-            if event.supportsMatcher {
+            if self.event.supportsMatcher {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Matcher Pattern")
                         .font(.headline)
-                    TextField(event.matcherPlaceholder, text: $matcher)
+                    TextField(self.event.matcherPlaceholder, text: self.$matcher)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                     Text("Use tool name with optional glob pattern. Leave empty to match all.")
@@ -508,7 +510,7 @@ struct AddHookGroupSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Command")
                     .font(.headline)
-                TextField("e.g., npm run lint, black $CLAUDE_FILE_PATH", text: $command)
+                TextField("e.g., npm run lint, black $CLAUDE_FILE_PATH", text: self.$command)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
                 Text("Shell command to run. You can add more commands after creation.")
@@ -523,19 +525,19 @@ struct AddHookGroupSheet: View {
                 HStack(spacing: 4) {
                     Text("When")
                         .foregroundStyle(.secondary)
-                    Text(event.displayName)
+                    Text(self.event.displayName)
                         .fontWeight(.medium)
-                    if event.supportsMatcher, !matcher.isEmpty {
+                    if self.event.supportsMatcher, !self.matcher.isEmpty {
                         Text("matches")
                             .foregroundStyle(.secondary)
-                        Text(matcher)
+                        Text(self.matcher)
                             .font(.system(.body, design: .monospaced))
                     }
                     Text("\u{2192}")
                         .foregroundStyle(.secondary)
                     Text("Run")
                         .foregroundStyle(.secondary)
-                    Text(command.isEmpty ? "..." : command)
+                    Text(self.command.isEmpty ? "..." : self.command)
                         .font(.system(.body, design: .monospaced))
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -550,18 +552,18 @@ struct AddHookGroupSheet: View {
             // Buttons
             HStack {
                 Button("Cancel") {
-                    dismiss()
+                    self.dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
                 Button("Add Hook Group") {
-                    onAdd(matcher, [command])
-                    dismiss()
+                    self.onAdd(self.matcher, [self.command])
+                    self.dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(command.isEmpty)
+                .disabled(self.command.isEmpty)
             }
         }
         .padding()
@@ -601,7 +603,7 @@ struct AddHookCommandSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Command")
                     .font(.headline)
-                TextField("Shell command to execute", text: $command)
+                TextField("Shell command to execute", text: self.$command)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
             }
@@ -610,18 +612,18 @@ struct AddHookCommandSheet: View {
 
             HStack {
                 Button("Cancel") {
-                    dismiss()
+                    self.dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
                 Button("Add Command") {
-                    onAdd(command)
-                    dismiss()
+                    self.onAdd(self.command)
+                    self.dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(command.isEmpty)
+                .disabled(self.command.isEmpty)
             }
         }
         .padding()
@@ -680,10 +682,10 @@ struct HookVariableRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(name)
+            Text(self.name)
                 .font(.system(.caption, design: .monospaced))
                 .fontWeight(.medium)
-            Text(description)
+            Text(self.description)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

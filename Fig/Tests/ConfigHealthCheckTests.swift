@@ -30,7 +30,7 @@ enum HealthCheckTestHelpers {
     }
 }
 
-// MARK: - DenyListSecurityCheck Tests
+// MARK: - DenyListSecurityCheckTests
 
 @Suite("DenyListSecurityCheck Tests")
 struct DenyListSecurityCheckTests {
@@ -39,7 +39,7 @@ struct DenyListSecurityCheckTests {
     @Test("Flags missing .env deny rule")
     func flagsMissingEnvDeny() {
         let context = HealthCheckTestHelpers.makeContext()
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         let envFinding = findings.first { $0.title.contains(".env") }
         #expect(envFinding != nil)
@@ -50,7 +50,7 @@ struct DenyListSecurityCheckTests {
     @Test("Flags missing secrets/ deny rule")
     func flagsMissingSecretsDeny() {
         let context = HealthCheckTestHelpers.makeContext()
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         let secretsFinding = findings.first { $0.title.contains("secrets/") }
         #expect(secretsFinding != nil)
@@ -62,7 +62,7 @@ struct DenyListSecurityCheckTests {
     func noFindingWhenEnvDenied() {
         let settings = ClaudeSettings(permissions: Permissions(deny: ["Read(.env)"]))
         let context = HealthCheckTestHelpers.makeContext(projectSettings: settings)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         let envFinding = findings.first { $0.title.contains(".env") }
         #expect(envFinding == nil)
@@ -72,7 +72,7 @@ struct DenyListSecurityCheckTests {
     func noFindingWhenSecretsDenied() {
         let settings = ClaudeSettings(permissions: Permissions(deny: ["Read(secrets/**)"]))
         let context = HealthCheckTestHelpers.makeContext(projectSettings: settings)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         let secretsFinding = findings.first { $0.title.contains("secrets/") }
         #expect(secretsFinding == nil)
@@ -86,13 +86,13 @@ struct DenyListSecurityCheckTests {
             globalSettings: global,
             projectLocalSettings: local
         )
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
 }
 
-// MARK: - BroadAllowRulesCheck Tests
+// MARK: - BroadAllowRulesCheckTests
 
 @Suite("BroadAllowRulesCheck Tests")
 struct BroadAllowRulesCheckTests {
@@ -102,7 +102,7 @@ struct BroadAllowRulesCheckTests {
     func flagsBroadBash() {
         let settings = ClaudeSettings(permissions: Permissions(allow: ["Bash(*)"]))
         let context = HealthCheckTestHelpers.makeContext(projectSettings: settings)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.count == 1)
         #expect(findings.first?.severity == .warning)
@@ -113,7 +113,7 @@ struct BroadAllowRulesCheckTests {
     func doesNotFlagSpecific() {
         let settings = ClaudeSettings(permissions: Permissions(allow: ["Bash(npm run *)"]))
         let context = HealthCheckTestHelpers.makeContext(projectSettings: settings)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
@@ -122,7 +122,7 @@ struct BroadAllowRulesCheckTests {
     func flagsMultipleBroad() {
         let settings = ClaudeSettings(permissions: Permissions(allow: ["Bash(*)", "Read(*)"]))
         let context = HealthCheckTestHelpers.makeContext(projectSettings: settings)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.count == 2)
     }
@@ -131,13 +131,13 @@ struct BroadAllowRulesCheckTests {
     func noAutoFix() {
         let settings = ClaudeSettings(permissions: Permissions(allow: ["Bash(*)"]))
         let context = HealthCheckTestHelpers.makeContext(projectSettings: settings)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.first?.autoFix == nil)
     }
 }
 
-// MARK: - GlobalConfigSizeCheck Tests
+// MARK: - GlobalConfigSizeCheckTests
 
 @Suite("GlobalConfigSizeCheck Tests")
 struct GlobalConfigSizeCheckTests {
@@ -147,7 +147,7 @@ struct GlobalConfigSizeCheckTests {
     func flagsLargeConfig() {
         let size: Int64 = 6 * 1024 * 1024 // 6 MB
         let context = HealthCheckTestHelpers.makeContext(globalConfigFileSize: size)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.count == 1)
         #expect(findings.first?.severity == .warning)
@@ -158,7 +158,7 @@ struct GlobalConfigSizeCheckTests {
     func noFindingForSmall() {
         let size: Int64 = 1024 // 1 KB
         let context = HealthCheckTestHelpers.makeContext(globalConfigFileSize: size)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
@@ -166,13 +166,13 @@ struct GlobalConfigSizeCheckTests {
     @Test("No finding when size is unknown")
     func noFindingWhenUnknown() {
         let context = HealthCheckTestHelpers.makeContext(globalConfigFileSize: nil)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
 }
 
-// MARK: - MCPHardcodedSecretsCheck Tests
+// MARK: - MCPHardcodedSecretsCheckTests
 
 @Suite("MCPHardcodedSecretsCheck Tests")
 struct MCPHardcodedSecretsCheckTests {
@@ -183,7 +183,7 @@ struct MCPHardcodedSecretsCheckTests {
         let server = MCPServer(command: "npx", env: ["GITHUB_TOKEN": "ghp_1234567890abcdef"])
         let config = MCPConfig(mcpServers: ["github": server])
         let context = HealthCheckTestHelpers.makeContext(mcpConfig: config)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(!findings.isEmpty)
         #expect(findings.first?.severity == .warning)
@@ -194,7 +194,7 @@ struct MCPHardcodedSecretsCheckTests {
         let server = MCPServer(command: "npx", env: ["API_KEY": "some-long-api-key-value"])
         let config = MCPConfig(mcpServers: ["test": server])
         let context = HealthCheckTestHelpers.makeContext(mcpConfig: config)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(!findings.isEmpty)
     }
@@ -204,7 +204,7 @@ struct MCPHardcodedSecretsCheckTests {
         let server = MCPServer(command: "npx", env: ["NODE_ENV": "production"])
         let config = MCPConfig(mcpServers: ["test": server])
         let context = HealthCheckTestHelpers.makeContext(mcpConfig: config)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
@@ -216,7 +216,7 @@ struct MCPHardcodedSecretsCheckTests {
         ])
         let config = MCPConfig(mcpServers: ["remote": server])
         let context = HealthCheckTestHelpers.makeContext(mcpConfig: config)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(!findings.isEmpty)
     }
@@ -224,13 +224,13 @@ struct MCPHardcodedSecretsCheckTests {
     @Test("No findings when no MCP servers")
     func noFindingsNoServers() {
         let context = HealthCheckTestHelpers.makeContext()
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
 }
 
-// MARK: - LocalSettingsCheck Tests
+// MARK: - LocalSettingsCheckTests
 
 @Suite("LocalSettingsCheck Tests")
 struct LocalSettingsCheckTests {
@@ -239,7 +239,7 @@ struct LocalSettingsCheckTests {
     @Test("Suggests creating local settings when missing")
     func suggestsCreation() {
         let context = HealthCheckTestHelpers.makeContext(localSettingsExists: false)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.count == 1)
         #expect(findings.first?.severity == .suggestion)
@@ -249,13 +249,13 @@ struct LocalSettingsCheckTests {
     @Test("No finding when local settings exist")
     func noFindingWhenExists() {
         let context = HealthCheckTestHelpers.makeContext(localSettingsExists: true)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
 }
 
-// MARK: - MCPScopingCheck Tests
+// MARK: - MCPScopingCheckTests
 
 @Suite("MCPScopingCheck Tests")
 struct MCPScopingCheckTests {
@@ -270,7 +270,7 @@ struct MCPScopingCheckTests {
             legacyConfig: legacy,
             mcpConfigExists: false
         )
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.count == 1)
         #expect(findings.first?.severity == .suggestion)
@@ -285,7 +285,7 @@ struct MCPScopingCheckTests {
             legacyConfig: legacy,
             mcpConfigExists: true
         )
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
@@ -293,13 +293,13 @@ struct MCPScopingCheckTests {
     @Test("No finding when no global servers")
     func noFindingNoGlobalServers() {
         let context = HealthCheckTestHelpers.makeContext(mcpConfigExists: false)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
 }
 
-// MARK: - HookSuggestionsCheck Tests
+// MARK: - HookSuggestionsCheckTests
 
 @Suite("HookSuggestionsCheck Tests")
 struct HookSuggestionsCheckTests {
@@ -308,7 +308,7 @@ struct HookSuggestionsCheckTests {
     @Test("Suggests hooks when none configured")
     func suggestsHooks() {
         let context = HealthCheckTestHelpers.makeContext()
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.count == 1)
         #expect(findings.first?.severity == .suggestion)
@@ -321,13 +321,13 @@ struct HookSuggestionsCheckTests {
         ]
         let settings = ClaudeSettings(hooks: hooks)
         let context = HealthCheckTestHelpers.makeContext(projectSettings: settings)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
 }
 
-// MARK: - GoodPracticesCheck Tests
+// MARK: - GoodPracticesCheckTests
 
 @Suite("GoodPracticesCheck Tests")
 struct GoodPracticesCheckTests {
@@ -337,7 +337,7 @@ struct GoodPracticesCheckTests {
     func reportsEnvProtection() {
         let settings = ClaudeSettings(permissions: Permissions(deny: ["Read(.env)"]))
         let context = HealthCheckTestHelpers.makeContext(projectSettings: settings)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         let envFinding = findings.first { $0.title.contains("Sensitive files protected") }
         #expect(envFinding != nil)
@@ -347,7 +347,7 @@ struct GoodPracticesCheckTests {
     @Test("Reports good practice for local settings")
     func reportsLocalSettings() {
         let context = HealthCheckTestHelpers.makeContext(localSettingsExists: true)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         let localFinding = findings.first { $0.title.contains("Local settings") }
         #expect(localFinding != nil)
@@ -357,7 +357,7 @@ struct GoodPracticesCheckTests {
     @Test("Reports good practice for project MCP")
     func reportsProjectMCP() {
         let context = HealthCheckTestHelpers.makeContext(mcpConfigExists: true)
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         let mcpFinding = findings.first { $0.title.contains("Project-scoped MCP") }
         #expect(mcpFinding != nil)
@@ -367,13 +367,13 @@ struct GoodPracticesCheckTests {
     @Test("No good practices for empty config")
     func noGoodPracticesEmpty() {
         let context = HealthCheckTestHelpers.makeContext()
-        let findings = check.check(context: context)
+        let findings = self.check.check(context: context)
 
         #expect(findings.isEmpty)
     }
 }
 
-// MARK: - Well-Configured Project Tests
+// MARK: - WellConfiguredProjectTests
 
 @Suite("Well-Configured Project Tests")
 struct WellConfiguredProjectTests {

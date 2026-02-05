@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 
+// MARK: - AppDelegate
+
 /// App delegate to configure the application before UI loads.
 final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     func applicationDidFinishLaunching(_: Notification) {
@@ -10,8 +12,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             NSApp.activate(ignoringOtherApps: true)
             NSApp.windows.first?.makeKeyAndOrderFront(nil)
         }
+
+        // Initialize the plugin system
+        Task {
+            await LuaPluginService.shared.initialize()
+        }
     }
 }
+
+// MARK: - FigApp
 
 /// The main entry point for the Fig application.
 @main

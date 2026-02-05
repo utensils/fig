@@ -91,6 +91,23 @@ enum AutoFix: Sendable, Equatable {
 
 /// A single finding from a health check.
 struct Finding: Identifiable, Sendable {
+    // MARK: Lifecycle
+
+    init(
+        severity: Severity,
+        title: String,
+        description: String,
+        autoFix: AutoFix? = nil
+    ) {
+        self.id = UUID()
+        self.severity = severity
+        self.title = title
+        self.description = description
+        self.autoFix = autoFix
+    }
+
+    // MARK: Internal
+
     /// Unique identifier for this finding.
     let id: UUID
 
@@ -105,19 +122,6 @@ struct Finding: Identifiable, Sendable {
 
     /// Optional auto-fix action for this finding.
     let autoFix: AutoFix?
-
-    init(
-        severity: Severity,
-        title: String,
-        description: String,
-        autoFix: AutoFix? = nil
-    ) {
-        self.id = UUID()
-        self.severity = severity
-        self.title = title
-        self.description = description
-        self.autoFix = autoFix
-    }
 }
 
 // MARK: - HealthCheckContext
