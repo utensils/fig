@@ -142,6 +142,9 @@ public enum LuaFigAPI {
 
     // MARK: - Config Read API
 
+    // TODO: Implement actual config reading. These stubs currently just log requests.
+    // Implementation requires passing ConfigFileManager or config values into the API registration.
+
     private static func registerConfigReadAPI(
         sandbox: LuaSandbox,
         figTable: Table,
@@ -150,10 +153,10 @@ public enum LuaFigAPI {
         let configTable = (figTable["config"] as? Table) ?? sandbox.createTable()
 
         // fig.config.getGlobal(key) -> value
+        // TODO: Implement actual global config reading
         if capabilities.contains(.configReadGlobal) {
             let getGlobalFn = sandbox.vm.vm.createFunction([String.arg]) { args in
                 let key = args.string
-                // This would need to be async in practice - returning placeholder
                 Log.general.debug("Plugin requested global config key: \(key)")
                 return .nothing
             }
@@ -161,6 +164,7 @@ public enum LuaFigAPI {
         }
 
         // fig.config.getProject(key) -> value
+        // TODO: Implement actual project config reading
         if capabilities.contains(.configReadProject) {
             let getProjectFn = sandbox.vm.vm.createFunction([String.arg]) { args in
                 let key = args.string
@@ -175,6 +179,9 @@ public enum LuaFigAPI {
 
     // MARK: - Config Write API
 
+    // TODO: Implement actual config writing. These stubs currently just log requests.
+    // Implementation requires async coordination with ConfigFileManager.
+
     private static func registerConfigWriteAPI(
         sandbox: LuaSandbox,
         figTable: Table,
@@ -183,6 +190,7 @@ public enum LuaFigAPI {
         let configTable = (figTable["config"] as? Table) ?? sandbox.createTable()
 
         // fig.config.setProject(key, value)
+        // TODO: Implement actual project config writing
         if capabilities.contains(.configWriteProject) {
             let setProjectFn = sandbox.vm.vm.createFunction([String.arg]) { args in
                 let key = args.string
@@ -193,6 +201,7 @@ public enum LuaFigAPI {
         }
 
         // fig.config.setLocal(key, value)
+        // TODO: Implement actual local config writing
         if capabilities.contains(.configWriteLocal) {
             let setLocalFn = sandbox.vm.vm.createFunction([String.arg]) { args in
                 let key = args.string
