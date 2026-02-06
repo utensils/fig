@@ -85,10 +85,12 @@ final class GlobalSettingsViewModel {
     /// Deletes a global MCP server by name.
     func deleteGlobalMCPServer(name: String) async {
         do {
-            guard var config = try await configManager.readGlobalConfig() else { return }
+            guard var config = try await configManager.readGlobalConfig() else {
+                return
+            }
             config.mcpServers?.removeValue(forKey: name)
-            try await configManager.writeGlobalConfig(config)
-            legacyConfig = config
+            try await self.configManager.writeGlobalConfig(config)
+            self.legacyConfig = config
             NotificationManager.shared.showSuccess(
                 "Server deleted",
                 message: "'\(name)' removed from global configuration"
@@ -158,7 +160,7 @@ struct GlobalSettingsDetailView: View {
         VStack(spacing: 0) {
             // Header
             GlobalSettingsHeaderView(viewModel: self.viewModel) {
-                showingEditor = true
+                self.showingEditor = true
             }
 
             Divider()
@@ -183,33 +185,33 @@ struct GlobalSettingsDetailView: View {
         .frame(minWidth: 500)
         .focusedSceneValue(\.globalSettingsTab, self.$viewModel.selectedTab)
         .focusedSceneValue(\.addMCPServerAction) {
-            mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
+            self.mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
                 projectPath: nil,
                 defaultScope: .global
             )
-            showMCPServerEditor = true
+            self.showMCPServerEditor = true
         }
         .focusedSceneValue(\.pasteMCPServersAction) {
-            showPasteServersSheet()
+            self.showPasteServersSheet()
         }
         .task {
             await self.viewModel.load()
         }
-        .sheet(isPresented: $showingEditor) {
+        .sheet(isPresented: self.$showingEditor) {
             GlobalSettingsEditorView {
                 Task {
                     await self.viewModel.load()
                 }
             }
         }
-        .sheet(isPresented: $showMCPServerEditor, onDismiss: {
+        .sheet(isPresented: self.$showMCPServerEditor, onDismiss: {
             Task { await self.viewModel.load() }
         }) {
             if let editorVM = mcpEditorViewModel {
                 MCPServerEditorView(viewModel: editorVM)
             }
         }
-        .sheet(isPresented: $showCopySheet, onDismiss: {
+        .sheet(isPresented: self.$showCopySheet, onDismiss: {
             Task { await self.viewModel.load() }
         }) {
             if let copyVM = copyViewModel {
@@ -221,43 +223,41 @@ struct GlobalSettingsDetailView: View {
                     }
             }
         }
-        .sheet(isPresented: $showPasteSheet, onDismiss: {
+        .sheet(item: self.$pasteViewModel, onDismiss: {
             Task { await self.viewModel.load() }
-        }) {
-            if let pasteVM = pasteViewModel {
-                MCPPasteSheet(viewModel: pasteVM)
-                    .task {
-                        let config = try? await ConfigFileManager.shared.readGlobalConfig()
-                        let projects = config?.allProjects ?? []
-                        pasteVM.loadDestinations(projects: projects)
-                    }
-            }
+        }) { pasteVM in
+            MCPPasteSheet(viewModel: pasteVM)
+                .task {
+                    let config = try? await ConfigFileManager.shared.readGlobalConfig()
+                    let projects = config?.allProjects ?? []
+                    pasteVM.loadDestinations(projects: projects)
+                }
         }
         .alert(
             "Delete Server",
-            isPresented: $showDeleteConfirmation,
-            presenting: serverToDelete
+            isPresented: self.$showDeleteConfirmation,
+            presenting: self.serverToDelete
         ) { name in
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
-                Task { await viewModel.deleteGlobalMCPServer(name: name) }
+                Task { await self.viewModel.deleteGlobalMCPServer(name: name) }
             }
         } message: { name in
             Text("Are you sure you want to delete '\(name)'? This action cannot be undone.")
         }
         .alert(
             "Sensitive Data Warning",
-            isPresented: $showSensitiveCopyAlert,
-            presenting: pendingCopyServers
+            isPresented: self.$showSensitiveCopyAlert,
+            presenting: self.pendingCopyServers
         ) { servers in
             Button("Cancel", role: .cancel) {
-                pendingCopyServers = nil
+                self.pendingCopyServers = nil
             }
             Button("Copy with Placeholders") {
-                copyServersToClipboard(servers, redact: true)
+                self.copyServersToClipboard(servers, redact: true)
             }
             Button("Copy with Secrets") {
-                copyServersToClipboard(servers, redact: false)
+                self.copyServersToClipboard(servers, redact: false)
             }
         } message: { _ in
             Text(
@@ -277,10 +277,69 @@ struct GlobalSettingsDetailView: View {
     @State private var serverToDelete: String?
     @State private var showCopySheet = false
     @State private var copyViewModel: MCPCopyViewModel?
-    @State private var showPasteSheet = false
     @State private var pasteViewModel: MCPPasteViewModel?
     @State private var showSensitiveCopyAlert = false
     @State private var pendingCopyServers: [String: MCPServer]?
+
+    @ViewBuilder
+    private func globalTabContent(for tab: GlobalSettingsTab) -> some View {
+        switch tab {
+        case .permissions:
+            PermissionsTabView(
+                permissions: self.viewModel.settings?.permissions,
+                source: .global
+            )
+        case .environment:
+            EnvironmentTabView(
+                envVars: self.viewModel.settings?.env?.map { ($0.key, $0.value, ConfigSource.global) } ?? [],
+                emptyMessage: "No global environment variables configured."
+            )
+        case .mcpServers:
+            MCPServersTabView(
+                servers: self.viewModel.globalMCPServers.map { ($0.name, $0.server, ConfigSource.global) },
+                emptyMessage: "No global MCP servers configured.",
+                onAdd: {
+                    self.mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
+                        projectPath: nil,
+                        defaultScope: .global
+                    )
+                    self.showMCPServerEditor = true
+                },
+                onEdit: { name, server, _ in
+                    self.mcpEditorViewModel = MCPServerEditorViewModel.forEditing(
+                        name: name,
+                        server: server,
+                        scope: .global,
+                        projectPath: nil
+                    )
+                    self.showMCPServerEditor = true
+                },
+                onDelete: { name, _ in
+                    self.serverToDelete = name
+                    self.showDeleteConfirmation = true
+                },
+                onCopy: { name, server in
+                    self.copyViewModel = MCPCopyViewModel(
+                        serverName: name,
+                        server: server,
+                        sourceDestination: .global
+                    )
+                    self.showCopySheet = true
+                },
+                onCopyAll: {
+                    self.handleCopyAllServers()
+                },
+                onPasteServers: {
+                    self.showPasteServersSheet()
+                }
+            )
+        case .advanced:
+            GlobalAdvancedTabView(
+                settings: self.viewModel.settings,
+                legacyConfig: self.viewModel.legacyConfig
+            )
+        }
+    }
 
     private func handleCopyAllServers() {
         let serverDict = Dictionary(
@@ -301,10 +360,10 @@ struct GlobalSettingsDetailView: View {
             )
 
             if hasSensitive {
-                pendingCopyServers = serverDict
-                showSensitiveCopyAlert = true
+                self.pendingCopyServers = serverDict
+                self.showSensitiveCopyAlert = true
             } else {
-                copyServersToClipboard(serverDict, redact: false)
+                self.copyServersToClipboard(serverDict, redact: false)
             }
         }
     }
@@ -326,73 +385,12 @@ struct GlobalSettingsDetailView: View {
                     message: error.localizedDescription
                 )
             }
-            pendingCopyServers = nil
+            self.pendingCopyServers = nil
         }
     }
 
     private func showPasteServersSheet() {
-        pasteViewModel = MCPPasteViewModel(currentProject: .global)
-        showPasteSheet = true
-    }
-
-    @ViewBuilder
-    private func globalTabContent(for tab: GlobalSettingsTab) -> some View {
-        switch tab {
-        case .permissions:
-            PermissionsTabView(
-                permissions: self.viewModel.settings?.permissions,
-                source: .global
-            )
-        case .environment:
-            EnvironmentTabView(
-                envVars: self.viewModel.settings?.env?.map { ($0.key, $0.value, ConfigSource.global) } ?? [],
-                emptyMessage: "No global environment variables configured."
-            )
-        case .mcpServers:
-            MCPServersTabView(
-                servers: self.viewModel.globalMCPServers.map { ($0.name, $0.server, ConfigSource.global) },
-                emptyMessage: "No global MCP servers configured.",
-                onAdd: {
-                    mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
-                        projectPath: nil,
-                        defaultScope: .global
-                    )
-                    showMCPServerEditor = true
-                },
-                onEdit: { name, server, _ in
-                    mcpEditorViewModel = MCPServerEditorViewModel.forEditing(
-                        name: name,
-                        server: server,
-                        scope: .global,
-                        projectPath: nil
-                    )
-                    showMCPServerEditor = true
-                },
-                onDelete: { name, _ in
-                    serverToDelete = name
-                    showDeleteConfirmation = true
-                },
-                onCopy: { name, server in
-                    copyViewModel = MCPCopyViewModel(
-                        serverName: name,
-                        server: server,
-                        sourceDestination: .global
-                    )
-                    showCopySheet = true
-                },
-                onCopyAll: {
-                    handleCopyAllServers()
-                },
-                onPasteServers: {
-                    showPasteServersSheet()
-                }
-            )
-        case .advanced:
-            GlobalAdvancedTabView(
-                settings: self.viewModel.settings,
-                legacyConfig: self.viewModel.legacyConfig
-            )
-        }
+        self.pasteViewModel = MCPPasteViewModel(currentProject: .global)
     }
 }
 
@@ -401,6 +399,7 @@ struct GlobalSettingsDetailView: View {
 /// Header view for global settings.
 struct GlobalSettingsHeaderView: View {
     @Bindable var viewModel: GlobalSettingsViewModel
+
     var onEditSettings: (() -> Void)?
 
     var body: some View {
@@ -579,7 +578,7 @@ struct FileStatusBadge: View {
         .padding(.vertical, 4)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label), \(exists ? "file exists" : "file not found")")
+        .accessibilityLabel("\(self.label), \(self.exists ? "file exists" : "file not found")")
     }
 }
 

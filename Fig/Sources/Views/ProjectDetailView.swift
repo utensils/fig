@@ -16,45 +16,45 @@ struct ProjectDetailView: View {
         VStack(spacing: 0) {
             // Header
             ProjectHeaderView(
-                viewModel: viewModel,
+                viewModel: self.viewModel,
                 onExport: {
-                    exportViewModel = ConfigExportViewModel(
-                        projectPath: viewModel.projectURL,
-                        projectName: viewModel.projectName
+                    self.exportViewModel = ConfigExportViewModel(
+                        projectPath: self.viewModel.projectURL,
+                        projectName: self.viewModel.projectName
                     )
-                    showExportSheet = true
+                    self.showExportSheet = true
                 },
                 onImport: {
-                    importViewModel = ConfigImportViewModel(
-                        projectPath: viewModel.projectURL,
-                        projectName: viewModel.projectName
+                    self.importViewModel = ConfigImportViewModel(
+                        projectPath: self.viewModel.projectURL,
+                        projectName: self.viewModel.projectName
                     )
-                    showImportSheet = true
+                    self.showImportSheet = true
                 },
                 onImportFromJSON: {
-                    showPasteServersSheet()
+                    self.showPasteServersSheet()
                 },
                 onExportMCPJSON: {
-                    exportMCPJSON()
+                    self.exportMCPJSON()
                 }
             )
 
             Divider()
 
             // Tab content
-            if viewModel.isLoading {
+            if self.viewModel.isLoading {
                 ProgressView("Loading configuration...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if !viewModel.projectExists {
+            } else if !self.viewModel.projectExists {
                 ContentUnavailableView(
                     "Project Not Found",
                     systemImage: "folder.badge.questionmark",
-                    description: Text("The project directory no longer exists at:\n\(viewModel.projectPath)")
+                    description: Text("The project directory no longer exists at:\n\(self.viewModel.projectPath)")
                 )
             } else {
-                TabView(selection: $viewModel.selectedTab) {
+                TabView(selection: self.$viewModel.selectedTab) {
                     ForEach(ProjectDetailTab.allCases) { tab in
-                        tabContent(for: tab)
+                        self.tabContent(for: tab)
                             .tabItem {
                                 Label(tab.title, systemImage: tab.icon)
                             }
@@ -65,20 +65,20 @@ struct ProjectDetailView: View {
             }
         }
         .frame(minWidth: 500)
-        .focusedSceneValue(\.projectDetailTab, $viewModel.selectedTab)
+        .focusedSceneValue(\.projectDetailTab, self.$viewModel.selectedTab)
         .focusedSceneValue(\.addMCPServerAction) {
-            mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
-                projectPath: viewModel.projectURL,
+            self.mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
+                projectPath: self.viewModel.projectURL,
                 defaultScope: .project
             )
-            showMCPServerEditor = true
+            self.showMCPServerEditor = true
         }
         .task {
-            await viewModel.loadConfiguration()
+            await self.viewModel.loadConfiguration()
         }
-        .sheet(isPresented: $showMCPServerEditor, onDismiss: {
+        .sheet(isPresented: self.$showMCPServerEditor, onDismiss: {
             Task {
-                await viewModel.loadConfiguration()
+                await self.viewModel.loadConfiguration()
             }
         }) {
             if let editorViewModel = mcpEditorViewModel {
@@ -87,21 +87,21 @@ struct ProjectDetailView: View {
         }
         .alert(
             "Delete Server",
-            isPresented: $showDeleteConfirmation,
-            presenting: serverToDelete
+            isPresented: self.$showDeleteConfirmation,
+            presenting: self.serverToDelete
         ) { server in
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
                 Task {
-                    await viewModel.deleteMCPServer(name: server.name, source: server.source)
+                    await self.viewModel.deleteMCPServer(name: server.name, source: server.source)
                 }
             }
         } message: { server in
             Text("Are you sure you want to delete '\(server.name)'? This action cannot be undone.")
         }
-        .sheet(isPresented: $showCopySheet, onDismiss: {
+        .sheet(isPresented: self.$showCopySheet, onDismiss: {
             Task {
-                await viewModel.loadConfiguration()
+                await self.viewModel.loadConfiguration()
             }
         }) {
             if let copyVM = copyViewModel {
@@ -114,14 +114,14 @@ struct ProjectDetailView: View {
                     }
             }
         }
-        .sheet(isPresented: $showExportSheet) {
+        .sheet(isPresented: self.$showExportSheet) {
             if let exportVM = exportViewModel {
                 ConfigExportView(viewModel: exportVM)
             }
         }
-        .sheet(isPresented: $showImportSheet, onDismiss: {
+        .sheet(isPresented: self.$showImportSheet, onDismiss: {
             Task {
-                await viewModel.loadConfiguration()
+                await self.viewModel.loadConfiguration()
             }
         }) {
             if let importVM = importViewModel {
@@ -129,38 +129,36 @@ struct ProjectDetailView: View {
             }
         }
         .promoteToGlobalAlert(
-            isPresented: $showPromoteConfirmation,
-            ruleToPromote: $ruleToPromote,
-            projectURL: viewModel.projectURL,
-            onComplete: { await viewModel.loadConfiguration() }
+            isPresented: self.$showPromoteConfirmation,
+            ruleToPromote: self.$ruleToPromote,
+            projectURL: self.viewModel.projectURL,
+            onComplete: { await self.viewModel.loadConfiguration() }
         )
-        .sheet(isPresented: $showPasteSheet, onDismiss: {
+        .sheet(item: self.$pasteViewModel, onDismiss: {
             Task {
-                await viewModel.loadConfiguration()
+                await self.viewModel.loadConfiguration()
             }
-        }) {
-            if let pasteVM = pasteViewModel {
-                MCPPasteSheet(viewModel: pasteVM)
-                    .task {
-                        let config = try? await ConfigFileManager.shared.readGlobalConfig()
-                        let projects = config?.allProjects ?? []
-                        pasteVM.loadDestinations(projects: projects)
-                    }
-            }
+        }) { pasteVM in
+            MCPPasteSheet(viewModel: pasteVM)
+                .task {
+                    let config = try? await ConfigFileManager.shared.readGlobalConfig()
+                    let projects = config?.allProjects ?? []
+                    pasteVM.loadDestinations(projects: projects)
+                }
         }
         .alert(
             "Sensitive Data Warning",
-            isPresented: $showSensitiveCopyAlert,
-            presenting: pendingCopyServers
+            isPresented: self.$showSensitiveCopyAlert,
+            presenting: self.pendingCopyServers
         ) { servers in
             Button("Cancel", role: .cancel) {
-                pendingCopyServers = nil
+                self.pendingCopyServers = nil
             }
             Button("Copy with Placeholders") {
-                copyServersToClipboard(servers, redact: true)
+                self.copyServersToClipboard(servers, redact: true)
             }
             Button("Copy with Secrets") {
-                copyServersToClipboard(servers, redact: false)
+                self.copyServersToClipboard(servers, redact: false)
             }
         } message: { _ in
             Text(
@@ -169,7 +167,7 @@ struct ProjectDetailView: View {
             )
         }
         .focusedSceneValue(\.pasteMCPServersAction) {
-            showPasteServersSheet()
+            self.showPasteServersSheet()
         }
     }
 
@@ -188,23 +186,139 @@ struct ProjectDetailView: View {
     @State private var importViewModel: ConfigImportViewModel?
     @State private var showPromoteConfirmation = false
     @State private var ruleToPromote: RulePromotionInfo?
-    @State private var showPasteSheet = false
     @State private var pasteViewModel: MCPPasteViewModel?
     @State private var showSensitiveCopyAlert = false
     @State private var pendingCopyServers: [String: MCPServer]?
 
+    private var permissionsTabContent: some View {
+        PermissionsTabView(
+            allPermissions: self.viewModel.allPermissions,
+            emptyMessage: "No permission rules configured for this project.",
+            onPromoteToGlobal: { rule, type in
+                self.ruleToPromote = RulePromotionInfo(rule: rule, type: type)
+                self.showPromoteConfirmation = true
+            },
+            onCopyToScope: { rule, type, targetScope in
+                Task {
+                    do {
+                        let added = try await PermissionRuleCopyService.shared.copyRule(
+                            rule: rule,
+                            type: type,
+                            to: targetScope,
+                            projectPath: self.viewModel.projectURL
+                        )
+                        if added {
+                            NotificationManager.shared.showSuccess(
+                                "Rule Copied",
+                                message: "Copied to \(targetScope.label)"
+                            )
+                        } else {
+                            NotificationManager.shared.showInfo(
+                                "Rule Already Exists",
+                                message: "This rule already exists in \(targetScope.label)"
+                            )
+                        }
+                        await self.viewModel.loadConfiguration()
+                    } catch {
+                        NotificationManager.shared.showError(error)
+                    }
+                }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func tabContent(for tab: ProjectDetailTab) -> some View {
+        switch tab {
+        case .permissions:
+            self.permissionsTabContent
+        case .environment:
+            EnvironmentTabView(
+                envVars: self.viewModel.allEnvironmentVariables,
+                emptyMessage: "No environment variables configured for this project."
+            )
+        case .mcpServers:
+            MCPServersTabView(
+                servers: self.viewModel.allMCPServers,
+                emptyMessage: "No MCP servers configured for this project.",
+                projectPath: self.viewModel.projectURL,
+                onAdd: {
+                    self.mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
+                        projectPath: self.viewModel.projectURL,
+                        defaultScope: .project
+                    )
+                    self.showMCPServerEditor = true
+                },
+                onEdit: { name, server, source in
+                    let scope: MCPServerScope = source == .global ? .global : .project
+                    self.mcpEditorViewModel = MCPServerEditorViewModel.forEditing(
+                        name: name,
+                        server: server,
+                        scope: scope,
+                        projectPath: self.viewModel.projectURL
+                    )
+                    self.showMCPServerEditor = true
+                },
+                onDelete: { name, source in
+                    self.serverToDelete = (name, source)
+                    self.showDeleteConfirmation = true
+                },
+                onCopy: { name, server in
+                    let sourceDestination = CopyDestination.project(
+                        path: self.viewModel.projectPath,
+                        name: self.viewModel.projectName
+                    )
+                    self.copyViewModel = MCPCopyViewModel(
+                        serverName: name,
+                        server: server,
+                        sourceDestination: sourceDestination
+                    )
+                    self.showCopySheet = true
+                },
+                onCopyAll: {
+                    self.handleCopyAllServers()
+                },
+                onPasteServers: {
+                    self.showPasteServersSheet()
+                }
+            )
+        case .hooks:
+            HooksTabView(
+                globalHooks: self.viewModel.globalSettings?.hooks,
+                projectHooks: self.viewModel.projectSettings?.hooks,
+                localHooks: self.viewModel.projectLocalSettings?.hooks
+            )
+        case .claudeMD:
+            ClaudeMDView(projectPath: self.viewModel.projectPath)
+        case .effectiveConfig:
+            if let merged = viewModel.mergedSettings {
+                EffectiveConfigView(
+                    mergedSettings: merged,
+                    envOverrides: self.viewModel.envOverrides
+                )
+            } else {
+                ContentUnavailableView(
+                    "No Configuration",
+                    systemImage: "checkmark.rectangle.stack",
+                    description: Text("No merged configuration available.")
+                )
+            }
+        case .healthCheck:
+            ConfigHealthCheckView(viewModel: self.viewModel)
+        case .advanced:
+            AdvancedTabView(viewModel: self.viewModel)
+        }
+    }
+
     private func handleCopyAllServers() {
-        // Collect project MCP servers (exclude global ones for project copy)
-        let projectServers = viewModel.allMCPServers
-            .filter { $0.source != .global }
         let serverDict = Dictionary(
-            uniqueKeysWithValues: projectServers.map { ($0.name, $0.server) }
+            uniqueKeysWithValues: viewModel.allMCPServers.map { ($0.name, $0.server) }
         )
 
         guard !serverDict.isEmpty else {
             NotificationManager.shared.showInfo(
                 "No servers to copy",
-                message: "This project has no MCP servers to copy."
+                message: "No MCP servers configured for this project."
             )
             return
         }
@@ -215,10 +329,10 @@ struct ProjectDetailView: View {
             )
 
             if hasSensitive {
-                pendingCopyServers = serverDict
-                showSensitiveCopyAlert = true
+                self.pendingCopyServers = serverDict
+                self.showSensitiveCopyAlert = true
             } else {
-                copyServersToClipboard(serverDict, redact: false)
+                self.copyServersToClipboard(serverDict, redact: false)
             }
         }
     }
@@ -240,21 +354,20 @@ struct ProjectDetailView: View {
                     message: error.localizedDescription
                 )
             }
-            pendingCopyServers = nil
+            self.pendingCopyServers = nil
         }
     }
 
     private func showPasteServersSheet() {
         let currentProject = CopyDestination.project(
-            path: viewModel.projectPath,
-            name: viewModel.projectName
+            path: self.viewModel.projectPath,
+            name: self.viewModel.projectName
         )
-        pasteViewModel = MCPPasteViewModel(currentProject: currentProject)
-        showPasteSheet = true
+        self.pasteViewModel = MCPPasteViewModel(currentProject: currentProject)
     }
 
     private func exportMCPJSON() {
-        let projectServers = viewModel.allMCPServers
+        let projectServers = self.viewModel.allMCPServers
             .filter { $0.source != .global }
         let serverDict = Dictionary(
             uniqueKeysWithValues: projectServers.map { ($0.name, $0.server) }
@@ -273,139 +386,19 @@ struct ProjectDetailView: View {
                 let config = MCPConfig(mcpServers: serverDict)
                 try await ConfigFileManager.shared.writeMCPConfig(
                     config,
-                    for: viewModel.projectURL
+                    for: self.viewModel.projectURL
                 )
                 NotificationManager.shared.showSuccess(
                     "Exported .mcp.json",
                     message: "MCP configuration written to project root"
                 )
-                await viewModel.loadConfiguration()
+                await self.viewModel.loadConfiguration()
             } catch {
                 NotificationManager.shared.showError(
                     "Export failed",
                     message: error.localizedDescription
                 )
             }
-        }
-    }
-
-    private var permissionsTabContent: some View {
-        PermissionsTabView(
-            allPermissions: viewModel.allPermissions,
-            emptyMessage: "No permission rules configured for this project.",
-            onPromoteToGlobal: { rule, type in
-                ruleToPromote = RulePromotionInfo(rule: rule, type: type)
-                showPromoteConfirmation = true
-            },
-            onCopyToScope: { rule, type, targetScope in
-                Task {
-                    do {
-                        let added = try await PermissionRuleCopyService.shared.copyRule(
-                            rule: rule,
-                            type: type,
-                            to: targetScope,
-                            projectPath: viewModel.projectURL
-                        )
-                        if added {
-                            NotificationManager.shared.showSuccess(
-                                "Rule Copied",
-                                message: "Copied to \(targetScope.label)"
-                            )
-                        } else {
-                            NotificationManager.shared.showInfo(
-                                "Rule Already Exists",
-                                message: "This rule already exists in \(targetScope.label)"
-                            )
-                        }
-                        await viewModel.loadConfiguration()
-                    } catch {
-                        NotificationManager.shared.showError(error)
-                    }
-                }
-            }
-        )
-    }
-
-    @ViewBuilder
-    private func tabContent(for tab: ProjectDetailTab) -> some View {
-        switch tab {
-        case .permissions:
-            permissionsTabContent
-        case .environment:
-            EnvironmentTabView(
-                envVars: viewModel.allEnvironmentVariables,
-                emptyMessage: "No environment variables configured for this project."
-            )
-        case .mcpServers:
-            MCPServersTabView(
-                servers: viewModel.allMCPServers,
-                emptyMessage: "No MCP servers configured for this project.",
-                projectPath: viewModel.projectURL,
-                onAdd: {
-                    mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
-                        projectPath: viewModel.projectURL,
-                        defaultScope: .project
-                    )
-                    showMCPServerEditor = true
-                },
-                onEdit: { name, server, source in
-                    let scope: MCPServerScope = source == .global ? .global : .project
-                    mcpEditorViewModel = MCPServerEditorViewModel.forEditing(
-                        name: name,
-                        server: server,
-                        scope: scope,
-                        projectPath: viewModel.projectURL
-                    )
-                    showMCPServerEditor = true
-                },
-                onDelete: { name, source in
-                    serverToDelete = (name, source)
-                    showDeleteConfirmation = true
-                },
-                onCopy: { name, server in
-                    let sourceDestination = CopyDestination.project(
-                        path: viewModel.projectPath,
-                        name: viewModel.projectName
-                    )
-                    copyViewModel = MCPCopyViewModel(
-                        serverName: name,
-                        server: server,
-                        sourceDestination: sourceDestination
-                    )
-                    showCopySheet = true
-                },
-                onCopyAll: {
-                    handleCopyAllServers()
-                },
-                onPasteServers: {
-                    showPasteServersSheet()
-                }
-            )
-        case .hooks:
-            HooksTabView(
-                globalHooks: viewModel.globalSettings?.hooks,
-                projectHooks: viewModel.projectSettings?.hooks,
-                localHooks: viewModel.projectLocalSettings?.hooks
-            )
-        case .claudeMD:
-            ClaudeMDView(projectPath: viewModel.projectPath)
-        case .effectiveConfig:
-            if let merged = viewModel.mergedSettings {
-                EffectiveConfigView(
-                    mergedSettings: merged,
-                    envOverrides: viewModel.envOverrides
-                )
-            } else {
-                ContentUnavailableView(
-                    "No Configuration",
-                    systemImage: "checkmark.rectangle.stack",
-                    description: Text("No merged configuration available.")
-                )
-            }
-        case .healthCheck:
-            ConfigHealthCheckView(viewModel: viewModel)
-        case .advanced:
-            AdvancedTabView(viewModel: viewModel)
         }
     }
 }
@@ -417,6 +410,7 @@ struct ProjectHeaderView: View {
     // MARK: Internal
 
     @Bindable var viewModel: ProjectDetailViewModel
+
     var onExport: (() -> Void)?
     var onImport: (() -> Void)?
     var onImportFromJSON: (() -> Void)?
@@ -426,26 +420,26 @@ struct ProjectHeaderView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 // Project icon
-                Image(systemName: viewModel.projectExists ? "folder.fill" : "folder.badge.questionmark")
+                Image(systemName: self.viewModel.projectExists ? "folder.fill" : "folder.badge.questionmark")
                     .font(.title)
-                    .foregroundStyle(viewModel.projectExists ? .blue : .orange)
+                    .foregroundStyle(self.viewModel.projectExists ? .blue : .orange)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.projectName)
+                    Text(self.viewModel.projectName)
                         .font(.title2)
                         .fontWeight(.semibold)
 
                     Button {
-                        viewModel.revealInFinder()
+                        self.viewModel.revealInFinder()
                     } label: {
-                        Text(abbreviatePath(viewModel.projectPath))
+                        Text(self.abbreviatePath(self.viewModel.projectPath))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .disabled(!viewModel.projectExists)
+                    .disabled(!self.viewModel.projectExists)
                     .onHover { isHovered in
-                        if isHovered, viewModel.projectExists {
+                        if isHovered, self.viewModel.projectExists {
                             NSCursor.pointingHand.push()
                         } else {
                             NSCursor.pop()
@@ -458,33 +452,33 @@ struct ProjectHeaderView: View {
                 // Action buttons
                 HStack(spacing: 8) {
                     Button {
-                        viewModel.revealInFinder()
+                        self.viewModel.revealInFinder()
                     } label: {
                         Label("Reveal", systemImage: "folder")
                     }
-                    .disabled(!viewModel.projectExists)
+                    .disabled(!self.viewModel.projectExists)
                     .accessibilityLabel("Reveal in Finder")
                     .accessibilityHint("Opens the project directory in Finder")
 
                     Button {
-                        viewModel.openInTerminal()
+                        self.viewModel.openInTerminal()
                     } label: {
                         Label("Terminal", systemImage: "terminal")
                     }
-                    .disabled(!viewModel.projectExists)
+                    .disabled(!self.viewModel.projectExists)
                     .accessibilityLabel("Open in Terminal")
                     .accessibilityHint("Opens a Terminal window at the project directory")
 
                     // Export/Import menu
                     Menu {
                         Button {
-                            onExport?()
+                            self.onExport?()
                         } label: {
                             Label("Export Configuration...", systemImage: "square.and.arrow.up")
                         }
 
                         Button {
-                            onImport?()
+                            self.onImport?()
                         } label: {
                             Label("Import Configuration...", systemImage: "square.and.arrow.down")
                         }
@@ -492,20 +486,20 @@ struct ProjectHeaderView: View {
                         Divider()
 
                         Button {
-                            onImportFromJSON?()
+                            self.onImportFromJSON?()
                         } label: {
                             Label("Import MCP Servers from JSON...", systemImage: "doc.on.clipboard")
                         }
 
                         Button {
-                            onExportMCPJSON?()
+                            self.onExportMCPJSON?()
                         } label: {
                             Label("Export .mcp.json...", systemImage: "doc.badge.arrow.up")
                         }
                     } label: {
                         Label("More", systemImage: "ellipsis.circle")
                     }
-                    .disabled(!viewModel.projectExists)
+                    .disabled(!self.viewModel.projectExists)
                 }
             }
 
@@ -560,27 +554,27 @@ struct ConfigFileBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: status.exists ? "checkmark.circle.fill" : "plus.circle.dashed")
-                .foregroundStyle(status.exists ? .green : .secondary)
+            Image(systemName: self.status.exists ? "checkmark.circle.fill" : "plus.circle.dashed")
+                .foregroundStyle(self.status.exists ? .green : .secondary)
                 .font(.caption)
-            Text(label)
+            Text(self.label)
                 .font(.caption)
-            Image(systemName: source.icon)
-                .foregroundStyle(sourceColor)
+            Image(systemName: self.source.icon)
+                .foregroundStyle(self.sourceColor)
                 .font(.caption2)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
-        .help(status.exists ? "File exists" : "File not created yet")
+        .help(self.status.exists ? "File exists" : "File not created yet")
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label), \(status.exists ? "file exists" : "file not created yet")")
+        .accessibilityLabel("\(self.label), \(self.status.exists ? "file exists" : "file not created yet")")
     }
 
     // MARK: Private
 
     private var sourceColor: Color {
-        switch source {
+        switch self.source {
         case .global:
             .blue
         case .projectShared:
@@ -668,7 +662,7 @@ struct AdvancedTabView: View {
 
                 // Disallowed tools
                 GroupBox("Disallowed Tools") {
-                    let tools = viewModel.allDisallowedTools
+                    let tools = self.viewModel.allDisallowedTools
                     if tools.isEmpty {
                         Text("No tools are disallowed for this project.")
                             .foregroundStyle(.secondary)
@@ -706,12 +700,12 @@ struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
-        let result = layout(proposal: proposal, subviews: subviews)
+        let result = self.layout(proposal: proposal, subviews: subviews)
         return result.size
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
-        let result = layout(proposal: proposal, subviews: subviews)
+        let result = self.layout(proposal: proposal, subviews: subviews)
         for (index, position) in result.positions.enumerated() {
             subviews[index].place(
                 at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
@@ -735,13 +729,13 @@ struct FlowLayout: Layout {
 
             if currentX + size.width > maxWidth, currentX > 0 {
                 currentX = 0
-                currentY += lineHeight + spacing
+                currentY += lineHeight + self.spacing
                 lineHeight = 0
             }
 
             positions.append(CGPoint(x: currentX, y: currentY))
             lineHeight = max(lineHeight, size.height)
-            currentX += size.width + spacing
+            currentX += size.width + self.spacing
             totalHeight = currentY + lineHeight
         }
 
