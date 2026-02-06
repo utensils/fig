@@ -83,17 +83,21 @@ final class GlobalSettingsViewModel {
     }
 
     /// Deletes a global MCP server by name.
-    func deleteMCPServer(name: String) async {
+    func deleteGlobalMCPServer(name: String) async {
         do {
-            guard var globalConfig = try await configManager.readGlobalConfig() else { return }
-            globalConfig.mcpServers?.removeValue(forKey: name)
-            try await configManager.writeGlobalConfig(globalConfig)
-            legacyConfig = globalConfig
-            NotificationManager.shared.showSuccess("Server deleted", message: "'\(name)' removed from global config")
-            Log.general.info("Deleted global MCP server '\(name)'")
+            guard var config = try await configManager.readGlobalConfig() else { return }
+            config.mcpServers?.removeValue(forKey: name)
+            try await configManager.writeGlobalConfig(config)
+            legacyConfig = config
+            NotificationManager.shared.showSuccess(
+                "Server deleted",
+                message: "'\(name)' removed from global configuration"
+            )
         } catch {
-            Log.general.error("Failed to delete MCP server '\(name)': \(error)")
-            NotificationManager.shared.showError(error)
+            NotificationManager.shared.showError(
+                "Delete failed",
+                message: error.localizedDescription
+            )
         }
     }
 
@@ -178,6 +182,16 @@ struct GlobalSettingsDetailView: View {
         }
         .frame(minWidth: 500)
         .focusedSceneValue(\.globalSettingsTab, self.$viewModel.selectedTab)
+        .focusedSceneValue(\.addMCPServerAction) {
+            mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
+                projectPath: nil,
+                defaultScope: .global
+            )
+            showMCPServerEditor = true
+        }
+        .focusedSceneValue(\.pasteMCPServersAction) {
+            showPasteServersSheet()
+        }
         .task {
             await self.viewModel.load()
         }
@@ -189,12 +203,34 @@ struct GlobalSettingsDetailView: View {
             }
         }
         .sheet(isPresented: $showMCPServerEditor, onDismiss: {
-            Task {
-                await self.viewModel.load()
-            }
+            Task { await self.viewModel.load() }
         }) {
-            if let editorViewModel = mcpEditorViewModel {
-                MCPServerEditorView(viewModel: editorViewModel)
+            if let editorVM = mcpEditorViewModel {
+                MCPServerEditorView(viewModel: editorVM)
+            }
+        }
+        .sheet(isPresented: $showCopySheet, onDismiss: {
+            Task { await self.viewModel.load() }
+        }) {
+            if let copyVM = copyViewModel {
+                MCPCopySheet(viewModel: copyVM)
+                    .task {
+                        let config = try? await ConfigFileManager.shared.readGlobalConfig()
+                        let projects = config?.allProjects ?? []
+                        copyVM.loadDestinations(projects: projects)
+                    }
+            }
+        }
+        .sheet(isPresented: $showPasteSheet, onDismiss: {
+            Task { await self.viewModel.load() }
+        }) {
+            if let pasteVM = pasteViewModel {
+                MCPPasteSheet(viewModel: pasteVM)
+                    .task {
+                        let config = try? await ConfigFileManager.shared.readGlobalConfig()
+                        let projects = config?.allProjects ?? []
+                        pasteVM.loadDestinations(projects: projects)
+                    }
             }
         }
         .alert(
@@ -204,12 +240,30 @@ struct GlobalSettingsDetailView: View {
         ) { name in
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
-                Task {
-                    await viewModel.deleteMCPServer(name: name)
-                }
+                Task { await viewModel.deleteGlobalMCPServer(name: name) }
             }
         } message: { name in
             Text("Are you sure you want to delete '\(name)'? This action cannot be undone.")
+        }
+        .alert(
+            "Sensitive Data Warning",
+            isPresented: $showSensitiveCopyAlert,
+            presenting: pendingCopyServers
+        ) { servers in
+            Button("Cancel", role: .cancel) {
+                pendingCopyServers = nil
+            }
+            Button("Copy with Placeholders") {
+                copyServersToClipboard(servers, redact: true)
+            }
+            Button("Copy with Secrets") {
+                copyServersToClipboard(servers, redact: false)
+            }
+        } message: { _ in
+            Text(
+                "The MCP configuration contains environment variables that may contain "
+                    + "secrets (API keys, tokens, etc.). Choose how to copy."
+            )
         }
     }
 
@@ -221,6 +275,65 @@ struct GlobalSettingsDetailView: View {
     @State private var mcpEditorViewModel: MCPServerEditorViewModel?
     @State private var showDeleteConfirmation = false
     @State private var serverToDelete: String?
+    @State private var showCopySheet = false
+    @State private var copyViewModel: MCPCopyViewModel?
+    @State private var showPasteSheet = false
+    @State private var pasteViewModel: MCPPasteViewModel?
+    @State private var showSensitiveCopyAlert = false
+    @State private var pendingCopyServers: [String: MCPServer]?
+
+    private func handleCopyAllServers() {
+        let serverDict = Dictionary(
+            uniqueKeysWithValues: viewModel.globalMCPServers.map { ($0.name, $0.server) }
+        )
+
+        guard !serverDict.isEmpty else {
+            NotificationManager.shared.showInfo(
+                "No servers to copy",
+                message: "No global MCP servers to copy."
+            )
+            return
+        }
+
+        Task {
+            let hasSensitive = await MCPSharingService.shared.containsSensitiveData(
+                servers: serverDict
+            )
+
+            if hasSensitive {
+                pendingCopyServers = serverDict
+                showSensitiveCopyAlert = true
+            } else {
+                copyServersToClipboard(serverDict, redact: false)
+            }
+        }
+    }
+
+    private func copyServersToClipboard(_ servers: [String: MCPServer], redact: Bool) {
+        Task {
+            do {
+                try MCPSharingService.shared.writeToClipboard(
+                    servers: servers,
+                    redactSensitive: redact
+                )
+                let message = redact
+                    ? "\(servers.count) server(s) copied with placeholders"
+                    : "\(servers.count) server(s) copied to clipboard"
+                NotificationManager.shared.showSuccess("Copied to clipboard", message: message)
+            } catch {
+                NotificationManager.shared.showError(
+                    "Copy failed",
+                    message: error.localizedDescription
+                )
+            }
+            pendingCopyServers = nil
+        }
+    }
+
+    private func showPasteServersSheet() {
+        pasteViewModel = MCPPasteViewModel(currentProject: .global)
+        showPasteSheet = true
+    }
 
     @ViewBuilder
     private func globalTabContent(for tab: GlobalSettingsTab) -> some View {
@@ -258,6 +371,20 @@ struct GlobalSettingsDetailView: View {
                 onDelete: { name, _ in
                     serverToDelete = name
                     showDeleteConfirmation = true
+                },
+                onCopy: { name, server in
+                    copyViewModel = MCPCopyViewModel(
+                        serverName: name,
+                        server: server,
+                        sourceDestination: .global
+                    )
+                    showCopySheet = true
+                },
+                onCopyAll: {
+                    handleCopyAllServers()
+                },
+                onPasteServers: {
+                    showPasteServersSheet()
                 }
             )
         case .advanced:
