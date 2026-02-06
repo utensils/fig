@@ -345,19 +345,48 @@ struct MCPServersTabView: View {
     var onEdit: ((String, MCPServer, ConfigSource) -> Void)?
     var onDelete: ((String, ConfigSource) -> Void)?
     var onCopy: ((String, MCPServer) -> Void)?
+    var onCopyAll: (() -> Void)?
+    var onPasteServers: (() -> Void)?
+
+    // MARK: Internal
+
+    var hasToolbar: Bool {
+        onAdd != nil || onCopyAll != nil || onPasteServers != nil
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             // Toolbar
-            if onAdd != nil {
+            if hasToolbar {
                 HStack {
-                    Spacer()
-                    Button {
-                        onAdd?()
-                    } label: {
-                        Label("Add Server", systemImage: "plus")
+                    if onPasteServers != nil {
+                        Button {
+                            onPasteServers?()
+                        } label: {
+                            Label("Import from JSON", systemImage: "doc.on.clipboard")
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
+
+                    Spacer()
+
+                    if onCopyAll != nil, !servers.isEmpty {
+                        Button {
+                            onCopyAll?()
+                        } label: {
+                            Label("Copy All as JSON", systemImage: "doc.on.doc")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    if onAdd != nil {
+                        Button {
+                            onAdd?()
+                        } label: {
+                            Label("Add Server", systemImage: "plus")
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
@@ -494,16 +523,18 @@ struct MCPServerCard: View {
 
                     SourceBadge(source: source)
 
-                    Button {
-                        withAnimation {
-                            isExpanded.toggle()
+                    if hasExpandableContent {
+                        Button {
+                            withAnimation {
+                                isExpanded.toggle()
+                            }
+                        } label: {
+                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption)
                         }
-                    } label: {
-                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                            .font(.caption)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isExpanded ? "Collapse \(name) details" : "Expand \(name) details")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(isExpanded ? "Collapse \(name) details" : "Expand \(name) details")
                 }
 
                 // Summary line
@@ -608,6 +639,14 @@ struct MCPServerCard: View {
     // MARK: Private
 
     @State private var isExpanded = false
+
+    private var hasExpandableContent: Bool {
+        if server.isHTTP {
+            return server.headers?.isEmpty == false
+        } else {
+            return server.env?.isEmpty == false
+        }
+    }
 
     private func maskSensitiveValue(key: String, value: String) -> String {
         let sensitivePatterns = ["token", "key", "secret", "password", "credential", "api", "authorization"]
