@@ -5,7 +5,7 @@ import Foundation
 /// View model for the paste/import MCP servers flow.
 @MainActor
 @Observable
-final class MCPPasteViewModel {
+final class MCPPasteViewModel: Identifiable {
     // MARK: Lifecycle
 
     init(
@@ -18,13 +18,6 @@ final class MCPPasteViewModel {
     }
 
     // MARK: Internal
-
-    /// The JSON text entered by the user.
-    var jsonText: String = "" {
-        didSet {
-            parseJSON()
-        }
-    }
 
     /// The selected destination for import.
     var selectedDestination: CopyDestination?
@@ -50,23 +43,40 @@ final class MCPPasteViewModel {
     /// Available destinations for import.
     private(set) var availableDestinations: [CopyDestination] = []
 
+    /// The JSON text entered by the user.
+    var jsonText: String = "" {
+        didSet {
+            self.parseJSON()
+        }
+    }
+
     /// Number of parsed servers.
-    var serverCount: Int { parsedServers?.count ?? 0 }
+    var serverCount: Int {
+        self.parsedServers?.count ?? 0
+    }
 
     /// Sorted server names from parsed JSON.
-    var serverNames: [String] { parsedServers?.keys.sorted() ?? [] }
+    var serverNames: [String] {
+        self.parsedServers?.keys.sorted() ?? []
+    }
 
     /// Whether the import can proceed.
     var canImport: Bool {
-        guard let servers = parsedServers, !servers.isEmpty else { return false }
-        guard selectedDestination != nil else { return false }
-        guard !isImporting else { return false }
+        guard let servers = parsedServers, !servers.isEmpty else {
+            return false
+        }
+        guard self.selectedDestination != nil else {
+            return false
+        }
+        guard !self.isImporting else {
+            return false
+        }
         return true
     }
 
     /// Whether the import completed successfully.
     var importSucceeded: Bool {
-        importResult?.totalImported ?? 0 > 0
+        self.importResult?.totalImported ?? 0 > 0
     }
 
     /// Loads available destinations from projects.
@@ -79,13 +89,13 @@ final class MCPPasteViewModel {
             }
         }
 
-        availableDestinations = destinations
+        self.availableDestinations = destinations
     }
 
     /// Reads JSON from the system clipboard and sets it as the input text.
     func loadFromClipboard() async {
         if let clipboardText = sharingService.readFromClipboard() {
-            jsonText = clipboardText
+            self.jsonText = clipboardText
         }
     }
 
@@ -93,20 +103,22 @@ final class MCPPasteViewModel {
     func performImport() async {
         guard let servers = parsedServers, !servers.isEmpty,
               let destination = selectedDestination
-        else { return }
+        else {
+            return
+        }
 
-        isImporting = true
-        errorMessage = nil
-        importResult = nil
+        self.isImporting = true
+        self.errorMessage = nil
+        self.importResult = nil
 
         do {
             let result = try await sharingService.importServers(
                 servers,
                 to: destination,
-                strategy: conflictStrategy
+                strategy: self.conflictStrategy
             )
 
-            importResult = result
+            self.importResult = result
 
             if result.totalImported > 0 {
                 NotificationManager.shared.showSuccess(
@@ -121,14 +133,14 @@ final class MCPPasteViewModel {
             }
 
         } catch {
-            errorMessage = error.localizedDescription
+            self.errorMessage = error.localizedDescription
             NotificationManager.shared.showError(
                 "Import failed",
                 message: error.localizedDescription
             )
         }
 
-        isImporting = false
+        self.isImporting = false
     }
 
     // MARK: Private
@@ -139,19 +151,21 @@ final class MCPPasteViewModel {
     private let sharingService: MCPSharingService
 
     private func parseJSON() {
-        parsedServers = nil
-        parseError = nil
+        self.parsedServers = nil
+        self.parseError = nil
 
-        let trimmed = jsonText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        let trimmed = self.jsonText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return
+        }
 
         Task {
             do {
-                parsedServers = try await sharingService.parseServersFromJSON(trimmed)
-                parseError = nil
+                self.parsedServers = try await self.sharingService.parseServersFromJSON(trimmed)
+                self.parseError = nil
             } catch {
-                parsedServers = nil
-                parseError = error.localizedDescription
+                self.parsedServers = nil
+                self.parseError = error.localizedDescription
             }
         }
     }

@@ -11,22 +11,22 @@ struct SourceBadge: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            Image(systemName: source.icon)
+            Image(systemName: self.source.icon)
                 .font(.caption2)
-            Text(source.label)
+            Text(self.source.label)
                 .font(.caption2)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
-        .background(backgroundColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
-        .foregroundStyle(backgroundColor)
-        .accessibilityLabel("Source: \(source.label)")
+        .background(self.backgroundColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
+        .foregroundStyle(self.backgroundColor)
+        .accessibilityLabel("Source: \(self.source.label)")
     }
 
     // MARK: Private
 
     private var backgroundColor: Color {
-        switch source {
+        switch self.source {
         case .global:
             .blue
         case .projectShared:
@@ -58,7 +58,7 @@ struct PermissionsTabView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Source legend for project views
-                if allPermissions != nil {
+                if self.allPermissions != nil {
                     SourceLegend()
                 }
 
@@ -69,7 +69,7 @@ struct PermissionsTabView: View {
                             .font(.headline)
                             .foregroundStyle(.green)
 
-                        let allowRules = allowPermissions
+                        let allowRules = self.allowPermissions
                         if allowRules.isEmpty {
                             Text("No allow rules configured.")
                                 .foregroundStyle(.secondary)
@@ -80,13 +80,13 @@ struct PermissionsTabView: View {
                                     rule: item.rule,
                                     type: .allow,
                                     source: item.source,
-                                    isOverride: isRuleOverridingGlobal(
+                                    isOverride: self.isRuleOverridingGlobal(
                                         rule: item.rule,
                                         type: .allow,
                                         source: item.source
                                     ),
-                                    onPromoteToGlobal: onPromoteToGlobal,
-                                    onCopyToScope: onCopyToScope
+                                    onPromoteToGlobal: self.onPromoteToGlobal,
+                                    onCopyToScope: self.onCopyToScope
                                 )
                             }
                         }
@@ -101,7 +101,7 @@ struct PermissionsTabView: View {
                             .font(.headline)
                             .foregroundStyle(.red)
 
-                        let denyRules = denyPermissions
+                        let denyRules = self.denyPermissions
                         if denyRules.isEmpty {
                             Text("No deny rules configured.")
                                 .foregroundStyle(.secondary)
@@ -112,13 +112,13 @@ struct PermissionsTabView: View {
                                     rule: item.rule,
                                     type: .deny,
                                     source: item.source,
-                                    isOverride: isRuleOverridingGlobal(
+                                    isOverride: self.isRuleOverridingGlobal(
                                         rule: item.rule,
                                         type: .deny,
                                         source: item.source
                                     ),
-                                    onPromoteToGlobal: onPromoteToGlobal,
-                                    onCopyToScope: onCopyToScope
+                                    onPromoteToGlobal: self.onPromoteToGlobal,
+                                    onCopyToScope: self.onCopyToScope
                                 )
                             }
                         }
@@ -156,7 +156,9 @@ struct PermissionsTabView: View {
 
     /// Checks if a project-level rule also exists at the global level.
     private func isRuleOverridingGlobal(rule: String, type: PermissionType, source: ConfigSource) -> Bool {
-        guard source != .global, let allPermissions else { return false }
+        guard source != .global, let allPermissions else {
+            return false
+        }
         return allPermissions.contains { $0.rule == rule && $0.type == type && $0.source == .global }
     }
 }
@@ -174,16 +176,16 @@ struct PermissionRuleRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: type.icon)
-                .foregroundStyle(type == .allow ? .green : .red)
+            Image(systemName: self.type.icon)
+                .foregroundStyle(self.type == .allow ? .green : .red)
                 .frame(width: 20)
 
-            Text(rule)
+            Text(self.rule)
                 .font(.system(.body, design: .monospaced))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
-            if isOverride {
+            if self.isOverride {
                 Image(systemName: "arrow.up.arrow.down")
                     .foregroundStyle(.orange)
                     .font(.caption2)
@@ -192,34 +194,36 @@ struct PermissionRuleRow: View {
 
             Spacer()
 
-            SourceBadge(source: source)
+            SourceBadge(source: self.source)
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(type == .allow ? "Allow" : "Deny") rule: \(rule), source: \(source.label)")
+        .accessibilityLabel(
+            "\(self.type == .allow ? "Allow" : "Deny") rule: \(self.rule), source: \(self.source.label)"
+        )
         .contextMenu {
             Button {
                 NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(rule, forType: .string)
+                NSPasteboard.general.setString(self.rule, forType: .string)
             } label: {
                 Label("Copy Rule", systemImage: "doc.on.doc")
             }
 
-            if source != .global, onPromoteToGlobal != nil {
+            if self.source != .global, self.onPromoteToGlobal != nil {
                 Divider()
 
                 Button {
-                    onPromoteToGlobal?(rule, type)
+                    self.onPromoteToGlobal?(self.rule, self.type)
                 } label: {
                     Label("Promote to Global", systemImage: "arrow.up.to.line")
                 }
             }
 
-            if source == .projectShared || source == .projectLocal {
-                let otherScope: ConfigSource = source == .projectShared ? .projectLocal : .projectShared
-                if onCopyToScope != nil {
+            if self.source == .projectShared || self.source == .projectLocal {
+                let otherScope: ConfigSource = self.source == .projectShared ? .projectLocal : .projectShared
+                if self.onCopyToScope != nil {
                     Button {
-                        onCopyToScope?(rule, type, otherScope)
+                        self.onCopyToScope?(self.rule, self.type, otherScope)
                     } label: {
                         Label("Copy to \(otherScope.label)", systemImage: "arrow.left.arrow.right")
                     }
@@ -239,20 +243,20 @@ struct EnvironmentTabView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if !envVars.isEmpty {
+                if !self.envVars.isEmpty {
                     SourceLegend()
                 }
 
-                if envVars.isEmpty {
+                if self.envVars.isEmpty {
                     ContentUnavailableView(
                         "No Environment Variables",
                         systemImage: "list.bullet.rectangle",
-                        description: Text(emptyMessage)
+                        description: Text(self.emptyMessage)
                     )
                 } else {
                     GroupBox {
                         VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(envVars.enumerated()), id: \.offset) { index, item in
+                            ForEach(Array(self.envVars.enumerated()), id: \.offset) { index, item in
                                 if index > 0 {
                                     Divider()
                                 }
@@ -285,7 +289,7 @@ struct EnvironmentVariableRow: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            Text(key)
+            Text(self.key)
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.medium)
                 .frame(minWidth: 200, alignment: .leading)
@@ -294,31 +298,31 @@ struct EnvironmentVariableRow: View {
                 .foregroundStyle(.secondary)
 
             Group {
-                if isValueVisible || !isSensitive {
-                    Text(value)
+                if self.isValueVisible || !self.isSensitive {
+                    Text(self.value)
                         .font(.system(.body, design: .monospaced))
                         .lineLimit(2)
                         .truncationMode(.middle)
                 } else {
-                    Text(String(repeating: "\u{2022}", count: min(value.count, 20)))
+                    Text(String(repeating: "\u{2022}", count: min(self.value.count, 20)))
                         .font(.system(.body, design: .monospaced))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if isSensitive {
+            if self.isSensitive {
                 Button {
-                    isValueVisible.toggle()
+                    self.isValueVisible.toggle()
                 } label: {
-                    Image(systemName: isValueVisible ? "eye.slash" : "eye")
+                    Image(systemName: self.isValueVisible ? "eye.slash" : "eye")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isValueVisible ? "Hide value" : "Show value")
-                .accessibilityHint("Toggles visibility of sensitive value for \(key)")
+                .accessibilityLabel(self.isValueVisible ? "Hide value" : "Show value")
+                .accessibilityHint("Toggles visibility of sensitive value for \(self.key)")
             }
 
-            SourceBadge(source: source)
+            SourceBadge(source: self.source)
         }
         .padding(.vertical, 8)
     }
@@ -329,7 +333,7 @@ struct EnvironmentVariableRow: View {
 
     private var isSensitive: Bool {
         let sensitivePatterns = ["token", "key", "secret", "password", "credential", "api"]
-        let lowercaseKey = key.lowercased()
+        let lowercaseKey = self.key.lowercased()
         return sensitivePatterns.contains { lowercaseKey.contains($0) }
     }
 }
@@ -348,20 +352,18 @@ struct MCPServersTabView: View {
     var onCopyAll: (() -> Void)?
     var onPasteServers: (() -> Void)?
 
-    // MARK: Internal
-
     var hasToolbar: Bool {
-        onAdd != nil || onCopyAll != nil || onPasteServers != nil
+        self.onAdd != nil || self.onCopyAll != nil || self.onPasteServers != nil
     }
 
     var body: some View {
         VStack(spacing: 0) {
             // Toolbar
-            if hasToolbar {
+            if self.hasToolbar {
                 HStack {
-                    if onPasteServers != nil {
+                    if self.onPasteServers != nil {
                         Button {
-                            onPasteServers?()
+                            self.onPasteServers?()
                         } label: {
                             Label("Import from JSON", systemImage: "doc.on.clipboard")
                         }
@@ -370,18 +372,18 @@ struct MCPServersTabView: View {
 
                     Spacer()
 
-                    if onCopyAll != nil, !servers.isEmpty {
+                    if self.onCopyAll != nil, !self.servers.isEmpty {
                         Button {
-                            onCopyAll?()
+                            self.onCopyAll?()
                         } label: {
                             Label("Copy All as JSON", systemImage: "doc.on.doc")
                         }
                         .buttonStyle(.bordered)
                     }
 
-                    if onAdd != nil {
+                    if self.onAdd != nil {
                         Button {
-                            onAdd?()
+                            self.onAdd?()
                         } label: {
                             Label("Add Server", systemImage: "plus")
                         }
@@ -396,30 +398,30 @@ struct MCPServersTabView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if !servers.isEmpty {
+                    if !self.servers.isEmpty {
                         SourceLegend()
                     }
 
-                    if servers.isEmpty {
+                    if self.servers.isEmpty {
                         ContentUnavailableView(
                             "No MCP Servers",
                             systemImage: "server.rack",
-                            description: Text(emptyMessage)
+                            description: Text(self.emptyMessage)
                         )
                     } else {
-                        ForEach(Array(servers.enumerated()), id: \.offset) { _, item in
+                        ForEach(Array(self.servers.enumerated()), id: \.offset) { _, item in
                             MCPServerCard(
                                 name: item.name,
                                 server: item.server,
                                 source: item.source,
-                                onEdit: onEdit != nil ? {
-                                    onEdit?(item.name, item.server, item.source)
+                                onEdit: self.onEdit != nil ? {
+                                    self.onEdit?(item.name, item.server, item.source)
                                 } : nil,
-                                onDelete: onDelete != nil ? {
-                                    onDelete?(item.name, item.source)
+                                onDelete: self.onDelete != nil ? {
+                                    self.onDelete?(item.name, item.source)
                                 } : nil,
-                                onCopy: onCopy != nil ? {
-                                    onCopy?(item.name, item.server)
+                                onCopy: self.onCopy != nil ? {
+                                    self.onCopy?(item.name, item.server)
                                 } : nil
                             )
                         }
@@ -452,13 +454,13 @@ struct MCPServerCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 // Header
                 HStack {
-                    Image(systemName: server.isHTTP ? "globe" : "terminal")
-                        .foregroundStyle(server.isHTTP ? .blue : .green)
+                    Image(systemName: self.server.isHTTP ? "globe" : "terminal")
+                        .foregroundStyle(self.server.isHTTP ? .blue : .green)
 
-                    Text(name)
+                    Text(self.name)
                         .font(.headline)
 
-                    Text(server.isHTTP ? "HTTP" : "Stdio")
+                    Text(self.server.isHTTP ? "HTTP" : "Stdio")
                         .font(.caption)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -468,45 +470,48 @@ struct MCPServerCard: View {
 
                     // Action buttons
                     HStack(spacing: 4) {
+                        // Health check button
+                        MCPHealthCheckButton(serverName: self.name, server: self.server)
+
                         // Copy to clipboard
                         Button {
-                            copyToClipboard()
+                            self.copyToClipboard()
                         } label: {
                             Image(systemName: "doc.on.doc")
                                 .font(.caption)
                         }
                         .buttonStyle(.plain)
                         .help("Copy as JSON")
-                        .accessibilityLabel("Copy \(name) as JSON")
+                        .accessibilityLabel("Copy \(self.name) as JSON")
 
                         // Copy to project
-                        if onCopy != nil {
+                        if self.onCopy != nil {
                             Button {
-                                onCopy?()
+                                self.onCopy?()
                             } label: {
                                 Image(systemName: "arrow.right.doc.on.clipboard")
                                     .font(.caption)
                             }
                             .buttonStyle(.plain)
                             .help("Copy to...")
-                            .accessibilityLabel("Copy \(name) to another project")
+                            .accessibilityLabel("Copy \(self.name) to another project")
                         }
 
-                        if onEdit != nil {
+                        if self.onEdit != nil {
                             Button {
-                                onEdit?()
+                                self.onEdit?()
                             } label: {
                                 Image(systemName: "pencil")
                                     .font(.caption)
                             }
                             .buttonStyle(.plain)
                             .help("Edit server")
-                            .accessibilityLabel("Edit \(name)")
+                            .accessibilityLabel("Edit \(self.name)")
                         }
 
-                        if onDelete != nil {
+                        if self.onDelete != nil {
                             Button {
-                                onDelete?()
+                                self.onDelete?()
                             } label: {
                                 Image(systemName: "trash")
                                     .font(.caption)
@@ -514,28 +519,29 @@ struct MCPServerCard: View {
                             }
                             .buttonStyle(.plain)
                             .help("Delete server")
-                            .accessibilityLabel("Delete \(name)")
+                            .accessibilityLabel("Delete \(self.name)")
                         }
                     }
 
-                    SourceBadge(source: source)
+                    SourceBadge(source: self.source)
 
-                    if hasExpandableContent {
+                    if self.hasExpandableContent {
                         Button {
                             withAnimation {
-                                isExpanded.toggle()
+                                self.isExpanded.toggle()
                             }
                         } label: {
-                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(isExpanded ? "Collapse \(name) details" : "Expand \(name) details")
+                        .accessibilityLabel(self
+                            .isExpanded ? "Collapse \(self.name) details" : "Expand \(self.name) details")
                     }
                 }
 
                 // Summary line
-                if server.isHTTP {
+                if self.server.isHTTP {
                     if let url = server.url {
                         Text(url)
                             .font(.system(.caption, design: .monospaced))
@@ -555,18 +561,58 @@ struct MCPServerCard: View {
                     }
                 }
 
+                // Expanded details
+                if self.isExpanded {
+                    Divider()
+
+                    if self.server.isHTTP {
+                        if let headers = server.headers, !headers.isEmpty {
+                            Text("Headers:")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            ForEach(Array(headers.keys.sorted()), id: \.self) { key in
+                                HStack {
+                                    Text(key)
+                                        .font(.system(.caption, design: .monospaced))
+                                    Text(":")
+                                        .foregroundStyle(.secondary)
+                                    Text(self.maskSensitiveValue(key: key, value: headers[key] ?? ""))
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    } else {
+                        if let env = server.env, !env.isEmpty {
+                            Text("Environment:")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            ForEach(Array(env.keys.sorted()), id: \.self) { key in
+                                HStack {
+                                    Text(key)
+                                        .font(.system(.caption, design: .monospaced))
+                                    Text("=")
+                                        .foregroundStyle(.secondary)
+                                    Text(self.maskSensitiveValue(key: key, value: env[key] ?? ""))
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         .contextMenu {
             Button {
-                copyToClipboard()
+                self.copyToClipboard()
             } label: {
                 Label("Copy as JSON", systemImage: "doc.on.doc")
             }
 
-            if onCopy != nil {
+            if self.onCopy != nil {
                 Button {
-                    onCopy?()
+                    self.onCopy?()
                 } label: {
                     Label("Copy to...", systemImage: "arrow.right.doc.on.clipboard")
                 }
@@ -574,18 +620,18 @@ struct MCPServerCard: View {
 
             Divider()
 
-            if onEdit != nil {
+            if self.onEdit != nil {
                 Button {
-                    onEdit?()
+                    self.onEdit?()
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
             }
 
-            if onDelete != nil {
+            if self.onDelete != nil {
                 Divider()
                 Button(role: .destructive) {
-                    onDelete?()
+                    self.onDelete?()
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
@@ -598,10 +644,10 @@ struct MCPServerCard: View {
     @State private var isExpanded = false
 
     private var hasExpandableContent: Bool {
-        if server.isHTTP {
-            return server.headers?.isEmpty == false
+        if self.server.isHTTP {
+            self.server.headers?.isEmpty == false
         } else {
-            return server.env?.isEmpty == false
+            self.server.env?.isEmpty == false
         }
     }
 
@@ -615,15 +661,31 @@ struct MCPServerCard: View {
     }
 
     private func copyToClipboard() {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode([name: self.server])
 
-        if let data = try? encoder.encode([name: server]),
-           let jsonString = String(data: data, encoding: .utf8)
-        {
+            guard let jsonString = String(data: data, encoding: .utf8) else {
+                NotificationManager.shared.showError(
+                    "Copy failed",
+                    message: "Failed to convert server data to text"
+                )
+                return
+            }
+
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(jsonString, forType: .string)
-            NotificationManager.shared.showSuccess("Copied to clipboard", message: "Server '\(name)' copied as JSON")
+            NotificationManager.shared.showSuccess(
+                "Copied to clipboard",
+                message: "Server '\(self.name)' copied as JSON"
+            )
+        } catch {
+            Log.general.error("Failed to encode server '\(self.name)': \(error)")
+            NotificationManager.shared.showError(
+                "Copy failed",
+                message: "Failed to encode server configuration"
+            )
         }
     }
 }
@@ -643,7 +705,7 @@ struct HooksTabView: View {
             VStack(alignment: .leading, spacing: 16) {
                 SourceLegend()
 
-                if allHooksEmpty {
+                if self.allHooksEmpty {
                     ContentUnavailableView(
                         "No Hooks Configured",
                         systemImage: "arrow.triangle.branch",
@@ -653,12 +715,12 @@ struct HooksTabView: View {
                     )
                 } else {
                     // List all hook events
-                    ForEach(allHookEvents, id: \.self) { event in
+                    ForEach(self.allHookEvents, id: \.self) { event in
                         HookEventSection(
                             event: event,
-                            globalGroups: globalHooks?[event],
-                            projectGroups: projectHooks?[event],
-                            localGroups: localHooks?[event]
+                            globalGroups: self.globalHooks?[event],
+                            projectGroups: self.projectHooks?[event],
+                            localGroups: self.localHooks?[event]
                         )
                     }
                 }
@@ -674,9 +736,9 @@ struct HooksTabView: View {
     // MARK: Private
 
     private var allHooksEmpty: Bool {
-        (globalHooks?.isEmpty ?? true) &&
-            (projectHooks?.isEmpty ?? true) &&
-            (localHooks?.isEmpty ?? true)
+        (self.globalHooks?.isEmpty ?? true) &&
+            (self.projectHooks?.isEmpty ?? true) &&
+            (self.localHooks?.isEmpty ?? true)
     }
 
     private var allHookEvents: [String] {
@@ -706,7 +768,7 @@ struct HookEventSection: View {
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
-                Text(event)
+                Text(self.event)
                     .font(.headline)
 
                 // Global hooks
@@ -751,7 +813,7 @@ struct HookGroupRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                SourceBadge(source: source)
+                SourceBadge(source: self.source)
             }
 
             if let hooks = group.hooks {

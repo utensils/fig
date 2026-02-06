@@ -102,5 +102,22 @@ struct MCPPasteViewModelTests {
         let vm = MCPPasteViewModel()
         #expect(vm.conflictStrategy == .rename)
     }
-}
 
+    @Test("conforms to Identifiable")
+    func identifiable() {
+        let vm1 = MCPPasteViewModel()
+        let vm2 = MCPPasteViewModel()
+
+        #expect(vm1.id != vm2.id)
+        #expect(vm1.id == vm1.id)
+    }
+
+    @Test("setting to nil clears view model for sheet dismissal")
+    func nilableForSheetBinding() {
+        var vm: MCPPasteViewModel? = MCPPasteViewModel(currentProject: .global)
+        #expect(vm != nil)
+
+        vm = nil
+        #expect(vm == nil)
+    }
+}

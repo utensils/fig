@@ -11,7 +11,7 @@ struct MCPSharingServiceTests {
     // MARK: - Serialization Tests
 
     @Test("Serializes servers to MCPConfig JSON format")
-    func serializeToJSON() async throws {
+    func serializeToJSON() throws {
         let servers: [String: MCPServer] = [
             "github": .stdio(command: "npx", args: ["-y", "@mcp/server-github"]),
             "api": .http(url: "https://mcp.example.com"),
@@ -48,7 +48,7 @@ struct MCPSharingServiceTests {
     }
 
     @Test("Serializes empty server dictionary")
-    func serializeEmpty() async throws {
+    func serializeEmpty() throws {
         let json = try service.serializeToJSON(servers: [:])
         let data = try #require(json.data(using: .utf8))
         let config = try JSONDecoder().decode(MCPConfig.self, from: data)
@@ -56,7 +56,7 @@ struct MCPSharingServiceTests {
     }
 
     @Test("Serialized JSON uses sorted keys")
-    func serializeSortedKeys() async throws {
+    func serializeSortedKeys() throws {
         let servers: [String: MCPServer] = [
             "zebra": .stdio(command: "z"),
             "alpha": .stdio(command: "a"),
@@ -131,7 +131,7 @@ struct MCPSharingServiceTests {
     }
 
     @Test("Redaction without sensitive data returns same JSON")
-    func redactNoSensitiveData() async throws {
+    func redactNoSensitiveData() throws {
         let servers: [String: MCPServer] = [
             "safe": .stdio(command: "echo", env: ["PATH": "/bin"]),
         ]
@@ -237,7 +237,7 @@ struct MCPSharingServiceTests {
     @Test("Rejects invalid JSON")
     func parseInvalidJSON() async {
         do {
-            _ = try await service.parseServersFromJSON("not json at all")
+            _ = try await self.service.parseServersFromJSON("not json at all")
             Issue.record("Expected error for invalid JSON")
         } catch {
             #expect(error is MCPSharingError)
@@ -247,7 +247,7 @@ struct MCPSharingServiceTests {
     @Test("Rejects empty JSON object")
     func parseEmptyObject() async {
         do {
-            _ = try await service.parseServersFromJSON("{}")
+            _ = try await self.service.parseServersFromJSON("{}")
             Issue.record("Expected error for empty JSON object")
         } catch {
             #expect(error is MCPSharingError)
@@ -257,7 +257,7 @@ struct MCPSharingServiceTests {
     @Test("Rejects JSON array")
     func parseArray() async {
         do {
-            _ = try await service.parseServersFromJSON("[1, 2, 3]")
+            _ = try await self.service.parseServersFromJSON("[1, 2, 3]")
             Issue.record("Expected error for JSON array")
         } catch {
             #expect(error is MCPSharingError)
@@ -326,8 +326,8 @@ struct MCPSharingServiceTests {
             "safe": .stdio(command: "echo"),
         ]
 
-        #expect(await service.containsSensitiveData(servers: withSecrets) == true)
-        #expect(await service.containsSensitiveData(servers: withoutSecrets) == false)
+        #expect(await self.service.containsSensitiveData(servers: withSecrets) == true)
+        #expect(await self.service.containsSensitiveData(servers: withoutSecrets) == false)
     }
 
     // MARK: - BulkImportResult Tests
@@ -358,5 +358,42 @@ struct MCPSharingServiceTests {
 
         #expect(result.totalImported == 0)
         #expect(result.summary.isEmpty)
+    }
+
+    // MARK: - Serialization with Mixed Sources
+
+    @Test("Serializes servers from different sources into single JSON")
+    func serializeMixedSourceServers() async throws {
+        // Simulates collecting servers from both global and project sources
+        // as would happen with "Copy All as JSON" in project view
+        let globalServer = MCPServer.http(url: "https://mcp.example.com")
+        let projectServer = MCPServer.stdio(command: "npx", args: ["-y", "@mcp/server-github"])
+
+        let allServers: [String: MCPServer] = [
+            "api": globalServer,
+            "github": projectServer,
+        ]
+
+        let json = try service.serializeToJSON(servers: allServers)
+        let parsed = try await service.parseServersFromJSON(json)
+
+        #expect(parsed.count == 2)
+        #expect(parsed["api"]?.url == "https://mcp.example.com")
+        #expect(parsed["github"]?.command == "npx")
+    }
+
+    @Test("Serializes server with additional properties")
+    func serializeWithAdditionalProperties() async throws {
+        let server = MCPServer(
+            command: "npx",
+            args: ["-y", "some-server"],
+            additionalProperties: ["customField": "customValue"]
+        )
+
+        let json = try service.serializeToJSON(servers: ["test": server])
+        let parsed = try await service.parseServersFromJSON(json)
+
+        #expect(parsed["test"]?.command == "npx")
+        #expect(parsed["test"]?.additionalProperties?["customField"]?.value as? String == "customValue")
     }
 }
