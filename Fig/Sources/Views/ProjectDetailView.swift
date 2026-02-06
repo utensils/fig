@@ -30,6 +30,12 @@ struct ProjectDetailView: View {
                         projectName: viewModel.projectName
                     )
                     showImportSheet = true
+                },
+                onImportFromJSON: {
+                    showPasteServersSheet()
+                },
+                onExportMCPJSON: {
+                    exportMCPJSON()
                 }
             )
 
@@ -128,6 +134,43 @@ struct ProjectDetailView: View {
             projectURL: viewModel.projectURL,
             onComplete: { await viewModel.loadConfiguration() }
         )
+        .sheet(isPresented: $showPasteSheet, onDismiss: {
+            Task {
+                await viewModel.loadConfiguration()
+            }
+        }) {
+            if let pasteVM = pasteViewModel {
+                MCPPasteSheet(viewModel: pasteVM)
+                    .task {
+                        let config = try? await ConfigFileManager.shared.readGlobalConfig()
+                        let projects = config?.allProjects ?? []
+                        pasteVM.loadDestinations(projects: projects)
+                    }
+            }
+        }
+        .alert(
+            "Sensitive Data Warning",
+            isPresented: $showSensitiveCopyAlert,
+            presenting: pendingCopyServers
+        ) { servers in
+            Button("Cancel", role: .cancel) {
+                pendingCopyServers = nil
+            }
+            Button("Copy with Placeholders") {
+                copyServersToClipboard(servers, redact: true)
+            }
+            Button("Copy with Secrets") {
+                copyServersToClipboard(servers, redact: false)
+            }
+        } message: { _ in
+            Text(
+                "The MCP configuration contains environment variables that may contain "
+                    + "secrets (API keys, tokens, etc.). Choose how to copy."
+            )
+        }
+        .focusedSceneValue(\.pasteMCPServersAction) {
+            showPasteServersSheet()
+        }
     }
 
     // MARK: Private
@@ -145,6 +188,106 @@ struct ProjectDetailView: View {
     @State private var importViewModel: ConfigImportViewModel?
     @State private var showPromoteConfirmation = false
     @State private var ruleToPromote: RulePromotionInfo?
+    @State private var showPasteSheet = false
+    @State private var pasteViewModel: MCPPasteViewModel?
+    @State private var showSensitiveCopyAlert = false
+    @State private var pendingCopyServers: [String: MCPServer]?
+
+    private func handleCopyAllServers() {
+        // Collect project MCP servers (exclude global ones for project copy)
+        let projectServers = viewModel.allMCPServers
+            .filter { $0.source != .global }
+        let serverDict = Dictionary(
+            uniqueKeysWithValues: projectServers.map { ($0.name, $0.server) }
+        )
+
+        guard !serverDict.isEmpty else {
+            NotificationManager.shared.showInfo(
+                "No servers to copy",
+                message: "This project has no MCP servers to copy."
+            )
+            return
+        }
+
+        Task {
+            let hasSensitive = await MCPSharingService.shared.containsSensitiveData(
+                servers: serverDict
+            )
+
+            if hasSensitive {
+                pendingCopyServers = serverDict
+                showSensitiveCopyAlert = true
+            } else {
+                copyServersToClipboard(serverDict, redact: false)
+            }
+        }
+    }
+
+    private func copyServersToClipboard(_ servers: [String: MCPServer], redact: Bool) {
+        Task {
+            do {
+                try MCPSharingService.shared.writeToClipboard(
+                    servers: servers,
+                    redactSensitive: redact
+                )
+                let message = redact
+                    ? "\(servers.count) server(s) copied with placeholders"
+                    : "\(servers.count) server(s) copied to clipboard"
+                NotificationManager.shared.showSuccess("Copied to clipboard", message: message)
+            } catch {
+                NotificationManager.shared.showError(
+                    "Copy failed",
+                    message: error.localizedDescription
+                )
+            }
+            pendingCopyServers = nil
+        }
+    }
+
+    private func showPasteServersSheet() {
+        let currentProject = CopyDestination.project(
+            path: viewModel.projectPath,
+            name: viewModel.projectName
+        )
+        pasteViewModel = MCPPasteViewModel(currentProject: currentProject)
+        showPasteSheet = true
+    }
+
+    private func exportMCPJSON() {
+        let projectServers = viewModel.allMCPServers
+            .filter { $0.source != .global }
+        let serverDict = Dictionary(
+            uniqueKeysWithValues: projectServers.map { ($0.name, $0.server) }
+        )
+
+        guard !serverDict.isEmpty else {
+            NotificationManager.shared.showInfo(
+                "No servers to export",
+                message: "This project has no project-level MCP servers to export."
+            )
+            return
+        }
+
+        Task {
+            do {
+                let config = MCPConfig(mcpServers: serverDict)
+                try await ConfigFileManager.shared.writeMCPConfig(
+                    config,
+                    for: viewModel.projectURL
+                )
+                NotificationManager.shared.showSuccess(
+                    "Exported .mcp.json",
+                    message: "MCP configuration written to project root"
+                )
+                await viewModel.loadConfiguration()
+            } catch {
+                NotificationManager.shared.showError(
+                    "Export failed",
+                    message: error.localizedDescription
+                )
+            }
+        }
+    }
 
     private var permissionsTabContent: some View {
         PermissionsTabView(
@@ -230,6 +373,12 @@ struct ProjectDetailView: View {
                         sourceDestination: sourceDestination
                     )
                     showCopySheet = true
+                },
+                onCopyAll: {
+                    handleCopyAllServers()
+                },
+                onPasteServers: {
+                    showPasteServersSheet()
                 }
             )
         case .hooks:
@@ -270,6 +419,8 @@ struct ProjectHeaderView: View {
     @Bindable var viewModel: ProjectDetailViewModel
     var onExport: (() -> Void)?
     var onImport: (() -> Void)?
+    var onImportFromJSON: (() -> Void)?
+    var onExportMCPJSON: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -336,6 +487,20 @@ struct ProjectHeaderView: View {
                             onImport?()
                         } label: {
                             Label("Import Configuration...", systemImage: "square.and.arrow.down")
+                        }
+
+                        Divider()
+
+                        Button {
+                            onImportFromJSON?()
+                        } label: {
+                            Label("Import MCP Servers from JSON...", systemImage: "doc.on.clipboard")
+                        }
+
+                        Button {
+                            onExportMCPJSON?()
+                        } label: {
+                            Label("Export .mcp.json...", systemImage: "doc.badge.arrow.up")
                         }
                     } label: {
                         Label("More", systemImage: "ellipsis.circle")
