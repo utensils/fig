@@ -13,13 +13,21 @@ struct AppCommands: Commands {
             .keyboardShortcut(",", modifiers: .command)
         }
 
-        // File menu: New MCP Server
+        // File menu: New MCP Server + Import from JSON
         CommandGroup(after: .newItem) {
             Button("New MCP Server") {
                 self.addMCPServer?()
             }
             .keyboardShortcut("n", modifiers: [.command, .shift])
             .disabled(self.addMCPServer == nil)
+
+            Divider()
+
+            Button("Import MCP Servers from JSON...") {
+                self.pasteMCPServers?()
+            }
+            .keyboardShortcut("v", modifiers: [.command, .shift])
+            .disabled(self.pasteMCPServers == nil)
         }
 
         // Tab menu for switching detail tabs
@@ -57,4 +65,5 @@ struct AppCommands: Commands {
     @FocusedBinding(\.projectDetailTab) private var projectTab
     @FocusedBinding(\.globalSettingsTab) private var globalTab
     @FocusedValue(\.addMCPServerAction) private var addMCPServer
+    @FocusedValue(\.pasteMCPServersAction) private var pasteMCPServers
 }

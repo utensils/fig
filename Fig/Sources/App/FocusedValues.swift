@@ -22,6 +22,11 @@ private struct AddMCPServerActionKey: FocusedValueKey {
     typealias Value = () -> Void
 }
 
+/// Key for the paste/import MCP servers action.
+private struct PasteMCPServersActionKey: FocusedValueKey {
+    typealias Value = () -> Void
+}
+
 // MARK: - FocusedValues Extension
 
 extension FocusedValues {
@@ -47,5 +52,11 @@ extension FocusedValues {
     var addMCPServerAction: (() -> Void)? {
         get { self[AddMCPServerActionKey.self] }
         set { self[AddMCPServerActionKey.self] = newValue }
+    }
+
+    /// Action to paste/import MCP servers from JSON.
+    var pasteMCPServersAction: (() -> Void)? {
+        get { self[PasteMCPServersActionKey.self] }
+        set { self[PasteMCPServersActionKey.self] = newValue }
     }
 }
