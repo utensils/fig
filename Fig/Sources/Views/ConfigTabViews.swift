@@ -523,16 +523,18 @@ struct MCPServerCard: View {
 
                     SourceBadge(source: source)
 
-                    Button {
-                        withAnimation {
-                            isExpanded.toggle()
+                    if hasExpandableContent {
+                        Button {
+                            withAnimation {
+                                isExpanded.toggle()
+                            }
+                        } label: {
+                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption)
                         }
-                    } label: {
-                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                            .font(.caption)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isExpanded ? "Collapse \(name) details" : "Expand \(name) details")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(isExpanded ? "Collapse \(name) details" : "Expand \(name) details")
                 }
 
                 // Summary line
@@ -637,6 +639,14 @@ struct MCPServerCard: View {
     // MARK: Private
 
     @State private var isExpanded = false
+
+    private var hasExpandableContent: Bool {
+        if server.isHTTP {
+            return server.headers?.isEmpty == false
+        } else {
+            return server.env?.isEmpty == false
+        }
+    }
 
     private func maskSensitiveValue(key: String, value: String) -> String {
         let sensitivePatterns = ["token", "key", "secret", "password", "credential", "api", "authorization"]
