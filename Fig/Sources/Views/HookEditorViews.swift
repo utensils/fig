@@ -638,55 +638,99 @@ struct AddHookCommandSheet: View {
 
 // MARK: - HookVariablesReference
 
-/// Collapsible reference section for available hook variables.
+/// Reference section for available hook variables.
 struct HookVariablesReference: View {
+    var isCollapsible = true
+
     var body: some View {
-        DisclosureGroup("Available Hook Variables") {
-            VStack(alignment: .leading, spacing: 8) {
-                HookVariableRow(
-                    name: "$CLAUDE_TOOL_NAME",
-                    description: "Name of the tool being used"
-                )
-                HookVariableRow(
-                    name: "$CLAUDE_TOOL_INPUT",
-                    description: "JSON input to the tool"
-                )
-                HookVariableRow(
-                    name: "$CLAUDE_FILE_PATH",
-                    description: "File path affected (if applicable)"
-                )
-                HookVariableRow(
-                    name: "$CLAUDE_TOOL_OUTPUT",
-                    description: "Output from the tool (PostToolUse only)"
-                )
-                HookVariableRow(
-                    name: "$CLAUDE_NOTIFICATION",
-                    description: "Notification message (Notification only)"
-                )
+        if isCollapsible {
+            DisclosureGroup("Available Hook Variables") {
+                variablesList
             }
-            .padding(.vertical, 8)
+            .padding()
+            .background(
+                .quaternary.opacity(0.5),
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+        } else {
+            GroupBox("Available Hook Variables") {
+                variablesList
+            }
         }
-        .padding()
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var variablesList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(HookVariable.all) { variable in
+                HookVariableRow(variable: variable)
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 
 // MARK: - HookVariableRow
 
-/// A row displaying a hook variable name and description.
+/// A row displaying a hook variable with click-to-copy and event scope.
 struct HookVariableRow: View {
-    let name: String
-    let description: String
+    let variable: HookVariable
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(name)
-                .font(.system(.caption, design: .monospaced))
-                .fontWeight(.medium)
-            Text(description)
+        HStack(alignment: .center, spacing: 12) {
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(variable.name, forType: .string)
+                NotificationManager.shared.showSuccess(
+                    "Copied",
+                    message: variable.name
+                )
+            } label: {
+                HStack(spacing: 4) {
+                    Text(variable.name)
+                        .font(.system(.caption, design: .monospaced))
+                        .fontWeight(.medium)
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .buttonStyle(.plain)
+            .help("Click to copy")
+
+            Text(variable.description)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 4) {
+                ForEach(variable.events) { event in
+                    HookEventBadge(event: event)
+                }
+            }
         }
+    }
+}
+
+// MARK: - HookEventBadge
+
+/// A small colored badge indicating a hook event scope.
+struct HookEventBadge: View {
+    let event: HookEvent
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: event.icon)
+                .font(.system(size: 8))
+            Text(event.displayName)
+                .font(.caption2)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(
+            event.color.opacity(0.2),
+            in: RoundedRectangle(cornerRadius: 4)
+        )
+        .foregroundStyle(event.color)
     }
 }
 

@@ -620,5 +620,119 @@ struct SendableTests {
         let _: any Sendable = ClaudeSettings()
         let _: any Sendable = ProjectEntry()
         let _: any Sendable = LegacyConfig()
+        let _: any Sendable = HookVariable(
+            name: "$TEST",
+            description: "test",
+            events: [.preToolUse]
+        )
+    }
+}
+
+// MARK: - HookVariableTests
+
+@Suite("HookVariable Tests")
+struct HookVariableTests {
+    @Test("All variables have names starting with $")
+    func variableNamesValid() {
+        for variable in HookVariable.all {
+            #expect(!variable.name.isEmpty)
+            #expect(variable.name.hasPrefix("$"))
+        }
+    }
+
+    @Test("All variables have non-empty descriptions")
+    func variableDescriptionsValid() {
+        for variable in HookVariable.all {
+            #expect(!variable.description.isEmpty)
+        }
+    }
+
+    @Test("All variables have at least one event")
+    func variablesHaveEvents() {
+        for variable in HookVariable.all {
+            #expect(!variable.events.isEmpty)
+        }
+    }
+
+    @Test("Variable IDs are unique")
+    func uniqueIds() {
+        let ids = HookVariable.all.map(\.id)
+        #expect(Set(ids).count == ids.count)
+    }
+
+    @Test("Catalog contains expected count")
+    func variableCount() {
+        #expect(HookVariable.all.count == 5)
+    }
+
+    @Test("Tool variables scoped to tool events")
+    func toolVariableScoping() {
+        let toolName = HookVariable.all.first { $0.name == "$CLAUDE_TOOL_NAME" }
+        #expect(toolName != nil)
+        #expect(toolName?.events.contains(.preToolUse) == true)
+        #expect(toolName?.events.contains(.postToolUse) == true)
+        #expect(toolName?.events.contains(.notification) == false)
+    }
+
+    @Test("Tool output scoped to PostToolUse only")
+    func toolOutputScoping() {
+        let toolOutput = HookVariable.all.first { $0.name == "$CLAUDE_TOOL_OUTPUT" }
+        #expect(toolOutput != nil)
+        #expect(toolOutput?.events == [.postToolUse])
+    }
+
+    @Test("Notification variable scoped to Notification only")
+    func notificationVariableScoping() {
+        let notification = HookVariable.all.first { $0.name == "$CLAUDE_NOTIFICATION" }
+        #expect(notification != nil)
+        #expect(notification?.events == [.notification])
+    }
+
+    @Test("ID matches name")
+    func idMatchesName() {
+        for variable in HookVariable.all {
+            #expect(variable.id == variable.name)
+        }
+    }
+}
+
+// MARK: - HookEventTests
+
+@Suite("HookEvent Tests")
+struct HookEventTests {
+    @Test("All cases have display names")
+    func allCasesHaveDisplayNames() {
+        for event in HookEvent.allCases {
+            #expect(!event.displayName.isEmpty)
+        }
+    }
+
+    @Test("All cases have icons")
+    func allCasesHaveIcons() {
+        for event in HookEvent.allCases {
+            #expect(!event.icon.isEmpty)
+        }
+    }
+
+    @Test("All cases have descriptions")
+    func allCasesHaveDescriptions() {
+        for event in HookEvent.allCases {
+            #expect(!event.description.isEmpty)
+        }
+    }
+
+    @Test("ID matches raw value")
+    func idMatchesRawValue() {
+        for event in HookEvent.allCases {
+            #expect(event.id == event.rawValue)
+        }
+    }
+
+    @Test("Tool use events support matchers")
+    func toolUseEventsSupportMatchers() {
+        #expect(HookEvent.preToolUse.supportsMatcher == true)
+        #expect(HookEvent.postToolUse.supportsMatcher == true)
+        #expect(HookEvent.notification.supportsMatcher == false)
+        #expect(HookEvent.stop.supportsMatcher == false)
     }
 }

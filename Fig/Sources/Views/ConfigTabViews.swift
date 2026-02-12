@@ -605,6 +605,8 @@ struct HooksTabView: View {
                     }
                 }
 
+                HookVariablesReference(isCollapsible: false)
+
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
