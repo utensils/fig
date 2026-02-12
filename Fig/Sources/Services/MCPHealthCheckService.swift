@@ -220,13 +220,13 @@ actor MCPHealthCheckService {
         stdinPipe.fileHandleForWriting.write(Data(header.utf8))
         stdinPipe.fileHandleForWriting.write(requestData)
 
-        // Try to close the write end to signal we're done sending
-        try? stdinPipe.fileHandleForWriting.close()
-
         // Read response with timeout
+        // Note: Do NOT close stdin before reading — MCP servers treat EOF on stdin
+        // as a signal to exit, which would cause them to terminate before responding.
         let responseResult = await readMCPResponse(from: stdoutPipe.fileHandleForReading)
 
         // Clean up process
+        try? stdinPipe.fileHandleForWriting.close()
         process.terminate()
         try? await Task.sleep(for: .milliseconds(100))
 
