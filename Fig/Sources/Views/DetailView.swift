@@ -11,6 +11,7 @@ struct DetailView: View {
                 GlobalSettingsDetailView()
             case let .project(path):
                 ProjectDetailView(projectPath: path)
+                    .id(path)
             case nil:
                 ContentUnavailableView(
                     "Select an Item",
