@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - EditablePermissionRule
 
@@ -382,6 +383,59 @@ enum HookEvent: String, CaseIterable, Identifiable {
         case .notification, .stop: false
         }
     }
+
+    var color: Color {
+        switch self {
+        case .preToolUse: .blue
+        case .postToolUse: .green
+        case .notification: .orange
+        case .stop: .red
+        }
+    }
+}
+
+// MARK: - HookVariable
+
+/// Describes an environment variable available in hook scripts.
+struct HookVariable: Identifiable, Sendable {
+    let name: String
+    let description: String
+    let events: [HookEvent]
+
+    var id: String { name }
+}
+
+// MARK: - HookVariable + Catalog
+
+extension HookVariable {
+    /// All available hook variables.
+    static let all: [HookVariable] = [
+        HookVariable(
+            name: "$CLAUDE_TOOL_NAME",
+            description: "Name of the tool being used",
+            events: [.preToolUse, .postToolUse]
+        ),
+        HookVariable(
+            name: "$CLAUDE_TOOL_INPUT",
+            description: "JSON input to the tool",
+            events: [.preToolUse, .postToolUse]
+        ),
+        HookVariable(
+            name: "$CLAUDE_FILE_PATH",
+            description: "File path affected (if applicable)",
+            events: [.preToolUse, .postToolUse]
+        ),
+        HookVariable(
+            name: "$CLAUDE_TOOL_OUTPUT",
+            description: "Output from the tool",
+            events: [.postToolUse]
+        ),
+        HookVariable(
+            name: "$CLAUDE_NOTIFICATION",
+            description: "Notification message",
+            events: [.notification]
+        ),
+    ]
 }
 
 // MARK: - HookTemplate
