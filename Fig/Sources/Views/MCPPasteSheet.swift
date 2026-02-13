@@ -8,27 +8,25 @@ struct MCPPasteSheet: View {
 
     @Bindable var viewModel: MCPPasteViewModel
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
         VStack(spacing: 0) {
-            header
+            self.header
 
             Divider()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    jsonInputSection
-                    previewSection
-                    destinationSection
-                    conflictSection
+                    self.jsonInputSection
+                    self.previewSection
+                    self.destinationSection
+                    self.conflictSection
 
                     if let result = viewModel.importResult {
-                        resultSection(result: result)
+                        self.resultSection(result: result)
                     }
 
                     if let error = viewModel.errorMessage {
-                        errorSection(error: error)
+                        self.errorSection(error: error)
                     }
                 }
                 .padding()
@@ -36,12 +34,14 @@ struct MCPPasteSheet: View {
 
             Divider()
 
-            footer
+            self.footer
         }
         .frame(width: 500, height: 550)
     }
 
     // MARK: Private
+
+    @Environment(\.dismiss) private var dismiss
 
     private var header: some View {
         HStack {
@@ -73,7 +73,7 @@ struct MCPPasteSheet: View {
 
                     Button {
                         Task {
-                            await viewModel.loadFromClipboard()
+                            await self.viewModel.loadFromClipboard()
                         }
                     } label: {
                         Label("Paste from Clipboard", systemImage: "clipboard")
@@ -83,7 +83,7 @@ struct MCPPasteSheet: View {
                     .controlSize(.small)
                 }
 
-                TextEditor(text: $viewModel.jsonText)
+                TextEditor(text: self.$viewModel.jsonText)
                     .font(.system(.caption, design: .monospaced))
                     .frame(minHeight: 120, maxHeight: 150)
                     .scrollContentBackground(.hidden)
@@ -115,12 +115,12 @@ struct MCPPasteSheet: View {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.green)
-                        Text("\(viewModel.serverCount) server(s) detected")
+                        Text("\(self.viewModel.serverCount) server(s) detected")
                             .fontWeight(.medium)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        ForEach(viewModel.serverNames, id: \.self) { name in
+                        ForEach(self.viewModel.serverNames, id: \.self) { name in
                             HStack {
                                 let server = servers[name]
                                 Image(systemName: server?.isHTTP == true ? "globe" : "terminal")
@@ -147,18 +147,18 @@ struct MCPPasteSheet: View {
 
     @ViewBuilder
     private var destinationSection: some View {
-        if viewModel.parsedServers != nil {
+        if self.viewModel.parsedServers != nil {
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
-                    if viewModel.availableDestinations.isEmpty {
+                    if self.viewModel.availableDestinations.isEmpty {
                         Text("No destinations available")
                             .foregroundStyle(.secondary)
                     } else {
-                        Picker("Import to", selection: $viewModel.selectedDestination) {
+                        Picker("Import to", selection: self.$viewModel.selectedDestination) {
                             Text("Select destination...")
                                 .tag(nil as CopyDestination?)
 
-                            ForEach(viewModel.availableDestinations) { destination in
+                            ForEach(self.viewModel.availableDestinations) { destination in
                                 Label(destination.displayName, systemImage: destination.icon)
                                     .tag(destination as CopyDestination?)
                             }
@@ -175,9 +175,9 @@ struct MCPPasteSheet: View {
 
     @ViewBuilder
     private var conflictSection: some View {
-        if viewModel.parsedServers != nil {
+        if self.viewModel.parsedServers != nil {
             GroupBox {
-                Picker("If server already exists", selection: $viewModel.conflictStrategy) {
+                Picker("If server already exists", selection: self.$viewModel.conflictStrategy) {
                     ForEach(
                         [ConflictStrategy.rename, .overwrite, .skip],
                         id: \.self
@@ -193,7 +193,35 @@ struct MCPPasteSheet: View {
         }
     }
 
-    @ViewBuilder
+    private var footer: some View {
+        HStack {
+            Button("Cancel") {
+                self.dismiss()
+            }
+            .keyboardShortcut(.cancelAction)
+
+            Spacer()
+
+            if self.viewModel.importSucceeded {
+                Button("Done") {
+                    self.dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+            } else {
+                Button("Import") {
+                    Task {
+                        await self.viewModel.performImport()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!self.viewModel.canImport)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding()
+    }
+
     private func resultSection(result: BulkImportResult) -> some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
@@ -246,7 +274,6 @@ struct MCPPasteSheet: View {
         }
     }
 
-    @ViewBuilder
     private func errorSection(error: String) -> some View {
         GroupBox {
             HStack {
@@ -259,35 +286,6 @@ struct MCPPasteSheet: View {
         } label: {
             Label("Error", systemImage: "xmark.octagon")
         }
-    }
-
-    private var footer: some View {
-        HStack {
-            Button("Cancel") {
-                dismiss()
-            }
-            .keyboardShortcut(.cancelAction)
-
-            Spacer()
-
-            if viewModel.importSucceeded {
-                Button("Done") {
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-            } else {
-                Button("Import") {
-                    Task {
-                        await viewModel.performImport()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.canImport)
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding()
     }
 }
 

@@ -5,11 +5,12 @@ import SwiftUI
 /// Picker for selecting the editing target file.
 struct EditingTargetPicker: View {
     @Binding var selection: EditingTarget
+
     var targets: [EditingTarget] = EditingTarget.projectTargets
 
     var body: some View {
-        Picker("Save to:", selection: $selection) {
-            ForEach(targets) { target in
+        Picker("Save to:", selection: self.$selection) {
+            ForEach(self.targets) { target in
                 HStack {
                     Image(systemName: target.source.icon)
                     Text(target.label)
@@ -19,7 +20,7 @@ struct EditingTargetPicker: View {
         }
         .pickerStyle(.segmented)
         .frame(maxWidth: 350)
-        .help(selection.description)
+        .help(self.selection.description)
     }
 }
 
@@ -27,8 +28,6 @@ struct EditingTargetPicker: View {
 
 /// Sheet for resolving external file change conflicts.
 struct ConflictResolutionSheet: View {
-    // MARK: Internal
-
     let fileName: String
     let onResolve: (ConflictResolution) -> Void
 
@@ -44,7 +43,7 @@ struct ConflictResolutionSheet: View {
                     .fontWeight(.semibold)
             }
 
-            Text("The file \(fileName) was modified externally while you have unsaved changes.")
+            Text("The file \(self.fileName) was modified externally while you have unsaved changes.")
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
@@ -52,7 +51,7 @@ struct ConflictResolutionSheet: View {
 
             VStack(spacing: 12) {
                 Button {
-                    onResolve(.keepLocal)
+                    self.onResolve(.keepLocal)
                 } label: {
                     HStack {
                         Image(systemName: "pencil.circle.fill")
@@ -72,7 +71,7 @@ struct ConflictResolutionSheet: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    onResolve(.useExternal)
+                    self.onResolve(.useExternal)
                 } label: {
                     HStack {
                         Image(systemName: "arrow.down.circle.fill")
@@ -106,7 +105,7 @@ struct DirtyStateIndicator: View {
     let isDirty: Bool
 
     var body: some View {
-        if isDirty {
+        if self.isDirty {
             Circle()
                 .fill(.orange)
                 .frame(width: 8, height: 8)
@@ -125,15 +124,15 @@ struct SaveButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            if isSaving {
+        Button(action: self.action) {
+            if self.isSaving {
                 ProgressView()
                     .controlSize(.small)
             } else {
                 Label("Save", systemImage: "square.and.arrow.down")
             }
         }
-        .disabled(!isDirty || isSaving)
+        .disabled(!self.isDirty || self.isSaving)
         .keyboardShortcut("s", modifiers: .command)
     }
 }
@@ -148,12 +147,12 @@ struct EditSettingsButton: View {
 
     var body: some View {
         Button {
-            showingEditor = true
+            self.showingEditor = true
         } label: {
             Label("Edit Settings", systemImage: "pencil")
         }
-        .sheet(isPresented: $showingEditor) {
-            ProjectSettingsEditorView(projectPath: projectPath)
+        .sheet(isPresented: self.$showingEditor) {
+            ProjectSettingsEditorView(projectPath: self.projectPath)
         }
     }
 

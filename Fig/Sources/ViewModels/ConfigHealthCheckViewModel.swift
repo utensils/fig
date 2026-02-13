@@ -33,7 +33,7 @@ final class ConfigHealthCheckViewModel {
 
     /// Count of findings by severity.
     var severityCounts: [Severity: Int] {
-        Dictionary(grouping: findings, by: \.severity)
+        Dictionary(grouping: self.findings, by: \.severity)
             .mapValues(\.count)
     }
 
@@ -82,15 +82,17 @@ final class ConfigHealthCheckViewModel {
         _ finding: Finding,
         legacyConfig: LegacyConfig?
     ) async {
-        guard let autoFix = finding.autoFix else { return }
+        guard let autoFix = finding.autoFix else {
+            return
+        }
 
         do {
             switch autoFix {
             case let .addToDenyList(pattern):
-                try await addToDenyList(pattern: pattern)
+                try await self.addToDenyList(pattern: pattern)
 
             case .createLocalSettings:
-                try await createLocalSettings()
+                try await self.createLocalSettings()
             }
 
             NotificationManager.shared.showSuccess(
@@ -99,17 +101,17 @@ final class ConfigHealthCheckViewModel {
             )
 
             // Re-run checks with freshly-read config to reflect the change
-            runChecks(
-                globalSettings: try? await configManager.readGlobalSettings(),
-                projectSettings: try? await configManager.readProjectSettings(for: projectPath),
-                projectLocalSettings: try? await configManager.readProjectLocalSettings(for: projectPath),
-                mcpConfig: try? await configManager.readMCPConfig(for: projectPath),
+            await self.runChecks(
+                globalSettings: try? self.configManager.readGlobalSettings(),
+                projectSettings: try? self.configManager.readProjectSettings(for: self.projectPath),
+                projectLocalSettings: try? self.configManager.readProjectLocalSettings(for: self.projectPath),
+                mcpConfig: try? self.configManager.readMCPConfig(for: self.projectPath),
                 legacyConfig: legacyConfig,
-                localSettingsExists: await configManager.fileExists(
-                    at: configManager.projectLocalSettingsURL(for: projectPath)
+                localSettingsExists: self.configManager.fileExists(
+                    at: self.configManager.projectLocalSettingsURL(for: self.projectPath)
                 ),
-                mcpConfigExists: await configManager.fileExists(
-                    at: configManager.mcpConfigURL(for: projectPath)
+                mcpConfigExists: self.configManager.fileExists(
+                    at: self.configManager.mcpConfigURL(for: self.projectPath)
                 )
             )
         } catch {
@@ -138,25 +140,27 @@ final class ConfigHealthCheckViewModel {
 
     /// Adds a pattern to the project's deny list in `.claude/settings.json`.
     private func addToDenyList(pattern: String) async throws {
-        var settings = try await configManager.readProjectSettings(for: projectPath) ?? ClaudeSettings()
+        var settings = try await configManager.readProjectSettings(for: self.projectPath) ?? ClaudeSettings()
 
         var permissions = settings.permissions ?? Permissions()
         var deny = permissions.deny ?? []
 
-        guard !deny.contains(pattern) else { return }
+        guard !deny.contains(pattern) else {
+            return
+        }
 
         deny.append(pattern)
         permissions.deny = deny
         settings.permissions = permissions
 
-        try await configManager.writeProjectSettings(settings, for: projectPath)
+        try await self.configManager.writeProjectSettings(settings, for: self.projectPath)
         Log.general.info("Added '\(pattern)' to deny list for \(self.projectPath.lastPathComponent)")
     }
 
     /// Creates an empty `settings.local.json` file.
     private func createLocalSettings() async throws {
         let settings = ClaudeSettings()
-        try await configManager.writeProjectLocalSettings(settings, for: projectPath)
+        try await configManager.writeProjectLocalSettings(settings, for: self.projectPath)
         Log.general.info("Created settings.local.json for \(self.projectPath.lastPathComponent)")
     }
 }

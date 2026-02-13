@@ -122,8 +122,6 @@ struct OnboardingViewModelTests {
         }
     }
 
-    // MARK: - State Properties
-
     @Suite("State Properties")
     struct StateProperties {
         @Test("isFirstStep is true only on welcome")

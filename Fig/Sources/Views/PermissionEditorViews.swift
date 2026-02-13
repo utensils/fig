@@ -16,8 +16,8 @@ struct PermissionRuleEditorView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Target selector and quick-add
                 HStack {
-                    if !viewModel.isGlobalMode {
-                        EditingTargetPicker(selection: $viewModel.editingTarget)
+                    if !self.viewModel.isGlobalMode {
+                        EditingTargetPicker(selection: self.$viewModel.editingTarget)
                     }
 
                     Spacer()
@@ -25,7 +25,7 @@ struct PermissionRuleEditorView: View {
                     Menu {
                         ForEach(PermissionPreset.allPresets) { preset in
                             Button {
-                                viewModel.applyPreset(preset)
+                                self.viewModel.applyPreset(preset)
                             } label: {
                                 VStack(alignment: .leading) {
                                     Text(preset.name)
@@ -51,33 +51,33 @@ struct PermissionRuleEditorView: View {
                             Spacer()
 
                             Button {
-                                showingAddAllowRule = true
+                                self.showingAddAllowRule = true
                             } label: {
                                 Label("Add Rule", systemImage: "plus")
                             }
                             .buttonStyle(.borderless)
                         }
 
-                        if viewModel.allowRules.isEmpty {
+                        if self.viewModel.allowRules.isEmpty {
                             Text("No allow rules configured.")
                                 .foregroundStyle(.secondary)
                                 .padding(.vertical, 8)
                         } else {
-                            ForEach(viewModel.allowRules) { rule in
+                            ForEach(self.viewModel.allowRules) { rule in
                                 EditablePermissionRuleRow(
                                     rule: rule,
                                     onUpdate: { newRule, newType in
-                                        viewModel.updatePermissionRule(rule, newRule: newRule, newType: newType)
+                                        self.viewModel.updatePermissionRule(rule, newRule: newRule, newType: newType)
                                     },
                                     onDelete: {
-                                        viewModel.removePermissionRule(rule)
+                                        self.viewModel.removePermissionRule(rule)
                                     },
-                                    validateRule: viewModel.validatePermissionRule,
+                                    validateRule: self.viewModel.validatePermissionRule,
                                     isDuplicate: { ruleStr, type in
-                                        viewModel.isRuleDuplicate(ruleStr, type: type, excluding: rule)
+                                        self.viewModel.isRuleDuplicate(ruleStr, type: type, excluding: rule)
                                     },
-                                    onPromoteToGlobal: onPromoteToGlobal != nil ? {
-                                        onPromoteToGlobal?(rule.rule, .allow)
+                                    onPromoteToGlobal: self.onPromoteToGlobal != nil ? {
+                                        self.onPromoteToGlobal?(rule.rule, .allow)
                                     } : nil
                                 )
                             }
@@ -97,33 +97,33 @@ struct PermissionRuleEditorView: View {
                             Spacer()
 
                             Button {
-                                showingAddDenyRule = true
+                                self.showingAddDenyRule = true
                             } label: {
                                 Label("Add Rule", systemImage: "plus")
                             }
                             .buttonStyle(.borderless)
                         }
 
-                        if viewModel.denyRules.isEmpty {
+                        if self.viewModel.denyRules.isEmpty {
                             Text("No deny rules configured.")
                                 .foregroundStyle(.secondary)
                                 .padding(.vertical, 8)
                         } else {
-                            ForEach(viewModel.denyRules) { rule in
+                            ForEach(self.viewModel.denyRules) { rule in
                                 EditablePermissionRuleRow(
                                     rule: rule,
                                     onUpdate: { newRule, newType in
-                                        viewModel.updatePermissionRule(rule, newRule: newRule, newType: newType)
+                                        self.viewModel.updatePermissionRule(rule, newRule: newRule, newType: newType)
                                     },
                                     onDelete: {
-                                        viewModel.removePermissionRule(rule)
+                                        self.viewModel.removePermissionRule(rule)
                                     },
-                                    validateRule: viewModel.validatePermissionRule,
+                                    validateRule: self.viewModel.validatePermissionRule,
                                     isDuplicate: { ruleStr, type in
-                                        viewModel.isRuleDuplicate(ruleStr, type: type, excluding: rule)
+                                        self.viewModel.isRuleDuplicate(ruleStr, type: type, excluding: rule)
                                     },
-                                    onPromoteToGlobal: onPromoteToGlobal != nil ? {
-                                        onPromoteToGlobal?(rule.rule, .deny)
+                                    onPromoteToGlobal: self.onPromoteToGlobal != nil ? {
+                                        self.onPromoteToGlobal?(rule.rule, .deny)
                                     } : nil
                                 )
                             }
@@ -136,22 +136,22 @@ struct PermissionRuleEditorView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .sheet(isPresented: $showingAddAllowRule) {
+        .sheet(isPresented: self.$showingAddAllowRule) {
             AddPermissionRuleSheet(type: .allow) { rule in
-                viewModel.addPermissionRule(rule, type: .allow)
+                self.viewModel.addPermissionRule(rule, type: .allow)
             } validateRule: { rule in
-                viewModel.validatePermissionRule(rule)
+                self.viewModel.validatePermissionRule(rule)
             } isDuplicate: { rule in
-                viewModel.isRuleDuplicate(rule, type: .allow)
+                self.viewModel.isRuleDuplicate(rule, type: .allow)
             }
         }
-        .sheet(isPresented: $showingAddDenyRule) {
+        .sheet(isPresented: self.$showingAddDenyRule) {
             AddPermissionRuleSheet(type: .deny) { rule in
-                viewModel.addPermissionRule(rule, type: .deny)
+                self.viewModel.addPermissionRule(rule, type: .deny)
             } validateRule: { rule in
-                viewModel.validatePermissionRule(rule)
+                self.viewModel.validatePermissionRule(rule)
             } isDuplicate: { rule in
-                viewModel.isRuleDuplicate(rule, type: .deny)
+                self.viewModel.isRuleDuplicate(rule, type: .deny)
             }
         }
     }
@@ -177,29 +177,29 @@ struct EditablePermissionRuleRow: View {
 
     var body: some View {
         HStack {
-            Image(systemName: rule.type.icon)
-                .foregroundStyle(rule.type == .allow ? .green : .red)
+            Image(systemName: self.rule.type.icon)
+                .foregroundStyle(self.rule.type == .allow ? .green : .red)
                 .frame(width: 20)
 
-            if isEditing {
-                TextField("Rule pattern", text: $editedRule)
+            if self.isEditing {
+                TextField("Rule pattern", text: self.$editedRule)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
                     .onSubmit {
-                        saveEdit()
+                        self.saveEdit()
                     }
 
                 Button("Save") {
-                    saveEdit()
+                    self.saveEdit()
                 }
-                .disabled(!canSave)
+                .disabled(!self.canSave)
 
                 Button("Cancel") {
-                    isEditing = false
-                    editedRule = rule.rule
+                    self.isEditing = false
+                    self.editedRule = self.rule.rule
                 }
             } else {
-                Text(rule.rule)
+                Text(self.rule.rule)
                     .font(.system(.body, design: .monospaced))
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -207,8 +207,8 @@ struct EditablePermissionRuleRow: View {
                 Spacer()
 
                 Button {
-                    isEditing = true
-                    editedRule = rule.rule
+                    self.isEditing = true
+                    self.editedRule = self.rule.rule
                 } label: {
                     Image(systemName: "pencil")
                         .font(.caption)
@@ -216,7 +216,7 @@ struct EditablePermissionRuleRow: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    showingDeleteConfirmation = true
+                    self.showingDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
                         .font(.caption)
@@ -233,20 +233,20 @@ struct EditablePermissionRuleRow: View {
         )
         .confirmationDialog(
             "Delete Rule",
-            isPresented: $showingDeleteConfirmation,
+            isPresented: self.$showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
-                onDelete()
+                self.onDelete()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Are you sure you want to delete this rule?\n\(rule.rule)")
+            Text("Are you sure you want to delete this rule?\n\(self.rule.rule)")
         }
         .contextMenu {
             Button {
                 NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(rule.rule, forType: .string)
+                NSPasteboard.general.setString(self.rule.rule, forType: .string)
             } label: {
                 Label("Copy Rule", systemImage: "doc.on.doc")
             }
@@ -264,7 +264,7 @@ struct EditablePermissionRuleRow: View {
             Divider()
 
             Button(role: .destructive) {
-                showingDeleteConfirmation = true
+                self.showingDeleteConfirmation = true
             } label: {
                 Label("Delete", systemImage: "trash")
             }
@@ -278,14 +278,16 @@ struct EditablePermissionRuleRow: View {
     @State private var showingDeleteConfirmation = false
 
     private var canSave: Bool {
-        let validation = validateRule(editedRule)
-        return validation.isValid && !isDuplicate(editedRule, rule.type)
+        let validation = self.validateRule(self.editedRule)
+        return validation.isValid && !self.isDuplicate(self.editedRule, self.rule.type)
     }
 
     private func saveEdit() {
-        guard canSave else { return }
-        onUpdate(editedRule, rule.type)
-        isEditing = false
+        guard self.canSave else {
+            return
+        }
+        self.onUpdate(self.editedRule, self.rule.type)
+        self.isEditing = false
     }
 }
 
@@ -318,10 +320,10 @@ struct AddPermissionRuleSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             // Header
             HStack {
-                Image(systemName: type == .allow ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(type == .allow ? .green : .red)
+                Image(systemName: self.type == .allow ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundStyle(self.type == .allow ? .green : .red)
                     .font(.title2)
-                Text("Add \(type == .allow ? "Allow" : "Deny") Rule")
+                Text("Add \(self.type == .allow ? "Allow" : "Deny") Rule")
                     .font(.title2)
                     .fontWeight(.semibold)
             }
@@ -332,7 +334,7 @@ struct AddPermissionRuleSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Tool Type")
                     .font(.headline)
-                Picker("Tool Type", selection: $selectedTool) {
+                Picker("Tool Type", selection: self.$selectedTool) {
                     ForEach(ToolType.allCases) { tool in
                         Text(tool.rawValue).tag(tool)
                     }
@@ -341,11 +343,11 @@ struct AddPermissionRuleSheet: View {
             }
 
             // Custom tool name (if custom selected)
-            if selectedTool == .custom {
+            if self.selectedTool == .custom {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Custom Tool Name")
                         .font(.headline)
-                    TextField("ToolName", text: $customToolName)
+                    TextField("ToolName", text: self.$customToolName)
                         .textFieldStyle(.roundedBorder)
                 }
             }
@@ -354,7 +356,7 @@ struct AddPermissionRuleSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Pattern (optional)")
                     .font(.headline)
-                TextField(selectedTool.placeholder, text: $pattern)
+                TextField(self.selectedTool.placeholder, text: self.$pattern)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
                 Text("Use * for wildcard, ** for recursive match")
@@ -367,9 +369,9 @@ struct AddPermissionRuleSheet: View {
                 Text("Preview")
                     .font(.headline)
                 HStack {
-                    Image(systemName: type.icon)
-                        .foregroundStyle(type == .allow ? .green : .red)
-                    Text(generatedRule)
+                    Image(systemName: self.type.icon)
+                        .foregroundStyle(self.type == .allow ? .green : .red)
+                    Text(self.generatedRule)
                         .font(.system(.body, design: .monospaced))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -393,18 +395,18 @@ struct AddPermissionRuleSheet: View {
             // Buttons
             HStack {
                 Button("Cancel") {
-                    dismiss()
+                    self.dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
                 Button("Add Rule") {
-                    onAdd(generatedRule)
-                    dismiss()
+                    self.onAdd(self.generatedRule)
+                    self.dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(!isValid)
+                .disabled(!self.isValid)
             }
         }
         .padding()
@@ -421,29 +423,29 @@ struct AddPermissionRuleSheet: View {
     @State private var pattern = ""
 
     private var toolName: String {
-        selectedTool == .custom ? customToolName : selectedTool.rawValue
+        self.selectedTool == .custom ? self.customToolName : self.selectedTool.rawValue
     }
 
     private var generatedRule: String {
-        if pattern.isEmpty {
-            return toolName
+        if self.pattern.isEmpty {
+            return self.toolName
         }
-        return "\(toolName)(\(pattern))"
+        return "\(self.toolName)(\(self.pattern))"
     }
 
     private var validationError: String? {
-        if selectedTool == .custom, customToolName.isEmpty {
+        if self.selectedTool == .custom, self.customToolName.isEmpty {
             return "Enter a custom tool name"
         }
-        if isDuplicate(generatedRule) {
+        if self.isDuplicate(self.generatedRule) {
             return "This rule already exists"
         }
-        let validation = validateRule(generatedRule)
+        let validation = self.validateRule(self.generatedRule)
         return validation.error
     }
 
     private var isValid: Bool {
-        validationError == nil && !toolName.isEmpty
+        self.validationError == nil && !self.toolName.isEmpty
     }
 }
 
@@ -461,6 +463,7 @@ struct RulePromotionInfo {
 struct PromoteToGlobalModifier: ViewModifier {
     @Binding var isPresented: Bool
     @Binding var ruleToPromote: RulePromotionInfo?
+
     let projectURL: URL?
     var onComplete: (() async -> Void)?
 
@@ -468,8 +471,8 @@ struct PromoteToGlobalModifier: ViewModifier {
         content
             .alert(
                 "Promote to Global",
-                isPresented: $isPresented,
-                presenting: ruleToPromote
+                isPresented: self.$isPresented,
+                presenting: self.ruleToPromote
             ) { ruleInfo in
                 Button("Cancel", role: .cancel) {}
                 Button("Promote") {
@@ -479,7 +482,7 @@ struct PromoteToGlobalModifier: ViewModifier {
                                 rule: ruleInfo.rule,
                                 type: ruleInfo.type,
                                 to: .global,
-                                projectPath: projectURL
+                                projectPath: self.projectURL
                             )
                             if added {
                                 NotificationManager.shared.showSuccess(
@@ -492,7 +495,7 @@ struct PromoteToGlobalModifier: ViewModifier {
                                     message: "This rule already exists in global settings"
                                 )
                             }
-                            await onComplete?()
+                            await self.onComplete?()
                         } catch {
                             NotificationManager.shared.showError(error)
                         }
@@ -526,7 +529,7 @@ extension View {
     viewModel.permissionRules = [
         EditablePermissionRule(rule: "Bash(npm run *)", type: .allow),
         EditablePermissionRule(rule: "Read(src/**)", type: .allow),
-        EditablePermissionRule(rule: "Read(.env)", type: .deny)
+        EditablePermissionRule(rule: "Read(.env)", type: .deny),
     ]
 
     return PermissionRuleEditorView(viewModel: viewModel)
