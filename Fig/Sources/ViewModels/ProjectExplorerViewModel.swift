@@ -97,6 +97,7 @@ final class ProjectExplorerViewModel {
 
     init(configManager: ConfigFileManager = .shared) {
         self.configManager = configManager
+        self.isGroupedByParent = UserDefaults.standard.bool(forKey: Self.groupByParentKey)
         self.favoritesStorage.load()
     }
 
@@ -106,7 +107,7 @@ final class ProjectExplorerViewModel {
     let favoritesStorage = FavoritesStorage()
 
     /// All discovered projects from the global config.
-    private(set) var projects: [ProjectEntry] = []
+    var projects: [ProjectEntry] = []
 
     /// Whether projects are currently being loaded.
     private(set) var isLoading = false
@@ -119,6 +120,23 @@ final class ProjectExplorerViewModel {
 
     /// Whether the quick switcher is shown.
     var isQuickSwitcherPresented = false
+
+    /// Whether projects are grouped by parent directory in the sidebar.
+    var isGroupedByParent: Bool = false {
+        didSet {
+            UserDefaults.standard.set(self.isGroupedByParent, forKey: Self.groupByParentKey)
+        }
+    }
+
+    /// All projects whose directories no longer exist on disk.
+    var missingProjects: [ProjectEntry] {
+        self.projects.filter { !self.projectExists($0) }
+    }
+
+    /// Whether there are any missing projects that can be cleaned up.
+    var hasMissingProjects: Bool {
+        self.projects.contains { !self.projectExists($0) }
+    }
 
     /// Favorite projects.
     var favoriteProjects: [ProjectEntry] {
@@ -175,6 +193,28 @@ final class ProjectExplorerViewModel {
             let nameMatch = project.name?.lowercased().contains(query) ?? false
             let pathMatch = project.path?.lowercased().contains(query) ?? false
             return nameMatch || pathMatch
+        }
+    }
+
+    /// Projects grouped by their parent directory.
+    ///
+    /// Groups are sorted alphabetically by parent path.
+    /// Projects within each group are sorted by name.
+    var groupedProjects: [ProjectGroup] {
+        let projects = self.filteredProjects
+
+        var groups: [String: [ProjectEntry]] = [:]
+        for project in projects {
+            let parentPath = self.parentDirectory(for: project)
+            groups[parentPath, default: []].append(project)
+        }
+
+        return groups.keys.sorted().map { parentPath in
+            ProjectGroup(
+                parentPath: parentPath,
+                displayName: self.abbreviatePath(parentPath),
+                projects: groups[parentPath]?.sorted { ($0.name ?? "") < ($1.name ?? "") } ?? []
+            )
         }
     }
 
@@ -258,7 +298,7 @@ final class ProjectExplorerViewModel {
                 return
             }
             config.projects?.removeValue(forKey: path)
-            try await configManager.writeGlobalConfig(config)
+            try await self.configManager.writeGlobalConfig(config)
 
             self.projects.removeAll { $0.path == path }
             self.favoritesStorage.removeProject(path)
@@ -296,7 +336,7 @@ final class ProjectExplorerViewModel {
                 config.projects?.removeValue(forKey: path)
             }
 
-            try await configManager.writeGlobalConfig(config)
+            try await self.configManager.writeGlobalConfig(config)
 
             let pathSet = Set(paths)
             self.projects.removeAll { pathSet.contains($0.path ?? "") }
@@ -314,6 +354,25 @@ final class ProjectExplorerViewModel {
             Log.general.error("Failed to remove projects: \(error.localizedDescription)")
             NotificationManager.shared.showError(error)
         }
+    }
+
+    /// Removes all projects whose directories no longer exist on disk.
+    ///
+    /// This is a convenience method that identifies missing projects and
+    /// removes them in a single batch operation using ``deleteProjects(_:)``.
+    ///
+    /// - Note: Callers are responsible for clearing any active selection
+    ///   referencing these projects before invoking this method.
+    ///
+    /// - Returns: The number of projects removed.
+    @discardableResult
+    func removeMissingProjects() async -> Int {
+        let missing = self.missingProjects
+        guard !missing.isEmpty else {
+            return 0
+        }
+        await self.deleteProjects(missing)
+        return missing.count
     }
 
     /// Opens a project in Terminal.
@@ -338,5 +397,24 @@ final class ProjectExplorerViewModel {
 
     // MARK: Private
 
+    private static let groupByParentKey = "groupProjectsByParent"
+
     private let configManager: ConfigFileManager
+
+    /// Returns the parent directory path for a project.
+    private func parentDirectory(for project: ProjectEntry) -> String {
+        guard let path = project.path else {
+            return "Unknown"
+        }
+        return URL(fileURLWithPath: path).deletingLastPathComponent().path
+    }
+
+    /// Abbreviates a path by replacing the home directory with ~.
+    private func abbreviatePath(_ path: String) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if path.hasPrefix(home) {
+            return "~" + path.dropFirst(home.count)
+        }
+        return path
+    }
 }
