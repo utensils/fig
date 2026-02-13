@@ -439,9 +439,6 @@ struct MCPServerCard: View {
 
                     // Action buttons
                     HStack(spacing: 4) {
-                        // Health check button
-                        MCPHealthCheckButton(serverName: name, server: server)
-
                         // Copy to clipboard
                         Button {
                             copyToClipboard()
