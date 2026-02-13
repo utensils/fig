@@ -60,6 +60,32 @@ struct SidebarView: View {
                     }
                 } else if self.viewModel.filteredProjects.isEmpty, !self.viewModel.searchQuery.isEmpty {
                     ContentUnavailableView.search(text: self.viewModel.searchQuery)
+                } else if self.viewModel.isGroupedByParent {
+                    ForEach(self.viewModel.groupedProjects) { group in
+                        DisclosureGroup {
+                            ForEach(group.projects) { project in
+                                self.projectRow(for: project, isFavoriteSection: false)
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "folder")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                                Text(group.displayName)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                Spacer()
+                                Text("\(group.projects.count)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .background(.quaternary, in: Capsule())
+                            }
+                        }
+                    }
                 } else {
                     ForEach(self.viewModel.filteredProjects) { project in
                         self.projectRow(for: project, isFavoriteSection: false)
@@ -96,6 +122,37 @@ struct SidebarView: View {
                     }
                 }
             }
+
+            ToolbarItem(placement: .automatic) {
+                if !self.viewModel.projects.isEmpty, !self.isSelectMode {
+                    Menu {
+                        Toggle(isOn: Binding(
+                            get: { self.viewModel.isGroupedByParent },
+                            set: { newValue in
+                                withAnimation {
+                                    self.viewModel.isGroupedByParent = newValue
+                                }
+                            }
+                        )) {
+                            Label("Group by Directory", systemImage: "list.bullet.indent")
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive) {
+                            self.showRemoveMissingConfirmation = true
+                        } label: {
+                            Label(
+                                "Remove Missing Projects\(self.viewModel.hasMissingProjects ? " (\(self.viewModel.missingProjects.count))" : "")",
+                                systemImage: "trash.slash"
+                            )
+                        }
+                        .disabled(!self.viewModel.hasMissingProjects)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
         }
         .safeAreaInset(edge: .bottom) {
             if self.isSelectMode {
@@ -112,6 +169,15 @@ struct SidebarView: View {
                             Text(self.allProjectsSelected ? "Deselect All" : "Select All")
                         }
                         .buttonStyle(.borderless)
+
+                        if self.viewModel.hasMissingProjects {
+                            Button {
+                                self.selectMissingProjects()
+                            } label: {
+                                Text("Select Missing")
+                            }
+                            .buttonStyle(.borderless)
+                        }
 
                         Spacer()
 
@@ -186,7 +252,9 @@ struct SidebarView: View {
                         self.selection = nil
                     }
                     let projectsToDelete = self.viewModel.projects.filter { project in
-                        guard let path = project.path else { return false }
+                        guard let path = project.path else {
+                            return false
+                        }
                         return self.selectedProjectPaths.contains(path)
                     }
                     await self.viewModel.deleteProjects(projectsToDelete)
@@ -201,6 +269,27 @@ struct SidebarView: View {
                     " The project directories will not be affected."
             )
         }
+        .alert(
+            "Remove Missing Projects",
+            isPresented: self.$showRemoveMissingConfirmation
+        ) {
+            Button("Cancel", role: .cancel) {}
+            Button("Remove \(self.viewModel.missingProjects.count)", role: .destructive) {
+                Task {
+                    let missingPaths = Set(self.viewModel.missingProjects.compactMap(\.path))
+                    if case let .project(path) = self.selection, missingPaths.contains(path) {
+                        self.selection = nil
+                    }
+                    await self.viewModel.removeMissingProjects()
+                }
+            }
+        } message: {
+            let count = self.viewModel.missingProjects.count
+            Text(
+                "\(count) project\(count == 1 ? "" : "s") with missing " +
+                    "directories will be removed from your configuration."
+            )
+        }
     }
 
     // MARK: Private
@@ -210,6 +299,7 @@ struct SidebarView: View {
     @State private var isSelectMode = false
     @State private var selectedProjectPaths: Set<String> = []
     @State private var showBulkDeleteConfirmation = false
+    @State private var showRemoveMissingConfirmation = false
 
     private var visibleProjectPaths: Set<String> {
         let favorites = self.viewModel.favoriteProjects.compactMap(\.path)
@@ -221,33 +311,6 @@ struct SidebarView: View {
     private var allProjectsSelected: Bool {
         let visible = self.visibleProjectPaths
         return !visible.isEmpty && visible.isSubset(of: self.selectedProjectPaths)
-    }
-
-    private func toggleSelectMode() {
-        withAnimation {
-            self.isSelectMode.toggle()
-            if !self.isSelectMode {
-                self.selectedProjectPaths.removeAll()
-            }
-        }
-    }
-
-    private func toggleProjectSelection(_ project: ProjectEntry) {
-        guard let path = project.path else { return }
-        if self.selectedProjectPaths.contains(path) {
-            self.selectedProjectPaths.remove(path)
-        } else {
-            self.selectedProjectPaths.insert(path)
-        }
-    }
-
-    private func isProjectSelected(_ project: ProjectEntry) -> Bool {
-        guard let path = project.path else { return false }
-        return self.selectedProjectPaths.contains(path)
-    }
-
-    private func selectAllProjects() {
-        self.selectedProjectPaths = self.visibleProjectPaths
     }
 
     @ViewBuilder
@@ -317,6 +380,42 @@ struct SidebarView: View {
                 }
         }
     }
+
+    private func toggleSelectMode() {
+        withAnimation {
+            self.isSelectMode.toggle()
+            if !self.isSelectMode {
+                self.selectedProjectPaths.removeAll()
+            }
+        }
+    }
+
+    private func toggleProjectSelection(_ project: ProjectEntry) {
+        guard let path = project.path else {
+            return
+        }
+        if self.selectedProjectPaths.contains(path) {
+            self.selectedProjectPaths.remove(path)
+        } else {
+            self.selectedProjectPaths.insert(path)
+        }
+    }
+
+    private func isProjectSelected(_ project: ProjectEntry) -> Bool {
+        guard let path = project.path else {
+            return false
+        }
+        return self.selectedProjectPaths.contains(path)
+    }
+
+    private func selectAllProjects() {
+        self.selectedProjectPaths = self.visibleProjectPaths
+    }
+
+    private func selectMissingProjects() {
+        let missingPaths = Set(self.viewModel.missingProjects.compactMap(\.path))
+        self.selectedProjectPaths = missingPaths.intersection(self.visibleProjectPaths)
+    }
 }
 
 // MARK: - ProjectRowView
@@ -385,22 +484,22 @@ struct ProjectRowView: View {
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityDescription)
+        .accessibilityLabel(self.accessibilityDescription)
     }
 
     // MARK: Private
 
     private var accessibilityDescription: String {
         var parts: [String] = []
-        parts.append(project.name ?? "Unknown project")
-        if !exists {
+        parts.append(self.project.name ?? "Unknown project")
+        if !self.exists {
             parts.append("directory not found")
         }
-        if isFavorite {
+        if self.isFavorite {
             parts.append("favorite")
         }
-        if mcpCount > 0 {
-            parts.append("\(mcpCount) MCP server\(mcpCount == 1 ? "" : "s")")
+        if self.mcpCount > 0 {
+            parts.append("\(self.mcpCount) MCP server\(self.mcpCount == 1 ? "" : "s")")
         }
         return parts.joined(separator: ", ")
     }
