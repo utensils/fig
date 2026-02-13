@@ -82,6 +82,21 @@ final class GlobalSettingsViewModel {
         NSWorkspace.shared.selectFile(path, inFileViewerRootedAtPath: dirPath)
     }
 
+    /// Deletes a global MCP server by name.
+    func deleteMCPServer(name: String) async {
+        do {
+            guard var globalConfig = try await configManager.readGlobalConfig() else { return }
+            globalConfig.mcpServers?.removeValue(forKey: name)
+            try await configManager.writeGlobalConfig(globalConfig)
+            legacyConfig = globalConfig
+            NotificationManager.shared.showSuccess("Server deleted", message: "'\(name)' removed from global config")
+            Log.general.info("Deleted global MCP server '\(name)'")
+        } catch {
+            Log.general.error("Failed to delete MCP server '\(name)': \(error)")
+            NotificationManager.shared.showError(error)
+        }
+    }
+
     // MARK: Private
 
     private let configManager: ConfigFileManager
@@ -173,12 +188,39 @@ struct GlobalSettingsDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showMCPServerEditor, onDismiss: {
+            Task {
+                await self.viewModel.load()
+            }
+        }) {
+            if let editorViewModel = mcpEditorViewModel {
+                MCPServerEditorView(viewModel: editorViewModel)
+            }
+        }
+        .alert(
+            "Delete Server",
+            isPresented: $showDeleteConfirmation,
+            presenting: serverToDelete
+        ) { name in
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                Task {
+                    await viewModel.deleteMCPServer(name: name)
+                }
+            }
+        } message: { name in
+            Text("Are you sure you want to delete '\(name)'? This action cannot be undone.")
+        }
     }
 
     // MARK: Private
 
     @State private var viewModel = GlobalSettingsViewModel()
     @State private var showingEditor = false
+    @State private var showMCPServerEditor = false
+    @State private var mcpEditorViewModel: MCPServerEditorViewModel?
+    @State private var showDeleteConfirmation = false
+    @State private var serverToDelete: String?
 
     @ViewBuilder
     private func globalTabContent(for tab: GlobalSettingsTab) -> some View {
@@ -196,7 +238,27 @@ struct GlobalSettingsDetailView: View {
         case .mcpServers:
             MCPServersTabView(
                 servers: self.viewModel.globalMCPServers.map { ($0.name, $0.server, ConfigSource.global) },
-                emptyMessage: "No global MCP servers configured."
+                emptyMessage: "No global MCP servers configured.",
+                onAdd: {
+                    mcpEditorViewModel = MCPServerEditorViewModel.forAdding(
+                        projectPath: nil,
+                        defaultScope: .global
+                    )
+                    showMCPServerEditor = true
+                },
+                onEdit: { name, server, _ in
+                    mcpEditorViewModel = MCPServerEditorViewModel.forEditing(
+                        name: name,
+                        server: server,
+                        scope: .global,
+                        projectPath: nil
+                    )
+                    showMCPServerEditor = true
+                },
+                onDelete: { name, _ in
+                    serverToDelete = name
+                    showDeleteConfirmation = true
+                }
             )
         case .advanced:
             GlobalAdvancedTabView(
