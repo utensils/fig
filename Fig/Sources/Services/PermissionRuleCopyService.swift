@@ -59,7 +59,7 @@ actor PermissionRuleCopyService {
 
         settings.permissions = permissions
 
-        try await writeSettings(
+        try await self.writeSettings(
             settings,
             for: destination,
             projectPath: projectPath,
@@ -113,7 +113,7 @@ actor PermissionRuleCopyService {
             settings.permissions = permissions
         }
 
-        try await writeSettings(
+        try await self.writeSettings(
             settings,
             for: source,
             projectPath: projectPath,
@@ -136,12 +136,11 @@ actor PermissionRuleCopyService {
             projectPath: projectPath,
             configManager: configManager
         )
-        let existingRules: [String]
-        switch type {
+        let existingRules: [String] = switch type {
         case .allow:
-            existingRules = settings?.permissions?.allow ?? []
+            settings?.permissions?.allow ?? []
         case .deny:
-            existingRules = settings?.permissions?.deny ?? []
+            settings?.permissions?.deny ?? []
         }
         return existingRules.contains(rule)
     }

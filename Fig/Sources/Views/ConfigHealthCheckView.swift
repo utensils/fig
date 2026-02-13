@@ -22,15 +22,15 @@ struct ConfigHealthCheckView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Summary header
                 HealthCheckHeaderView(
-                    healthVM: healthCheckVM,
-                    onRunChecks: { runChecks() }
+                    healthVM: self.healthCheckVM,
+                    onRunChecks: { self.runChecks() }
                 )
 
-                if healthCheckVM.isRunning {
+                if self.healthCheckVM.isRunning {
                     ProgressView("Running health checks...")
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 20)
-                } else if healthCheckVM.findings.isEmpty, healthCheckVM.lastRunDate != nil {
+                } else if self.healthCheckVM.findings.isEmpty, self.healthCheckVM.lastRunDate != nil {
                     ContentUnavailableView(
                         "No Findings",
                         systemImage: "checkmark.seal.fill",
@@ -38,12 +38,12 @@ struct ConfigHealthCheckView: View {
                     )
                 } else {
                     // Findings grouped by severity
-                    ForEach(healthCheckVM.groupedFindings, id: \.severity) { group in
+                    ForEach(self.healthCheckVM.groupedFindings, id: \.severity) { group in
                         FindingSectionView(
                             severity: group.severity,
                             findings: group.findings,
                             onAutoFix: { finding in
-                                Task { await executeAutoFix(finding) }
+                                Task { await self.executeAutoFix(finding) }
                             }
                         )
                     }
@@ -54,7 +54,7 @@ struct ConfigHealthCheckView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .task {
-            runChecks()
+            self.runChecks()
         }
     }
 
@@ -63,25 +63,25 @@ struct ConfigHealthCheckView: View {
     @State private var healthCheckVM: ConfigHealthCheckViewModel
 
     private func runChecks() {
-        healthCheckVM.runChecks(
-            globalSettings: viewModel.globalSettings,
-            projectSettings: viewModel.projectSettings,
-            projectLocalSettings: viewModel.projectLocalSettings,
-            mcpConfig: viewModel.mcpConfig,
-            legacyConfig: viewModel.legacyConfig,
-            localSettingsExists: viewModel.projectLocalSettingsStatus?.exists ?? false,
-            mcpConfigExists: viewModel.mcpConfigStatus?.exists ?? false
+        self.healthCheckVM.runChecks(
+            globalSettings: self.viewModel.globalSettings,
+            projectSettings: self.viewModel.projectSettings,
+            projectLocalSettings: self.viewModel.projectLocalSettings,
+            mcpConfig: self.viewModel.mcpConfig,
+            legacyConfig: self.viewModel.legacyConfig,
+            localSettingsExists: self.viewModel.projectLocalSettingsStatus?.exists ?? false,
+            mcpConfigExists: self.viewModel.mcpConfigStatus?.exists ?? false
         )
     }
 
     private func executeAutoFix(_ finding: Finding) async {
-        await healthCheckVM.executeAutoFix(
+        await self.healthCheckVM.executeAutoFix(
             finding,
-            legacyConfig: viewModel.legacyConfig
+            legacyConfig: self.viewModel.legacyConfig
         )
 
         // Reload project config to reflect changes
-        await viewModel.loadConfiguration()
+        await self.viewModel.loadConfiguration()
     }
 }
 
@@ -108,7 +108,7 @@ struct HealthCheckHeaderView: View {
             Spacer()
 
             // Severity count badges
-            if !healthVM.findings.isEmpty {
+            if !self.healthVM.findings.isEmpty {
                 HStack(spacing: 6) {
                     ForEach(Severity.allCases, id: \.self) { severity in
                         if let count = healthVM.severityCounts[severity], count > 0 {
@@ -119,11 +119,11 @@ struct HealthCheckHeaderView: View {
             }
 
             Button {
-                onRunChecks()
+                self.onRunChecks()
             } label: {
                 Label("Re-check", systemImage: "arrow.clockwise")
             }
-            .disabled(healthVM.isRunning)
+            .disabled(self.healthVM.isRunning)
         }
     }
 }
@@ -137,16 +137,16 @@ struct SeverityCountBadge: View {
 
     var body: some View {
         HStack(spacing: 3) {
-            Image(systemName: severity.icon)
+            Image(systemName: self.severity.icon)
                 .font(.caption2)
-            Text("\(count)")
+            Text("\(self.count)")
                 .font(.caption)
                 .fontWeight(.medium)
         }
-        .foregroundStyle(severity.color)
+        .foregroundStyle(self.severity.color)
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
-        .background(severity.color.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
+        .background(self.severity.color.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
     }
 }
 
@@ -161,21 +161,21 @@ struct FindingSectionView: View {
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(findings.enumerated()), id: \.element.id) { index, finding in
+                ForEach(Array(self.findings.enumerated()), id: \.element.id) { index, finding in
                     if index > 0 {
                         Divider()
                     }
-                    FindingRowView(finding: finding, onAutoFix: onAutoFix)
+                    FindingRowView(finding: finding, onAutoFix: self.onAutoFix)
                 }
             }
             .padding(.vertical, 4)
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: severity.icon)
-                    .foregroundStyle(severity.color)
-                Text(severity.label)
+                Image(systemName: self.severity.icon)
+                    .foregroundStyle(self.severity.color)
+                Text(self.severity.label)
                     .fontWeight(.medium)
-                Text("(\(findings.count))")
+                Text("(\(self.findings.count))")
                     .foregroundStyle(.secondary)
             }
         }
@@ -191,17 +191,17 @@ struct FindingRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: finding.severity.icon)
-                .foregroundStyle(finding.severity.color)
+            Image(systemName: self.finding.severity.icon)
+                .foregroundStyle(self.finding.severity.color)
                 .font(.body)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(finding.title)
+                Text(self.finding.title)
                     .font(.body)
                     .fontWeight(.medium)
 
-                Text(finding.description)
+                Text(self.finding.description)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -211,7 +211,7 @@ struct FindingRowView: View {
 
             if let autoFix = finding.autoFix {
                 Button {
-                    onAutoFix(finding)
+                    self.onAutoFix(self.finding)
                 } label: {
                     Label(autoFix.label, systemImage: "wand.and.stars")
                         .font(.caption)

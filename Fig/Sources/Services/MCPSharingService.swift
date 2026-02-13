@@ -11,6 +11,8 @@ enum MCPSharingError: Error, LocalizedError {
     case serializationFailed(underlying: Error)
     case importFailed(underlying: Error)
 
+    // MARK: Internal
+
     var errorDescription: String? {
         switch self {
         case let .invalidJSON(detail):
@@ -34,21 +36,23 @@ struct BulkImportResult: Sendable, Equatable {
     let renamed: [String: String]
     let errors: [String]
 
-    var totalImported: Int { imported.count + renamed.count }
+    var totalImported: Int {
+        self.imported.count + self.renamed.count
+    }
 
     var summary: String {
         var parts: [String] = []
-        if !imported.isEmpty {
-            parts.append("\(imported.count) imported")
+        if !self.imported.isEmpty {
+            parts.append("\(self.imported.count) imported")
         }
-        if !renamed.isEmpty {
-            parts.append("\(renamed.count) renamed")
+        if !self.renamed.isEmpty {
+            parts.append("\(self.renamed.count) renamed")
         }
-        if !skipped.isEmpty {
-            parts.append("\(skipped.count) skipped")
+        if !self.skipped.isEmpty {
+            parts.append("\(self.skipped.count) skipped")
         }
-        if !errors.isEmpty {
-            parts.append("\(errors.count) errors")
+        if !self.errors.isEmpty {
+            parts.append("\(self.errors.count) errors")
         }
         return parts.joined(separator: ", ")
     }
@@ -58,6 +62,10 @@ struct BulkImportResult: Sendable, Equatable {
 
 /// Service for sharing MCP server configurations via clipboard and bulk import/export.
 actor MCPSharingService {
+    // MARK: Lifecycle
+
+    private init() {}
+
     // MARK: Internal
 
     static let shared = MCPSharingService()
@@ -72,7 +80,7 @@ actor MCPSharingService {
         servers: [String: MCPServer],
         redactSensitive: Bool = false
     ) throws -> String {
-        let finalServers = redactSensitive ? redactServers(servers) : servers
+        let finalServers = redactSensitive ? self.redactServers(servers) : servers
         let config = MCPConfig(mcpServers: finalServers)
 
         let encoder = JSONEncoder()
@@ -147,10 +155,10 @@ actor MCPSharingService {
             // Check env vars
             if let env = server.env {
                 for key in env.keys.sorted() {
-                    if isSensitiveKey(key) {
+                    if self.isSensitiveKey(key) {
                         warnings.append(SensitiveEnvWarning(
                             key: "\(serverName).\(key)",
-                            reason: sensitiveReason(for: key)
+                            reason: self.sensitiveReason(for: key)
                         ))
                     }
                 }
@@ -159,10 +167,10 @@ actor MCPSharingService {
             // Check headers
             if let headers = server.headers {
                 for key in headers.keys.sorted() {
-                    if isSensitiveKey(key) {
+                    if self.isSensitiveKey(key) {
                         warnings.append(SensitiveEnvWarning(
                             key: "\(serverName).\(key)",
-                            reason: sensitiveReason(for: key)
+                            reason: self.sensitiveReason(for: key)
                         ))
                     }
                 }
@@ -174,7 +182,7 @@ actor MCPSharingService {
 
     /// Checks if any server has sensitive data.
     func containsSensitiveData(servers: [String: MCPServer]) -> Bool {
-        !detectSensitiveData(servers: servers).isEmpty
+        !self.detectSensitiveData(servers: servers).isEmpty
     }
 
     // MARK: - Clipboard Operations
@@ -223,13 +231,14 @@ actor MCPSharingService {
 
             if hasConflict {
                 switch strategy {
-                case .skip, .prompt:
+                case .skip,
+                     .prompt:
                     skipped.append(name)
                     continue
 
                 case .overwrite:
                     do {
-                        try await writeServer(
+                        try await self.writeServer(
                             name: name,
                             server: server,
                             to: destination,
@@ -241,9 +250,9 @@ actor MCPSharingService {
                     }
 
                 case .rename:
-                    let newName = generateUniqueName(baseName: name, existingNames: allNames)
+                    let newName = self.generateUniqueName(baseName: name, existingNames: allNames)
                     do {
-                        try await writeServer(
+                        try await self.writeServer(
                             name: newName,
                             server: server,
                             to: destination,
@@ -257,7 +266,7 @@ actor MCPSharingService {
                 }
             } else {
                 do {
-                    try await writeServer(
+                    try await self.writeServer(
                         name: name,
                         server: server,
                         to: destination,
@@ -284,8 +293,6 @@ actor MCPSharingService {
     }
 
     // MARK: Private
-
-    private init() {}
 
     // MARK: - Sensitive Data Helpers
 
@@ -320,7 +327,7 @@ actor MCPSharingService {
     private nonisolated func redactServers(_ servers: [String: MCPServer]) -> [String: MCPServer] {
         var result: [String: MCPServer] = [:]
         for (name, server) in servers {
-            result[name] = redactServer(server)
+            result[name] = self.redactServer(server)
         }
         return result
     }
@@ -332,7 +339,7 @@ actor MCPSharingService {
         if let env = server.env {
             var redactedEnv: [String: String] = [:]
             for (key, value) in env {
-                if isSensitiveKey(key) {
+                if self.isSensitiveKey(key) {
                     redactedEnv[key] = "<YOUR_\(key.uppercased())>"
                 } else {
                     redactedEnv[key] = value
@@ -345,7 +352,7 @@ actor MCPSharingService {
         if let headers = server.headers {
             var redactedHeaders: [String: String] = [:]
             for (key, value) in headers {
-                if isSensitiveKey(key) {
+                if self.isSensitiveKey(key) {
                     redactedHeaders[key] = "<YOUR_\(key.uppercased())>"
                 } else {
                     redactedHeaders[key] = value

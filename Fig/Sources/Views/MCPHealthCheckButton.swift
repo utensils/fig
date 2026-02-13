@@ -11,28 +11,24 @@ struct MCPHealthCheckButton: View {
 
     var body: some View {
         Button {
-            runHealthCheck()
+            self.runHealthCheck()
         } label: {
             HStack(spacing: 4) {
-                statusIcon
+                self.statusIcon
                 Text("Test")
                     .font(.caption2)
             }
         }
         .buttonStyle(.bordered)
         .controlSize(.small)
-        .disabled(isChecking)
-        .help(helpText)
-        .popover(isPresented: $showDetails) {
-            HealthCheckResultPopover(result: result)
+        .disabled(self.isChecking)
+        .help(self.helpText)
+        .popover(isPresented: self.$showDetails) {
+            HealthCheckResultPopover(result: self.result)
         }
     }
 
     // MARK: Private
-
-    @State private var state: CheckState = .idle
-    @State private var result: MCPHealthCheckResult?
-    @State private var showDetails = false
 
     private enum CheckState {
         case idle
@@ -40,12 +36,16 @@ struct MCPHealthCheckButton: View {
         case completed
     }
 
+    @State private var state: CheckState = .idle
+    @State private var result: MCPHealthCheckResult?
+    @State private var showDetails = false
+
     private var isChecking: Bool {
-        state == .checking
+        self.state == .checking
     }
 
     private var helpText: String {
-        switch state {
+        switch self.state {
         case .idle:
             "Test server connection"
         case .checking:
@@ -60,7 +60,7 @@ struct MCPHealthCheckButton: View {
     }
 
     @ViewBuilder private var statusIcon: some View {
-        switch state {
+        switch self.state {
         case .idle:
             Image(systemName: "play.circle")
                 .foregroundStyle(.secondary)
@@ -89,27 +89,27 @@ struct MCPHealthCheckButton: View {
     }
 
     private func runHealthCheck() {
-        if state == .completed, result != nil {
+        if self.state == .completed, self.result != nil {
             // Show details if we already have a result
-            showDetails = true
+            self.showDetails = true
             return
         }
 
-        state = .checking
-        result = nil
+        self.state = .checking
+        self.result = nil
 
         Task {
             let checkResult = await MCPHealthCheckService.shared.checkHealth(
-                name: serverName,
-                server: server
+                name: self.serverName,
+                server: self.server
             )
-            result = checkResult
-            state = .completed
+            self.result = checkResult
+            self.state = .completed
 
             // Show toast notification
             switch checkResult.status {
             case let .success(info):
-                let name = info?.serverName ?? serverName
+                let name = info?.serverName ?? self.serverName
                 NotificationManager.shared.showSuccess(
                     "Connected to \(name)",
                     message: String(format: "Response time: %.0fms", checkResult.duration * 1000)
@@ -133,6 +133,8 @@ struct MCPHealthCheckButton: View {
 
 /// Popover showing detailed health check results.
 struct HealthCheckResultPopover: View {
+    // MARK: Internal
+
     let result: MCPHealthCheckResult?
 
     var body: some View {
@@ -140,9 +142,9 @@ struct HealthCheckResultPopover: View {
             if let result {
                 // Status header
                 HStack {
-                    statusIcon(for: result)
+                    self.statusIcon(for: result)
                     VStack(alignment: .leading) {
-                        Text(statusTitle(for: result))
+                        Text(self.statusTitle(for: result))
                             .font(.headline)
                         Text(String(format: "%.0fms", result.duration * 1000))
                             .font(.caption)
@@ -205,6 +207,8 @@ struct HealthCheckResultPopover: View {
         .frame(minWidth: 250, maxWidth: 350)
     }
 
+    // MARK: Private
+
     @ViewBuilder
     private func statusIcon(for result: MCPHealthCheckResult) -> some View {
         switch result.status {
@@ -244,10 +248,10 @@ private struct HealthCheckDetailRow: View {
 
     var body: some View {
         HStack {
-            Text(label + ":")
+            Text(self.label + ":")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text(value)
+            Text(self.value)
                 .font(.caption)
                 .fontWeight(.medium)
         }

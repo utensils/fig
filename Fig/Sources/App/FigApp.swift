@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 
+// MARK: - AppDelegate
+
 /// App delegate to configure the application before UI loads.
 final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     func applicationDidFinishLaunching(_: Notification) {
@@ -12,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         }
     }
 }
+
+// MARK: - FigApp
 
 /// The main entry point for the Fig application.
 @main

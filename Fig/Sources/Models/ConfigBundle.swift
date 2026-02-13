@@ -65,13 +65,13 @@ struct ConfigBundle: Codable, Equatable {
 
     /// Whether the bundle has any content.
     var isEmpty: Bool {
-        settings == nil && localSettings == nil && mcpServers == nil
+        self.settings == nil && self.localSettings == nil && self.mcpServers == nil
     }
 
     /// Whether the bundle contains potentially sensitive data.
     var containsSensitiveData: Bool {
         // Check local settings (usually contains sensitive data)
-        if localSettings != nil {
+        if self.localSettings != nil {
             return true
         }
 
@@ -151,7 +151,11 @@ enum ConfigBundleComponent: String, CaseIterable, Identifiable {
     case localSettings
     case mcpServers
 
-    var id: String { rawValue }
+    // MARK: Internal
+
+    var id: String {
+        rawValue
+    }
 
     var displayName: String {
         switch self {
@@ -189,17 +193,16 @@ enum ConfigBundleComponent: String, CaseIterable, Identifiable {
 
 /// Represents a conflict found during import.
 struct ImportConflict: Identifiable {
-    let id = UUID()
-    let component: ConfigBundleComponent
-    let description: String
-    var resolution: ImportResolution = .merge
-
     enum ImportResolution: String, CaseIterable, Identifiable {
-        case merge    // Combine with existing (for arrays/dicts)
-        case replace  // Replace existing completely
-        case skip     // Keep existing, skip import
+        case merge // Combine with existing (for arrays/dicts)
+        case replace // Replace existing completely
+        case skip // Keep existing, skip import
 
-        var id: String { rawValue }
+        // MARK: Internal
+
+        var id: String {
+            rawValue
+        }
 
         var displayName: String {
             switch self {
@@ -209,6 +212,11 @@ struct ImportConflict: Identifiable {
             }
         }
     }
+
+    let id = UUID()
+    let component: ConfigBundleComponent
+    let description: String
+    var resolution: ImportResolution = .merge
 }
 
 // MARK: - ImportResult
