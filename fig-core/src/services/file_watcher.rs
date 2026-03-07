@@ -27,23 +27,22 @@ impl FileWatcher {
         let (tx, rx) = mpsc::unbounded_channel();
         let tx_clone = tx.clone();
 
-        let watcher =
-            notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
-                if let Ok(event) = res {
-                    let kind = match event.kind {
-                        EventKind::Create(_) => Some(FileWatchEventKind::Created),
-                        EventKind::Modify(_) => Some(FileWatchEventKind::Modified),
-                        EventKind::Remove(_) => Some(FileWatchEventKind::Deleted),
-                        _ => None,
-                    };
+        let watcher = notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
+            if let Ok(event) = res {
+                let kind = match event.kind {
+                    EventKind::Create(_) => Some(FileWatchEventKind::Created),
+                    EventKind::Modify(_) => Some(FileWatchEventKind::Modified),
+                    EventKind::Remove(_) => Some(FileWatchEventKind::Deleted),
+                    _ => None,
+                };
 
-                    if let Some(kind) = kind {
-                        for path in event.paths {
-                            let _ = tx_clone.send(FileWatchEvent { path, kind });
-                        }
+                if let Some(kind) = kind {
+                    for path in event.paths {
+                        let _ = tx_clone.send(FileWatchEvent { path, kind });
                     }
                 }
-            })?;
+            }
+        })?;
 
         Ok((
             Self {

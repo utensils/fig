@@ -130,10 +130,7 @@ impl ConfigFileManager {
         self.read(&self.project_local_settings_path(project))
     }
 
-    pub fn read_mcp_config(
-        &self,
-        project: &Path,
-    ) -> Result<Option<MCPConfig>, ConfigFileError> {
+    pub fn read_mcp_config(&self, project: &Path) -> Result<Option<MCPConfig>, ConfigFileError> {
         self.read(&self.mcp_config_path(project))
     }
 
@@ -142,10 +139,7 @@ impl ConfigFileManager {
         self.write(config, &path)
     }
 
-    pub fn write_global_settings(
-        &self,
-        settings: &ClaudeSettings,
-    ) -> Result<(), ConfigFileError> {
+    pub fn write_global_settings(&self, settings: &ClaudeSettings) -> Result<(), ConfigFileError> {
         let path = self.global_settings_path();
         self.write(settings, &path)
     }

@@ -52,9 +52,7 @@ impl ConfigFileError {
                 "The file contains invalid JSON. Fix it manually or delete it to start fresh."
             }
             Self::WriteError { .. } => "Check disk space and file permissions.",
-            Self::BackupFailed { .. } => {
-                "Check disk space. The original file was not modified."
-            }
+            Self::BackupFailed { .. } => "Check disk space. The original file was not modified.",
             Self::CircularSymlink { .. } => "Remove the circular symlink and try again.",
         }
     }
@@ -108,24 +106,14 @@ pub enum MCPHealthCheckError {
 impl MCPHealthCheckError {
     pub fn recovery_suggestion(&self) -> &str {
         match self {
-            Self::ProcessSpawnFailed(_) => {
-                "Check that the command exists and is in your PATH."
-            }
-            Self::ProcessExitedEarly { .. } => {
-                "The server crashed on startup. Check its logs."
-            }
+            Self::ProcessSpawnFailed(_) => "Check that the command exists and is in your PATH.",
+            Self::ProcessExitedEarly { .. } => "The server crashed on startup. Check its logs.",
             Self::InvalidHandshakeResponse(_) => {
                 "The server did not respond with valid MCP protocol."
             }
-            Self::HttpRequestFailed { .. } => {
-                "Check the server URL and that it's running."
-            }
-            Self::NetworkError(_) => {
-                "Check your network connection and the server URL."
-            }
-            Self::Timeout { .. } => {
-                "The server took too long to respond. It may be overloaded."
-            }
+            Self::HttpRequestFailed { .. } => "Check the server URL and that it's running.",
+            Self::NetworkError(_) => "Check your network connection and the server URL.",
+            Self::Timeout { .. } => "The server took too long to respond. It may be overloaded.",
             Self::NoCommandOrUrl => {
                 "Configure either a command (stdio) or URL (HTTP) for this server."
             }

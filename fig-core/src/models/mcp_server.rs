@@ -103,7 +103,11 @@ mod tests {
 
     #[test]
     fn test_mcp_server_factory_methods() {
-        let stdio = MCPServer::stdio("node".to_string(), Some(vec!["server.js".to_string()]), None);
+        let stdio = MCPServer::stdio(
+            "node".to_string(),
+            Some(vec!["server.js".to_string()]),
+            None,
+        );
         assert!(stdio.is_stdio());
         assert_eq!(stdio.command, Some("node".to_string()));
 

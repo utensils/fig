@@ -50,10 +50,7 @@ mod tests {
             format!("{}", ConfigSource::ProjectShared),
             "Project (shared)"
         );
-        assert_eq!(
-            format!("{}", ConfigSource::ProjectLocal),
-            "Project (local)"
-        );
+        assert_eq!(format!("{}", ConfigSource::ProjectLocal), "Project (local)");
     }
 
     #[test]

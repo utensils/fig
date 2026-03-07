@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use crate::error::ConfigFileError;
+use crate::models::claude_settings::ClaudeSettings;
 use crate::models::config_source::ConfigSource;
 use crate::models::merged_settings::*;
-use crate::models::claude_settings::ClaudeSettings;
 use crate::services::config_file_manager::ConfigFileManager;
 
 pub struct SettingsMergeService {
@@ -49,9 +49,7 @@ impl SettingsMergeService {
         }
     }
 
-    fn merge_permissions(
-        tiers: &[(Option<&ClaudeSettings>, ConfigSource)],
-    ) -> MergedPermissions {
+    fn merge_permissions(tiers: &[(Option<&ClaudeSettings>, ConfigSource)]) -> MergedPermissions {
         let mut allow_entries: Vec<MergedValue<String>> = Vec::new();
         let mut deny_entries: Vec<MergedValue<String>> = Vec::new();
         let mut seen_allow = HashSet::new();
@@ -256,8 +254,7 @@ mod tests {
             ..Default::default()
         };
 
-        let merged =
-            SettingsMergeService::merge_from_loaded(Some(&global), Some(&shared), None);
+        let merged = SettingsMergeService::merge_from_loaded(Some(&global), Some(&shared), None);
         assert_eq!(merged.permissions.allow_patterns().len(), 2);
     }
 
@@ -275,14 +272,10 @@ mod tests {
             ..Default::default()
         };
 
-        let merged =
-            SettingsMergeService::merge_from_loaded(Some(&global), None, Some(&local));
+        let merged = SettingsMergeService::merge_from_loaded(Some(&global), None, Some(&local));
         assert_eq!(merged.effective_env().get("DEBUG"), Some(&"true"));
         assert_eq!(merged.effective_env().get("LOG_LEVEL"), Some(&"info"));
-        assert_eq!(
-            merged.env_source("DEBUG"),
-            Some(ConfigSource::ProjectLocal)
-        );
+        assert_eq!(merged.env_source("DEBUG"), Some(ConfigSource::ProjectLocal));
         assert_eq!(merged.env_source("LOG_LEVEL"), Some(ConfigSource::Global));
     }
 
@@ -351,8 +344,7 @@ mod tests {
             ..Default::default()
         };
 
-        let merged =
-            SettingsMergeService::merge_from_loaded(Some(&global), None, Some(&local));
+        let merged = SettingsMergeService::merge_from_loaded(Some(&global), None, Some(&local));
         let groups = merged.hooks.groups("PreToolUse").unwrap();
         assert_eq!(groups.len(), 2);
         assert_eq!(groups[0].source, ConfigSource::Global);
@@ -378,8 +370,7 @@ mod tests {
             ..Default::default()
         };
 
-        let merged =
-            SettingsMergeService::merge_from_loaded(Some(&global), None, Some(&local));
+        let merged = SettingsMergeService::merge_from_loaded(Some(&global), None, Some(&local));
         let attr = merged.attribution.unwrap();
         assert_eq!(attr.value.commits, Some(true));
         assert_eq!(attr.source, ConfigSource::ProjectLocal);
@@ -395,8 +386,7 @@ mod tests {
             ..Default::default()
         };
 
-        let merged =
-            SettingsMergeService::merge_from_loaded(Some(&global), None, None);
+        let merged = SettingsMergeService::merge_from_loaded(Some(&global), None, None);
         let attr = merged.attribution.unwrap();
         assert_eq!(attr.value.commits, Some(true));
         assert_eq!(attr.source, ConfigSource::Global);
@@ -429,8 +419,7 @@ mod tests {
             ..Default::default()
         };
 
-        let merged =
-            SettingsMergeService::merge_from_loaded(Some(&global), None, Some(&local));
+        let merged = SettingsMergeService::merge_from_loaded(Some(&global), None, Some(&local));
         let bash_entry = merged
             .permissions
             .allow
@@ -493,19 +482,13 @@ mod tests {
             ..Default::default()
         };
 
-        let merged = SettingsMergeService::merge_from_loaded(
-            Some(&global),
-            Some(&shared),
-            Some(&local),
-        );
+        let merged =
+            SettingsMergeService::merge_from_loaded(Some(&global), Some(&shared), Some(&local));
 
         assert_eq!(merged.permissions.allow_patterns().len(), 2);
         assert_eq!(merged.permissions.deny_patterns().len(), 2);
         assert_eq!(merged.effective_env().get("DEBUG"), Some(&"true"));
-        assert_eq!(
-            merged.env_source("DEBUG"),
-            Some(ConfigSource::ProjectLocal)
-        );
+        assert_eq!(merged.env_source("DEBUG"), Some(ConfigSource::ProjectLocal));
         assert_eq!(merged.effective_env().get("LOG_LEVEL"), Some(&"info"));
         assert_eq!(
             merged.effective_env().get("API_URL"),
