@@ -5,6 +5,7 @@ use iced::{Element, Length, Padding};
 use crate::styles;
 use crate::views::attribution_editor::{attribution_editor_view, AttributionEditorState};
 use crate::views::environment_editor::{environment_editor_view, EnvironmentEditorState};
+use crate::views::mcp_server_list::{mcp_server_list_view, MCPServerListState};
 use crate::views::permissions_editor::{permissions_editor_view, PermissionsEditorState};
 use crate::Message;
 
@@ -15,6 +16,7 @@ pub fn detail_view<'a>(
     permissions_state: &'a PermissionsEditorState,
     environment_state: &'a EnvironmentEditorState,
     attribution_state: &'a AttributionEditorState,
+    mcp_list_state: &'a MCPServerListState,
 ) -> Element<'a, Message> {
     let content = match selection {
         NavigationSelection::GlobalSettings => global_settings_view(
@@ -22,6 +24,7 @@ pub fn detail_view<'a>(
             permissions_state,
             environment_state,
             attribution_state,
+            mcp_list_state,
         ),
         NavigationSelection::Project(path) => project_detail_view(
             path,
@@ -29,6 +32,7 @@ pub fn detail_view<'a>(
             permissions_state,
             environment_state,
             attribution_state,
+            mcp_list_state,
         ),
     };
 
@@ -47,6 +51,7 @@ fn global_settings_view<'a>(
     permissions_state: &'a PermissionsEditorState,
     environment_state: &'a EnvironmentEditorState,
     attribution_state: &'a AttributionEditorState,
+    mcp_list_state: &'a MCPServerListState,
 ) -> Element<'a, Message> {
     let tabs = tab_bar(
         GlobalSettingsTab::all(),
@@ -58,9 +63,7 @@ fn global_settings_view<'a>(
     let body = match active_tab {
         GlobalSettingsTab::Permissions => permissions_editor_view(permissions_state),
         GlobalSettingsTab::Environment => environment_editor_view(environment_state),
-        GlobalSettingsTab::McpServers => {
-            placeholder_content("MCP Servers", "Manage MCP server configs")
-        }
+        GlobalSettingsTab::McpServers => mcp_server_list_view(mcp_list_state),
         GlobalSettingsTab::Advanced => attribution_editor_view(attribution_state),
     };
 
@@ -77,6 +80,7 @@ fn project_detail_view<'a>(
     permissions_state: &'a PermissionsEditorState,
     environment_state: &'a EnvironmentEditorState,
     attribution_state: &'a AttributionEditorState,
+    mcp_list_state: &'a MCPServerListState,
 ) -> Element<'a, Message> {
     let project_name = std::path::Path::new(path)
         .file_name()
@@ -100,7 +104,7 @@ fn project_detail_view<'a>(
     let body = match active_tab {
         ProjectDetailTab::Permissions => permissions_editor_view(permissions_state),
         ProjectDetailTab::Environment => environment_editor_view(environment_state),
-        ProjectDetailTab::McpServers => placeholder_content("MCP Servers", "Project MCP servers"),
+        ProjectDetailTab::McpServers => mcp_server_list_view(mcp_list_state),
         ProjectDetailTab::Hooks => placeholder_content("Hooks", "Lifecycle hooks configuration"),
         ProjectDetailTab::ClaudeMd => placeholder_content("CLAUDE.md", "Project instructions"),
         ProjectDetailTab::EffectiveConfig => {
