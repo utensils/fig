@@ -51,6 +51,10 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 
+# Rust
+target/
+Cargo.lock
+
 # macOS
 .DS_Store
 .AppleDouble
