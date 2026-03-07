@@ -3,16 +3,33 @@ use iced::widget::{button, column, container, row, text};
 use iced::{Element, Length, Padding};
 
 use crate::styles;
+use crate::views::attribution_editor::{attribution_editor_view, AttributionEditorState};
+use crate::views::environment_editor::{environment_editor_view, EnvironmentEditorState};
+use crate::views::permissions_editor::{permissions_editor_view, PermissionsEditorState};
 use crate::Message;
 
 pub fn detail_view<'a>(
     selection: &'a NavigationSelection,
     global_tab: GlobalSettingsTab,
     project_tab: ProjectDetailTab,
+    permissions_state: &'a PermissionsEditorState,
+    environment_state: &'a EnvironmentEditorState,
+    attribution_state: &'a AttributionEditorState,
 ) -> Element<'a, Message> {
     let content = match selection {
-        NavigationSelection::GlobalSettings => global_settings_view(global_tab),
-        NavigationSelection::Project(path) => project_detail_view(path, project_tab),
+        NavigationSelection::GlobalSettings => global_settings_view(
+            global_tab,
+            permissions_state,
+            environment_state,
+            attribution_state,
+        ),
+        NavigationSelection::Project(path) => project_detail_view(
+            path,
+            project_tab,
+            permissions_state,
+            environment_state,
+            attribution_state,
+        ),
     };
 
     container(content)
@@ -25,7 +42,12 @@ pub fn detail_view<'a>(
         .into()
 }
 
-fn global_settings_view(active_tab: GlobalSettingsTab) -> Element<'static, Message> {
+fn global_settings_view<'a>(
+    active_tab: GlobalSettingsTab,
+    permissions_state: &'a PermissionsEditorState,
+    environment_state: &'a EnvironmentEditorState,
+    attribution_state: &'a AttributionEditorState,
+) -> Element<'a, Message> {
     let tabs = tab_bar(
         GlobalSettingsTab::all(),
         active_tab,
@@ -34,16 +56,12 @@ fn global_settings_view(active_tab: GlobalSettingsTab) -> Element<'static, Messa
     );
 
     let body = match active_tab {
-        GlobalSettingsTab::Permissions => {
-            placeholder_content("Permissions", "Manage tool permissions")
-        }
-        GlobalSettingsTab::Environment => {
-            placeholder_content("Environment", "Configure environment variables")
-        }
+        GlobalSettingsTab::Permissions => permissions_editor_view(permissions_state),
+        GlobalSettingsTab::Environment => environment_editor_view(environment_state),
         GlobalSettingsTab::McpServers => {
             placeholder_content("MCP Servers", "Manage MCP server configs")
         }
-        GlobalSettingsTab::Advanced => placeholder_content("Advanced", "Advanced settings"),
+        GlobalSettingsTab::Advanced => attribution_editor_view(attribution_state),
     };
 
     column![tabs, body]
@@ -53,7 +71,13 @@ fn global_settings_view(active_tab: GlobalSettingsTab) -> Element<'static, Messa
         .into()
 }
 
-fn project_detail_view<'a>(path: &str, active_tab: ProjectDetailTab) -> Element<'a, Message> {
+fn project_detail_view<'a>(
+    path: &str,
+    active_tab: ProjectDetailTab,
+    permissions_state: &'a PermissionsEditorState,
+    environment_state: &'a EnvironmentEditorState,
+    attribution_state: &'a AttributionEditorState,
+) -> Element<'a, Message> {
     let project_name = std::path::Path::new(path)
         .file_name()
         .and_then(|n| n.to_str())
@@ -74,12 +98,8 @@ fn project_detail_view<'a>(path: &str, active_tab: ProjectDetailTab) -> Element<
     );
 
     let body = match active_tab {
-        ProjectDetailTab::Permissions => {
-            placeholder_content("Permissions", "Project permission rules")
-        }
-        ProjectDetailTab::Environment => {
-            placeholder_content("Environment", "Project environment variables")
-        }
+        ProjectDetailTab::Permissions => permissions_editor_view(permissions_state),
+        ProjectDetailTab::Environment => environment_editor_view(environment_state),
         ProjectDetailTab::McpServers => placeholder_content("MCP Servers", "Project MCP servers"),
         ProjectDetailTab::Hooks => placeholder_content("Hooks", "Lifecycle hooks configuration"),
         ProjectDetailTab::ClaudeMd => placeholder_content("CLAUDE.md", "Project instructions"),
@@ -87,7 +107,7 @@ fn project_detail_view<'a>(path: &str, active_tab: ProjectDetailTab) -> Element<
             placeholder_content("Effective Config", "Merged configuration view")
         }
         ProjectDetailTab::HealthCheck => placeholder_content("Health", "Server health checks"),
-        ProjectDetailTab::Advanced => placeholder_content("Advanced", "Advanced project settings"),
+        ProjectDetailTab::Advanced => attribution_editor_view(attribution_state),
     };
 
     column![header, tabs, body]
