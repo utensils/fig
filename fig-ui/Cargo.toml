@@ -1,0 +1,9 @@
+[package]
+name = "fig-ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fig-core = { path = "../fig-core" }
+iced = { version = "0.13", features = ["tokio", "svg"] }
+iced_aw = "0.11"
