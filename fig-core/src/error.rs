@@ -30,6 +30,9 @@ pub enum ConfigFileError {
     #[error("Permission denied: {path}")]
     PermissionDenied { path: PathBuf },
 
+    #[error("Failed to read {path}: {message}")]
+    ReadError { path: PathBuf, message: String },
+
     #[error("Invalid JSON in {path}: {message}")]
     InvalidJson { path: PathBuf, message: String },
 
@@ -48,6 +51,7 @@ impl ConfigFileError {
         match self {
             Self::FileNotFound { .. } => "The file will be created when you save settings.",
             Self::PermissionDenied { .. } => "Check file permissions and try again.",
+            Self::ReadError { .. } => "Check that the file exists and is readable.",
             Self::InvalidJson { .. } => {
                 "The file contains invalid JSON. Fix it manually or delete it to start fresh."
             }
@@ -171,6 +175,10 @@ mod tests {
             },
             ConfigFileError::PermissionDenied {
                 path: PathBuf::new(),
+            },
+            ConfigFileError::ReadError {
+                path: PathBuf::new(),
+                message: String::new(),
             },
             ConfigFileError::InvalidJson {
                 path: PathBuf::new(),

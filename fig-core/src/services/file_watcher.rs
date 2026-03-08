@@ -1,5 +1,5 @@
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::sync::mpsc;
 
@@ -18,7 +18,8 @@ pub enum FileWatchEventKind {
 
 pub struct FileWatcher {
     watcher: RecommendedWatcher,
-    watched_paths: HashSet<PathBuf>,
+    /// Maps user-provided path to the effective path passed to the OS watcher.
+    watched_paths: HashMap<PathBuf, PathBuf>,
     _tx: mpsc::UnboundedSender<FileWatchEvent>,
 }
 
@@ -47,7 +48,7 @@ impl FileWatcher {
         Ok((
             Self {
                 watcher,
-                watched_paths: HashSet::new(),
+                watched_paths: HashMap::new(),
                 _tx: tx,
             },
             rx,
@@ -56,43 +57,33 @@ impl FileWatcher {
 
     pub fn watch(&mut self, path: &Path) -> Result<(), notify::Error> {
         let watch_path = if path.is_file() {
-            path.parent().unwrap_or(path)
+            path.parent().unwrap_or(path).to_path_buf()
         } else {
-            path
+            path.to_path_buf()
         };
 
         self.watcher
-            .watch(watch_path, RecursiveMode::NonRecursive)?;
-        self.watched_paths.insert(path.to_path_buf());
+            .watch(&watch_path, RecursiveMode::NonRecursive)?;
+        self.watched_paths.insert(path.to_path_buf(), watch_path);
         Ok(())
     }
 
     pub fn unwatch(&mut self, path: &Path) -> Result<(), notify::Error> {
-        let watch_path = if path.is_file() {
-            path.parent().unwrap_or(path)
-        } else {
-            path
-        };
-
-        self.watcher.unwatch(watch_path)?;
-        self.watched_paths.remove(path);
+        if let Some(watch_path) = self.watched_paths.remove(path) {
+            self.watcher.unwatch(&watch_path)?;
+        }
         Ok(())
     }
 
     pub fn unwatch_all(&mut self) {
-        let paths: Vec<PathBuf> = self.watched_paths.drain().collect();
-        for path in paths {
-            let watch_path = if path.is_file() {
-                path.parent().unwrap_or(&path).to_path_buf()
-            } else {
-                path
-            };
+        let entries: Vec<(PathBuf, PathBuf)> = self.watched_paths.drain().collect();
+        for (_path, watch_path) in entries {
             let _ = self.watcher.unwatch(&watch_path);
         }
     }
 
     pub fn is_watching(&self, path: &Path) -> bool {
-        self.watched_paths.contains(path)
+        self.watched_paths.contains_key(path)
     }
 }
 

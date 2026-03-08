@@ -148,10 +148,16 @@ impl App {
             // Navigation
             Message::SelectGlobalSettings => {
                 self.selection = NavigationSelection::GlobalSettings;
+                self.permissions_state.editing_target = EditingTarget::Global;
+                self.environment_state.editing_target = EditingTarget::Global;
+                self.attribution_state.editing_target = EditingTarget::Global;
             }
             Message::SelectProject(path) => {
                 self.selection = NavigationSelection::Project(path);
                 self.project_tab = ProjectDetailTab::Permissions;
+                self.permissions_state.editing_target = EditingTarget::ProjectShared;
+                self.environment_state.editing_target = EditingTarget::ProjectShared;
+                self.attribution_state.editing_target = EditingTarget::ProjectShared;
             }
             Message::SelectGlobalTab(tab) => {
                 self.global_tab = tab;
@@ -381,7 +387,7 @@ impl App {
                     .iter()
                     .map(|(n, s)| (n.as_str(), s))
                     .collect();
-                let _json = mcp_clipboard_service::export_to_json(&servers, false);
+                let _json = mcp_clipboard_service::export_to_json(&servers, true);
             }
             Message::MCPToggleRedaction(enabled) => {
                 if let Some(ref mut sheet) = self.mcp_list_state.import_sheet {

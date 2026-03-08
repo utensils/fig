@@ -6,6 +6,5 @@ edition = "2021"
 [dependencies]
 fig-core = { path = "../fig-core" }
 iced = { version = "0.13", features = ["tokio", "svg"] }
-iced_aw = "0.11"
 dirs = "6"
 uuid = { version = "1", features = ["v4"] }

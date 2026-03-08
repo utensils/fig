@@ -1,4 +1,4 @@
-use fig_core::models::{DiscoveredProject, NavigationSelection};
+use fig_core::models::{abbreviate_dir, DiscoveredProject, NavigationSelection};
 use iced::widget::{button, column, container, scrollable, text, Column};
 use iced::{Color, Element, Length, Padding};
 use std::collections::BTreeMap;
@@ -181,22 +181,5 @@ fn sidebar_item<'a>(
 }
 
 fn abbreviate_path(path: &Path) -> String {
-    if let Some(home) = dirs::home_dir() {
-        if let Ok(relative) = path.strip_prefix(&home) {
-            return format!("~/{}", relative.display());
-        }
-    }
-    path.display().to_string()
-}
-
-fn abbreviate_dir(path: &Path, home: Option<&Path>) -> String {
-    if let Some(h) = home {
-        if let Ok(relative) = path.strip_prefix(h) {
-            if relative.as_os_str().is_empty() {
-                return "~".to_string();
-            }
-            return format!("~/{}", relative.display());
-        }
-    }
-    path.display().to_string()
+    abbreviate_dir(path, dirs::home_dir().as_deref())
 }

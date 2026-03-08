@@ -61,7 +61,7 @@ impl ProjectGroup {
     }
 }
 
-fn abbreviate_dir(path: &Path, home: Option<&Path>) -> String {
+pub fn abbreviate_dir(path: &Path, home: Option<&Path>) -> String {
     if let Some(h) = home {
         if let Ok(relative) = path.strip_prefix(h) {
             if relative.as_os_str().is_empty() {

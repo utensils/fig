@@ -315,9 +315,9 @@ mod tests {
     #[test]
     fn test_preset_rules_valid_types() {
         for preset in PERMISSION_PRESETS {
-            for (rule, ptype) in preset.rules {
+            for &(rule, ptype) in preset.rules {
                 assert!(!rule.is_empty());
-                assert!(*ptype == PermissionType::Allow || *ptype == PermissionType::Deny);
+                assert!(ptype == PermissionType::Allow || ptype == PermissionType::Deny);
             }
         }
     }

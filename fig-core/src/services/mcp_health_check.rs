@@ -92,7 +92,18 @@ async fn check_stdio(name: &str, server: &MCPServer) -> MCPHealthCheckResult {
     };
 
     let request = build_initialize_request();
-    let request_body = serde_json::to_string(&request).unwrap();
+    let request_body = match serde_json::to_string(&request) {
+        Ok(body) => body,
+        Err(e) => {
+            return MCPHealthCheckResult {
+                server_name: name.to_string(),
+                status: MCPHealthStatus::Failure {
+                    error: format!("Failed to serialize request: {e}"),
+                },
+                duration: start.elapsed(),
+            };
+        }
+    };
     let message = format!(
         "Content-Length: {}\r\n\r\n{}",
         request_body.len(),
@@ -174,10 +185,21 @@ async fn check_http(name: &str, server: &MCPServer) -> MCPHealthCheckResult {
         }
     };
 
-    let client = reqwest::Client::builder()
+    let client = match reqwest::Client::builder()
         .timeout(Duration::from_secs(HEALTH_CHECK_TIMEOUT_SECS))
         .build()
-        .unwrap();
+    {
+        Ok(client) => client,
+        Err(e) => {
+            return MCPHealthCheckResult {
+                server_name: name.to_string(),
+                status: MCPHealthStatus::Failure {
+                    error: format!("Failed to build HTTP client: {e}"),
+                },
+                duration: start.elapsed(),
+            };
+        }
+    };
 
     let request = build_initialize_request();
     let mut req = client.post(&url).json(&request);

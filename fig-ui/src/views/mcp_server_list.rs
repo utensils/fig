@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use fig_core::models::{MCPServer, MCPServerFormData, ValidationError};
+use fig_core::models::{
+    EditableEnvironmentVariable, MCPServer, MCPServerFormData, ValidationError,
+};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Element, Length, Padding};
 
@@ -225,7 +227,7 @@ fn server_card<'a>(name: &str, server: &MCPServer, is_expanded: bool) -> Element
             keys.sort();
             for key in keys {
                 let value = &env[key];
-                let display = if is_sensitive_key(key) {
+                let display = if EditableEnvironmentVariable::is_sensitive_key(key) {
                     "********".to_string()
                 } else {
                     value.clone()
@@ -264,11 +266,4 @@ fn server_card<'a>(name: &str, server: &MCPServer, is_expanded: bool) -> Element
             ..Default::default()
         })
         .into()
-}
-
-fn is_sensitive_key(key: &str) -> bool {
-    let upper = key.to_uppercase();
-    ["TOKEN", "KEY", "SECRET", "PASSWORD"]
-        .iter()
-        .any(|pat| upper.contains(pat))
 }

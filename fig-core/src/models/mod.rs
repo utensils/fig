@@ -37,4 +37,4 @@ pub use merged_settings::{MergedHooks, MergedPermissions, MergedSettings, Merged
 pub use navigation::{EditingTarget, GlobalSettingsTab, NavigationSelection, ProjectDetailTab};
 pub use permissions::Permissions;
 pub use project_entry::ProjectEntry;
-pub use project_group::ProjectGroup;
+pub use project_group::{abbreviate_dir, ProjectGroup};

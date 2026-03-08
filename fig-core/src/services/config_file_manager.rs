@@ -67,7 +67,7 @@ impl ConfigFileManager {
                     path: path.to_path_buf(),
                 }
             } else {
-                ConfigFileError::InvalidJson {
+                ConfigFileError::ReadError {
                     path: path.to_path_buf(),
                     message: e.to_string(),
                 }
@@ -87,12 +87,15 @@ impl ConfigFileManager {
             self.create_backup(path)?;
         }
 
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).map_err(|e| ConfigFileError::WriteError {
-                path: path.to_path_buf(),
-                message: e.to_string(),
-            })?;
-        }
+        let parent = path.parent().ok_or_else(|| ConfigFileError::WriteError {
+            path: path.to_path_buf(),
+            message: "No parent directory".to_string(),
+        })?;
+
+        fs::create_dir_all(parent).map_err(|e| ConfigFileError::WriteError {
+            path: path.to_path_buf(),
+            message: e.to_string(),
+        })?;
 
         let content =
             serde_json::to_string_pretty(value).map_err(|e| ConfigFileError::WriteError {
@@ -100,9 +103,25 @@ impl ConfigFileManager {
                 message: e.to_string(),
             })?;
 
-        fs::write(path, content).map_err(|e| ConfigFileError::WriteError {
-            path: path.to_path_buf(),
-            message: e.to_string(),
+        // Write to a temp file then rename for atomic operation
+        let temp_path = parent.join(format!(
+            ".fig-tmp-{}",
+            std::process::id()
+        ));
+        fs::write(&temp_path, &content).map_err(|e| {
+            let _ = fs::remove_file(&temp_path);
+            ConfigFileError::WriteError {
+                path: path.to_path_buf(),
+                message: e.to_string(),
+            }
+        })?;
+
+        fs::rename(&temp_path, path).map_err(|e| {
+            let _ = fs::remove_file(&temp_path);
+            ConfigFileError::WriteError {
+                path: path.to_path_buf(),
+                message: e.to_string(),
+            }
         })
     }
 

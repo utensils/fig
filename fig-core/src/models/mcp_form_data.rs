@@ -1,3 +1,4 @@
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -34,6 +35,9 @@ pub struct MCPServerFormData {
     pub server_type: MCPServerType,
     pub is_editing: bool,
     pub original_name: Option<String>,
+    /// Preserved fields not editable in the form (headers, additional_properties).
+    preserved_headers: Option<HashMap<String, String>>,
+    preserved_extra: HashMap<String, Value>,
 }
 
 impl MCPServerFormData {
@@ -47,6 +51,8 @@ impl MCPServerFormData {
             server_type: MCPServerType::Stdio,
             is_editing: false,
             original_name: None,
+            preserved_headers: None,
+            preserved_extra: HashMap::new(),
         }
     }
 
@@ -86,11 +92,13 @@ impl MCPServerFormData {
             server_type,
             is_editing: true,
             original_name: Some(name.to_string()),
+            preserved_headers: server.headers.clone(),
+            preserved_extra: server.additional_properties.clone(),
         }
     }
 
     pub fn to_mcp_server(&self) -> MCPServer {
-        match self.server_type {
+        let mut server = match self.server_type {
             MCPServerType::Stdio => {
                 let args: Vec<String> = self
                     .args_text
@@ -106,8 +114,10 @@ impl MCPServerFormData {
                     if env.is_empty() { None } else { Some(env) },
                 )
             }
-            MCPServerType::Sse => MCPServer::http(self.url.clone(), None),
-        }
+            MCPServerType::Sse => MCPServer::http(self.url.clone(), self.preserved_headers.clone()),
+        };
+        server.additional_properties = self.preserved_extra.clone();
+        server
     }
 
     pub fn validate(&self) -> Vec<ValidationError> {
@@ -224,6 +234,8 @@ mod tests {
             server_type: MCPServerType::Stdio,
             is_editing: false,
             original_name: None,
+            preserved_headers: None,
+            preserved_extra: HashMap::new(),
         };
 
         let server = form.to_mcp_server();
@@ -253,6 +265,8 @@ mod tests {
             server_type: MCPServerType::Sse,
             is_editing: false,
             original_name: None,
+            preserved_headers: None,
+            preserved_extra: HashMap::new(),
         };
 
         let server = form.to_mcp_server();

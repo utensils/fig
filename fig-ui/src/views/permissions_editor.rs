@@ -42,10 +42,10 @@ impl PermissionsEditorState {
 
     pub fn apply_preset(&mut self, preset_id: &str) {
         if let Some(preset) = PERMISSION_PRESETS.iter().find(|p| p.id == preset_id) {
-            for (rule, ptype) in preset.rules {
-                if !self.rules.iter().any(|r| r.rule == *rule) {
+            for &(rule, ptype) in preset.rules {
+                if !self.rules.iter().any(|r| r.rule == rule) {
                     self.rules
-                        .push(EditablePermissionRule::new(rule.to_string(), *ptype));
+                        .push(EditablePermissionRule::new(rule.to_string(), ptype));
                 }
             }
         }
