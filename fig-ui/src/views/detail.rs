@@ -4,11 +4,15 @@ use iced::{Element, Length, Padding};
 
 use crate::styles;
 use crate::views::attribution_editor::{attribution_editor_view, AttributionEditorState};
+use crate::views::effective_config_view::{effective_config_view, EffectiveConfigViewState};
 use crate::views::environment_editor::{environment_editor_view, EnvironmentEditorState};
+use crate::views::health_check_view::{health_check_view, HealthCheckViewState};
+use crate::views::hooks_editor::{hooks_editor_view, HooksEditorState};
 use crate::views::mcp_server_list::{mcp_server_list_view, MCPServerListState};
 use crate::views::permissions_editor::{permissions_editor_view, PermissionsEditorState};
 use crate::Message;
 
+#[allow(clippy::too_many_arguments)]
 pub fn detail_view<'a>(
     selection: &'a NavigationSelection,
     global_tab: GlobalSettingsTab,
@@ -17,6 +21,9 @@ pub fn detail_view<'a>(
     environment_state: &'a EnvironmentEditorState,
     attribution_state: &'a AttributionEditorState,
     mcp_list_state: &'a MCPServerListState,
+    hooks_state: &'a HooksEditorState,
+    health_state: &'a HealthCheckViewState,
+    effective_config_state: &'a EffectiveConfigViewState,
 ) -> Element<'a, Message> {
     let content = match selection {
         NavigationSelection::GlobalSettings => global_settings_view(
@@ -33,6 +40,9 @@ pub fn detail_view<'a>(
             environment_state,
             attribution_state,
             mcp_list_state,
+            hooks_state,
+            health_state,
+            effective_config_state,
         ),
     };
 
@@ -74,6 +84,7 @@ fn global_settings_view<'a>(
         .into()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn project_detail_view<'a>(
     path: &str,
     active_tab: ProjectDetailTab,
@@ -81,6 +92,9 @@ fn project_detail_view<'a>(
     environment_state: &'a EnvironmentEditorState,
     attribution_state: &'a AttributionEditorState,
     mcp_list_state: &'a MCPServerListState,
+    hooks_state: &'a HooksEditorState,
+    health_state: &'a HealthCheckViewState,
+    effective_config_state: &'a EffectiveConfigViewState,
 ) -> Element<'a, Message> {
     let project_name = std::path::Path::new(path)
         .file_name()
@@ -105,12 +119,10 @@ fn project_detail_view<'a>(
         ProjectDetailTab::Permissions => permissions_editor_view(permissions_state),
         ProjectDetailTab::Environment => environment_editor_view(environment_state),
         ProjectDetailTab::McpServers => mcp_server_list_view(mcp_list_state),
-        ProjectDetailTab::Hooks => placeholder_content("Hooks", "Lifecycle hooks configuration"),
+        ProjectDetailTab::Hooks => hooks_editor_view(hooks_state),
         ProjectDetailTab::ClaudeMd => placeholder_content("CLAUDE.md", "Project instructions"),
-        ProjectDetailTab::EffectiveConfig => {
-            placeholder_content("Effective Config", "Merged configuration view")
-        }
-        ProjectDetailTab::HealthCheck => placeholder_content("Health", "Server health checks"),
+        ProjectDetailTab::EffectiveConfig => effective_config_view(effective_config_state),
+        ProjectDetailTab::HealthCheck => health_check_view(health_state),
         ProjectDetailTab::Advanced => attribution_editor_view(attribution_state),
     };
 

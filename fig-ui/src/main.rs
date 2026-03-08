@@ -2,15 +2,19 @@ mod styles;
 mod views;
 
 use fig_core::models::{
-    ConfigSource, DiscoveredProject, EditingTarget, GlobalSettingsTab, MCPServerFormData,
-    MCPServerType, NavigationSelection, PermissionType, ProjectDetailTab,
+    ConfigSource, DiscoveredProject, EditableHookDefinition, EditableHookGroup, EditingTarget,
+    GlobalSettingsTab, HookEvent, MCPServerFormData, MCPServerType, NavigationSelection,
+    PermissionType, ProjectDetailTab, HOOK_TEMPLATES,
 };
 use fig_core::services::mcp_clipboard_service;
 use iced::widget::{container, row};
 use iced::{Element, Length, Theme};
 use uuid::Uuid;
 use views::attribution_editor::AttributionEditorState;
+use views::effective_config_view::EffectiveConfigViewState;
 use views::environment_editor::EnvironmentEditorState;
+use views::health_check_view::{HealthCheckViewState, MCPHealthButtonState};
+use views::hooks_editor::HooksEditorState;
 use views::mcp_copy_sheet::{CopySheetState, ImportSheetState};
 use views::mcp_server_list::MCPServerListState;
 use views::permissions_editor::PermissionsEditorState;
@@ -32,6 +36,11 @@ struct App {
     environment_state: EnvironmentEditorState,
     attribution_state: AttributionEditorState,
     mcp_list_state: MCPServerListState,
+    hooks_state: HooksEditorState,
+    health_state: HealthCheckViewState,
+    #[allow(dead_code)]
+    mcp_health_states: std::collections::HashMap<String, MCPHealthButtonState>,
+    effective_config_state: EffectiveConfigViewState,
 }
 
 #[derive(Debug, Clone)]
@@ -94,6 +103,23 @@ pub enum Message {
     MCPImportConfirm,
     MCPExportToClipboard,
     MCPToggleRedaction(bool),
+
+    // Hooks editor
+    HooksSelectEvent(HookEvent),
+    HooksAddGroup,
+    HooksRemoveGroup(Uuid),
+    HooksUpdateMatcher(Uuid, String),
+    HooksAddHook(Uuid),
+    HooksRemoveHook(Uuid, Uuid),
+    HooksUpdateHookCommand(Uuid, Uuid, String),
+    HooksApplyTemplate(String),
+    HooksChangeTarget(EditingTarget),
+
+    // Health check
+    HealthCheckRun,
+    #[allow(dead_code)]
+    HealthCheckCompleted(Vec<fig_core::services::Finding>),
+    MCPHealthCheck(String),
 }
 
 impl Default for App {
@@ -108,6 +134,10 @@ impl Default for App {
             environment_state: EnvironmentEditorState::default(),
             attribution_state: AttributionEditorState::default(),
             mcp_list_state: MCPServerListState::default(),
+            hooks_state: HooksEditorState::default(),
+            health_state: HealthCheckViewState::default(),
+            mcp_health_states: std::collections::HashMap::new(),
+            effective_config_state: EffectiveConfigViewState::default(),
         }
     }
 }
@@ -289,8 +319,6 @@ impl App {
                 }
             }
             Message::MCPCopyConfirm | Message::MCPCopyForceOverwrite => {
-                // In a full implementation this would call MCPCopyService and
-                // write to disk via ConfigFileManager. For now, close the sheet.
                 self.mcp_list_state.copy_sheet = None;
             }
 
@@ -354,12 +382,112 @@ impl App {
                     .map(|(n, s)| (n.as_str(), s))
                     .collect();
                 let _json = mcp_clipboard_service::export_to_json(&servers, false);
-                // In a full implementation, this would copy to system clipboard
             }
             Message::MCPToggleRedaction(enabled) => {
                 if let Some(ref mut sheet) = self.mcp_list_state.import_sheet {
                     sheet.redact_on_export = enabled;
                 }
+            }
+
+            // Hooks editor
+            Message::HooksSelectEvent(event) => {
+                self.hooks_state.active_event = event;
+            }
+            Message::HooksAddGroup => {
+                let event = self.hooks_state.active_event;
+                let matcher = if event.supports_matcher() {
+                    Some(String::new())
+                } else {
+                    None
+                };
+                self.hooks_state
+                    .groups
+                    .entry(event)
+                    .or_default()
+                    .push(EditableHookGroup::new(matcher));
+            }
+            Message::HooksRemoveGroup(id) => {
+                for groups in self.hooks_state.groups.values_mut() {
+                    groups.retain(|g| g.id != id);
+                }
+            }
+            Message::HooksUpdateMatcher(group_id, matcher) => {
+                for groups in self.hooks_state.groups.values_mut() {
+                    if let Some(group) = groups.iter_mut().find(|g| g.id == group_id) {
+                        group.matcher = if matcher.is_empty() {
+                            None
+                        } else {
+                            Some(matcher)
+                        };
+                        break;
+                    }
+                }
+            }
+            Message::HooksAddHook(group_id) => {
+                for groups in self.hooks_state.groups.values_mut() {
+                    if let Some(group) = groups.iter_mut().find(|g| g.id == group_id) {
+                        group.hooks.push(EditableHookDefinition::new(String::new()));
+                        break;
+                    }
+                }
+            }
+            Message::HooksRemoveHook(group_id, hook_id) => {
+                for groups in self.hooks_state.groups.values_mut() {
+                    if let Some(group) = groups.iter_mut().find(|g| g.id == group_id) {
+                        group.hooks.retain(|h| h.id != hook_id);
+                        break;
+                    }
+                }
+            }
+            Message::HooksUpdateHookCommand(group_id, hook_id, command) => {
+                for groups in self.hooks_state.groups.values_mut() {
+                    if let Some(group) = groups.iter_mut().find(|g| g.id == group_id) {
+                        if let Some(hook) = group.hooks.iter_mut().find(|h| h.id == hook_id) {
+                            hook.command = command;
+                        }
+                        break;
+                    }
+                }
+            }
+            Message::HooksApplyTemplate(name) => {
+                if let Some(template) = HOOK_TEMPLATES.iter().find(|t| t.name == name) {
+                    let mut group = EditableHookGroup::new(template.matcher.map(|m| m.to_string()));
+                    for cmd in template.commands {
+                        group
+                            .hooks
+                            .push(EditableHookDefinition::new(cmd.to_string()));
+                    }
+                    self.hooks_state
+                        .groups
+                        .entry(template.event)
+                        .or_default()
+                        .push(group);
+                }
+            }
+            Message::HooksChangeTarget(target) => {
+                self.hooks_state.editing_target = target;
+            }
+
+            // Health check
+            Message::HealthCheckRun => {
+                // In a full implementation, this would run checks asynchronously
+                self.health_state.is_running = true;
+                let ctx = fig_core::services::HealthCheckContext {
+                    global_settings: None,
+                    project_settings: None,
+                    merged: fig_core::models::MergedSettings::default(),
+                    has_local_settings: false,
+                    has_project_mcp: false,
+                };
+                self.health_state.findings = fig_core::services::health_check::run_all_checks(&ctx);
+                self.health_state.is_running = false;
+            }
+            Message::HealthCheckCompleted(findings) => {
+                self.health_state.findings = findings;
+                self.health_state.is_running = false;
+            }
+            Message::MCPHealthCheck(_name) => {
+                // In a full implementation, this would run async health check
             }
         }
     }
@@ -376,6 +504,9 @@ impl App {
             &self.environment_state,
             &self.attribution_state,
             &self.mcp_list_state,
+            &self.hooks_state,
+            &self.health_state,
+            &self.effective_config_state,
         );
 
         let content = row![sidebar, detail]
