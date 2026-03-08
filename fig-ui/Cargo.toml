@@ -1,0 +1,11 @@
+[package]
+name = "fig-ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fig-core = { path = "../fig-core" }
+iced = { version = "0.13", features = ["tokio", "svg"] }
+dirs = "6"
+uuid = { version = "1", features = ["v4"] }
+arboard = "3"

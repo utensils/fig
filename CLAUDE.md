@@ -4,29 +4,30 @@ This file provides guidance for Claude Code and other AI agents working on the F
 
 ## Project Overview
 
-Fig is a native macOS application for managing Claude Code configuration files. It provides a visual interface for editing `~/.claude.json`, `~/.claude/settings.json`, project-level settings, MCP server configs, and hooks. See `README.md` for full feature details.
+Fig is a cross-platform desktop application for managing Claude Code configuration files. It provides a visual interface for editing `~/.claude.json`, `~/.claude/settings.json`, project-level settings, MCP server configs, and hooks. See `README.md` for full feature details.
 
 ## Development Setup
 
 ```bash
-brew bundle            # Installs SwiftLint, SwiftFormat, Lefthook
-lefthook install       # Sets up pre-commit/pre-push git hooks
-swift build            # Build the project
-swift test             # Run the test suite
+cargo build            # Build all crates
+cargo test             # Run the test suite
+cargo clippy -- -D warnings  # Lint (must pass clean)
+cargo fmt --check      # Format check
 ```
-
-Minimum deployment target: **macOS 14.0 (Sonoma)**. Swift 6.0 with strict concurrency enabled.
 
 ## Architecture
 
-Fig uses **MVVM** with Swift 6 strict concurrency throughout:
+Fig is a Cargo workspace with two crates using the Iced Elm architecture:
 
-- **Models** (`Sources/Models/`) — `Sendable`, `Codable`, `Equatable`, `Hashable`. All models preserve unknown JSON keys via `AnyCodable` and `DynamicCodingKey` for safe round-tripping.
-- **ViewModels** (`Sources/ViewModels/`) — `@MainActor @Observable final class`. Manage UI state, loading/saving, undo/redo, and file watching.
-- **Views** (`Sources/Views/`) — SwiftUI views. Onboarding views live in `Views/Onboarding/`.
-- **Services** (`Sources/Services/`) — Actor-based services for all file I/O and business logic. Thread-safe by design.
-- **Utilities** (`Sources/Utilities/`) — Helpers like `Logger.swift`.
-- **App** (`Sources/App/`) — Entry point (`FigApp.swift`), keyboard commands, and focused values.
+- **fig-core** (`fig-core/src/`) — Pure library crate. Models, services, and error types. No GUI dependency.
+  - `models/` — Data structures with `serde`, `Clone`, `PartialEq`. Unknown JSON fields preserved via `#[serde(flatten)]` with `HashMap<String, serde_json::Value>`.
+  - `services/` — Business logic: config file I/O (`ConfigFileManager`), file watching (`FileWatcher`), settings merging (`SettingsMergeService`), health checks, MCP operations, project discovery.
+  - `error.rs` — `FigError` and `ConfigFileError` types using `thiserror`.
+
+- **fig-ui** (`fig-ui/src/`) — Binary crate using [Iced](https://iced.rs) 0.13.
+  - `main.rs` — `App` struct (state), `Message` enum (events), `update()` (state transitions), `view()` (render).
+  - `views/` — View functions returning `Element<'a, Message>`. Each view is a standalone function, not a struct.
+  - `styles.rs` — Theme color constants (`TEXT_PRIMARY`, `ACCENT`, `SELECTED_BG`, etc.).
 
 ### Configuration Hierarchy
 
@@ -34,25 +35,25 @@ Settings merge from three tiers with clear precedence: **projectLocal > projectS
 
 ## Code Conventions
 
-- **Linting**: SwiftLint (`.swiftlint.yml`) + SwiftFormat (`.swiftformat`) enforced via pre-commit hooks.
-- **Line length**: 120-char soft limit (warning), 150-char hard limit (error).
-- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) required. Pattern: `feat|fix|docs|style|refactor|perf|test|chore|build|ci` with optional scope. Enforced by lefthook commit-msg hook.
-- **No force unwraps** — prefer `guard`/`if let`.
-- **Logging**: Use the `Log` utility (`Log.general`, `Log.ui`, `Log.fileIO`, `Log.network`) — never use `print`.
-- **Concurrency**: All models must be `Sendable`. All I/O services must be `actor`. All view models must be `@MainActor`.
+- **Linting**: `cargo clippy -- -D warnings` must pass clean. `cargo fmt` for formatting.
+- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) required. Pattern: `feat|fix|docs|style|refactor|perf|test|chore|build|ci` with optional scope. Lowercase messages.
+- **No `.unwrap()` in library code** — use `?` or proper error handling. `.unwrap()` is acceptable in tests.
+- **Logging**: Use `eprintln!` sparingly for debugging. No println in library code.
 
 ## Testing
 
-- Uses **Swift Testing** framework (`@Suite`, `@Test`, `#expect`) — not XCTest.
-- Tests live in `Tests/`.
-- Run with `swift test`.
-- Focus areas: model serialization/round-tripping, service logic, view model behavior.
-- Test fixtures use enums with static properties for shared test data.
+- Inline `#[cfg(test)] mod tests` in each module.
+- Use `#[test]` for sync tests, `#[tokio::test]` for async.
+- Run with `cargo test`.
+- Focus areas: model serialization round-tripping, service logic, validation.
+- Currently 166 tests across the workspace.
 
 ## Common Pitfalls
 
-- **Preserve unknown JSON fields**: Models use custom `init(from:)`/`encode(to:)` with `AnyCodable` to round-trip unknown keys. Never drop `additionalProperties` during serialization.
+- **Preserve unknown JSON fields**: Models use `#[serde(flatten)] pub extra: HashMap<String, serde_json::Value>` to round-trip unknown keys. Never drop extra fields during serialization.
 - **Backups are automatic**: `ConfigFileManager` creates timestamped backups before every write. Do not bypass this.
-- **External change detection**: File watching uses `DispatchSource` on file modification dates. Respect this pattern when modifying file I/O.
+- **External change detection**: File watching uses polling on file modification times. Respect this pattern when modifying file I/O.
 - **Config merge semantics**: Permissions union across tiers, environment variables override, hooks concatenate. Check `SettingsMergeService` before changing merge behavior.
-- **AnyCodable is `@unchecked Sendable`**: It stores `Any` internally and sanitizes values recursively. Take care when modifying it.
+- **Iced lifetime patterns**: View functions return `Element<'a, Message>` — borrowed data must outlive the returned element. Use `.to_string()` or `.clone()` for local values used in text widgets.
+- **Iced Padding**: Use `Padding::new(f32).left(f32).right(f32)` builder for asymmetric padding.
+- **Clippy too-many-arguments**: Use `#[allow(clippy::too_many_arguments)]` on view dispatch functions that pass state to sub-views.

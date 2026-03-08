@@ -3,9 +3,9 @@
 
 version: 2
 updates:
-  # Swift Package Manager
-  - package-ecosystem: "swift"
-    directory: "/Fig"
+  # Cargo (Rust)
+  - package-ecosystem: "cargo"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -14,6 +14,6 @@ updates:
       prefix: "build(deps):"
     labels:
       - "dependencies"
-      - "swift"
+      - "rust"
     reviewers:
       - "doomspork"

@@ -7,9 +7,7 @@ import { Steps, Aside } from '@astrojs/starlight/components';
 
 ## System Requirements
 
-- **macOS 14.0** (Sonoma) or later
-- **Xcode 16.0+** (for building from source)
-- **Swift 6.0**
+- **Rust 1.78+** (for building from source)
 - [Claude Code](https://github.com/anthropics/claude-code) installed and configured
 
 ## Installation
@@ -24,19 +22,23 @@ import { Steps, Aside } from '@astrojs/starlight/components';
    git clone https://github.com/utensils/fig.git
    ```
 
-2. Build with Swift Package Manager:
+2. Build with Cargo:
 
    ```bash
-   cd fig/Fig
-   swift build
+   cd fig
+   cargo build --release
    ```
 
-   Or open `Package.swift` in Xcode and press **Cmd+R** to build and run.
+3. Run the application:
+
+   ```bash
+   cargo run --release
+   ```
 
 </Steps>
 
 <Aside type="tip">
-A Homebrew Cask formula is planned for future releases to simplify installation.
+Pre-built binaries are planned for future releases to simplify installation.
 </Aside>
 
 ## First Run
@@ -58,7 +60,7 @@ Fig explains which configuration files it needs to read and write:
 | `<project>/.claude/settings.json` | Per-project settings |
 | `<project>/.mcp.json` | MCP server configuration |
 
-Fig accesses these files through standard macOS file system APIs. No special permissions are required beyond normal file access.
+Fig accesses these files through standard file system APIs. No special permissions are required beyond normal file access.
 
 ### 3. Project Discovery
 
