@@ -4,7 +4,7 @@
   <img src="https://github.com/user-attachments/assets/1f5228a2-0111-40fc-a5e7-5dc3a29110ca" alt="Fig logo" width="200" />
 </p>
 
-A native macOS application for managing [Claude Code](https://github.com/anthropics/claude-code) configuration.
+A cross-platform desktop application for managing [Claude Code](https://github.com/anthropics/claude-code) configuration.
 
 ## What is Fig?
 
@@ -31,21 +31,23 @@ Fig provides a visual interface for managing Claude Code settings, MCP servers, 
 
 ## Requirements
 
-- macOS 14.0 (Sonoma) or later
-- Xcode 16.0 or later (for building from source)
-- Swift 6.0
+- Rust 1.78 or later
 
 ## Installation
 
 ### From Source
 
 ```bash
-git clone https://github.com/doomspork/fig.git
-cd fig/Fig
-swift build
+git clone https://github.com/utensils/fig.git
+cd fig
+cargo build --release
 ```
 
-Or open `Fig/Package.swift` in Xcode and press Cmd+R to build and run.
+Run with:
+
+```bash
+cargo run --release
+```
 
 ### Pre-built Binary
 
@@ -54,26 +56,25 @@ Coming soon.
 ## Project Structure
 
 ```
-Fig/
-├── Package.swift           # Swift Package Manager manifest
-├── Fig.entitlements        # Code signing entitlements
-└── Sources/
-    ├── App/               # Application entry point
-    ├── Models/            # Data models (Sendable conformant)
-    ├── ViewModels/        # View models (@MainActor)
-    ├── Views/             # SwiftUI views
-    ├── Services/          # Business logic (actors for I/O)
-    └── Utilities/         # Helper utilities
+fig-core/              # Library crate: models, services, error types
+├── src/
+│   ├── models/        # Data models (serde, Clone, PartialEq)
+│   ├── services/      # Business logic (config I/O, health checks, merging)
+│   └── error.rs       # Error types
+fig-ui/                # Binary crate: Iced GUI application
+├── src/
+│   ├── views/         # View functions (detail, sidebar, editors)
+│   ├── styles.rs      # Theme constants
+│   └── main.rs        # App state, Message enum, update/view
+Cargo.toml             # Workspace manifest
 ```
 
 ## Architecture
 
-Fig uses the MVVM pattern with Swift 6 strict concurrency:
+Fig uses a Cargo workspace with two crates and the Iced Elm architecture:
 
-- **Models** — Pure data structures conforming to `Sendable`
-- **ViewModels** — `@MainActor` classes for UI state management
-- **Views** — SwiftUI views with `NavigationSplitView` layout
-- **Services** — Actor-based services for thread-safe file I/O
+- **fig-core** — Pure library with models and services. No GUI dependency. Handles configuration file I/O, settings merging, health checks, and MCP operations.
+- **fig-ui** — Binary using [Iced](https://iced.rs) 0.13. Follows the Elm pattern: `Model` (app state) → `Message` (events) → `update` (state transitions) → `view` (render UI).
 
 ## Configuration Files
 

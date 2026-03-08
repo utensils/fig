@@ -8,9 +8,9 @@ import { Image } from 'astro:assets';
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Fig - Visual Claude Code Configuration</title>
-		<meta name="description" content="A native macOS application for managing Claude Code configuration. Stop hand-editing scattered JSON files." />
+		<meta name="description" content="A desktop application for managing Claude Code configuration. Stop hand-editing scattered JSON files." />
 		<meta property="og:title" content="Fig - Visual Claude Code Configuration" />
-		<meta property="og:description" content="A native macOS application for managing Claude Code configuration." />
+		<meta property="og:description" content="A desktop application for managing Claude Code configuration." />
 		<meta property="og:type" content="website" />
 		<link rel="icon" type="image/png" href="/fig/favicon.png" />
 		<link rel="apple-touch-icon" href="/fig/apple-touch-icon.png" />
@@ -289,8 +289,7 @@ import { Image } from 'astro:assets';
 			<h1>A visual interface for <span>Claude Code</span> configuration</h1>
 			<p>
 				Stop hand-editing scattered JSON files. Fig discovers your projects
-				and lets you manage settings, MCP servers, and hooks from one native
-				macOS app.
+				and lets you manage settings, MCP servers, and hooks from one app.
 			</p>
 			<div class="hero-actions">
 				<a href="/fig/getting-started/" class="btn btn-primary">Get Started</a>
@@ -333,11 +332,11 @@ import { Image } from 'astro:assets';
 			<div class="code-block">
 				<span class="comment"># Clone and build from source</span><br />
 				git clone https://github.com/utensils/fig.git<br />
-				cd fig/Fig<br />
-				swift build<br />
+				cd fig<br />
+				cargo build --release<br />
 				<br />
-				<span class="comment"># Or open in Xcode</span><br />
-				open Package.swift
+				<span class="comment"># Run the application</span><br />
+				cargo run --release
 			</div>
 		</section>
 
@@ -347,7 +346,7 @@ import { Image } from 'astro:assets';
 				<li><a href="https://github.com/utensils/fig">GitHub</a></li>
 				<li><a href="https://github.com/utensils/fig/blob/main/LICENSE">MIT License</a></li>
 			</ul>
-			<p>Fig is a native macOS app for managing Claude Code configuration.</p>
+			<p>Fig is a desktop app for managing Claude Code configuration.</p>
 		</footer>
 	</body>
 </html>
