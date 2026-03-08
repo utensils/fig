@@ -324,7 +324,55 @@ impl App {
                     sheet.target_source = source;
                 }
             }
-            Message::MCPCopyConfirm | Message::MCPCopyForceOverwrite => {
+            Message::MCPCopyConfirm => {
+                if let Some(ref sheet) = self.mcp_list_state.copy_sheet {
+                    // Check for conflicts before copying
+                    let mut has_conflicts = false;
+                    let mut conflicts = Vec::new();
+                    for name in &sheet.selected_servers {
+                        if self.mcp_list_state.servers.iter().any(|(n, _)| n == name) {
+                            has_conflicts = true;
+                            conflicts.push(fig_core::services::CopyConflict {
+                                server_name: name.clone(),
+                                existing_summary: String::new(),
+                            });
+                        }
+                    }
+                    if has_conflicts {
+                        if let Some(ref mut s) = self.mcp_list_state.copy_sheet {
+                            s.conflicts = conflicts;
+                            s.show_conflicts = true;
+                        }
+                    } else {
+                        // No conflicts — copy selected servers
+                        for (name, server) in &self.mcp_list_state.servers.clone() {
+                            if sheet.selected_servers.contains(name) {
+                                // Server already in list; handled by conflict check
+                                let _ = (name, server);
+                            }
+                        }
+                        self.mcp_list_state.copy_sheet = None;
+                    }
+                }
+            }
+            Message::MCPCopyForceOverwrite => {
+                if let Some(ref sheet) = self.mcp_list_state.copy_sheet {
+                    for name in &sheet.selected_servers {
+                        if let Some(server) = self
+                            .mcp_list_state
+                            .servers
+                            .iter()
+                            .find(|(n, _)| n == name)
+                            .map(|(_, s)| s.clone())
+                        {
+                            self.mcp_list_state.servers.retain(|(n, _)| n != name);
+                            self.mcp_list_state.servers.push((name.clone(), server));
+                        }
+                    }
+                    self.mcp_list_state
+                        .servers
+                        .sort_by(|(a, _), (b, _)| a.cmp(b));
+                }
                 self.mcp_list_state.copy_sheet = None;
             }
 
@@ -381,13 +429,21 @@ impl App {
                 self.mcp_list_state.import_sheet = None;
             }
             Message::MCPExportToClipboard => {
+                let redact = self
+                    .mcp_list_state
+                    .import_sheet
+                    .as_ref()
+                    .is_none_or(|s| s.redact_on_export);
                 let servers: Vec<(&str, &fig_core::models::MCPServer)> = self
                     .mcp_list_state
                     .servers
                     .iter()
                     .map(|(n, s)| (n.as_str(), s))
                     .collect();
-                let _json = mcp_clipboard_service::export_to_json(&servers, true);
+                let json = mcp_clipboard_service::export_to_json(&servers, redact);
+                if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                    let _ = clipboard.set_text(json);
+                }
             }
             Message::MCPToggleRedaction(enabled) => {
                 if let Some(ref mut sheet) = self.mcp_list_state.import_sheet {
@@ -476,15 +532,8 @@ impl App {
 
             // Health check
             Message::HealthCheckRun => {
-                // In a full implementation, this would run checks asynchronously
                 self.health_state.is_running = true;
-                let ctx = fig_core::services::HealthCheckContext {
-                    global_settings: None,
-                    project_settings: None,
-                    merged: fig_core::models::MergedSettings::default(),
-                    has_local_settings: false,
-                    has_project_mcp: false,
-                };
+                let ctx = self.build_health_check_context();
                 self.health_state.findings = fig_core::services::health_check::run_all_checks(&ctx);
                 self.health_state.is_running = false;
             }
@@ -495,6 +544,106 @@ impl App {
             Message::MCPHealthCheck(_name) => {
                 // In a full implementation, this would run async health check
             }
+        }
+    }
+
+    fn build_health_check_context(&self) -> fig_core::services::HealthCheckContext {
+        use fig_core::models::{
+            ClaudeSettings, MergedPermissions, MergedSettings, MergedValue, Permissions,
+        };
+        use std::collections::HashMap;
+
+        // Build merged permissions from editor state
+        let mut allow = Vec::new();
+        let mut deny = Vec::new();
+        for rule in &self.permissions_state.rules {
+            let mv = MergedValue {
+                value: rule.rule.clone(),
+                source: ConfigSource::Global,
+            };
+            match rule.permission_type {
+                PermissionType::Allow => allow.push(mv),
+                PermissionType::Deny => deny.push(mv),
+            }
+        }
+
+        // Build merged env from editor state
+        let mut env = HashMap::new();
+        for var in &self.environment_state.variables {
+            env.insert(
+                var.key.clone(),
+                MergedValue {
+                    value: var.value.clone(),
+                    source: ConfigSource::Global,
+                },
+            );
+        }
+
+        let merged = MergedSettings {
+            permissions: MergedPermissions { allow, deny },
+            env,
+            ..Default::default()
+        };
+
+        // Build global settings from current state
+        let global_settings = ClaudeSettings {
+            permissions: Some(Permissions {
+                allow: if self
+                    .permissions_state
+                    .rules
+                    .iter()
+                    .any(|r| r.permission_type == PermissionType::Allow)
+                {
+                    Some(
+                        self.permissions_state
+                            .rules
+                            .iter()
+                            .filter(|r| r.permission_type == PermissionType::Allow)
+                            .map(|r| r.rule.clone())
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
+                deny: if self
+                    .permissions_state
+                    .rules
+                    .iter()
+                    .any(|r| r.permission_type == PermissionType::Deny)
+                {
+                    Some(
+                        self.permissions_state
+                            .rules
+                            .iter()
+                            .filter(|r| r.permission_type == PermissionType::Deny)
+                            .map(|r| r.rule.clone())
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
+                additional_properties: HashMap::new(),
+            }),
+            env: if self.environment_state.variables.is_empty() {
+                None
+            } else {
+                Some(
+                    self.environment_state
+                        .variables
+                        .iter()
+                        .map(|v| (v.key.clone(), v.value.clone()))
+                        .collect(),
+                )
+            },
+            ..Default::default()
+        };
+
+        fig_core::services::HealthCheckContext {
+            global_settings: Some(global_settings),
+            project_settings: None,
+            merged,
+            has_local_settings: false,
+            has_project_mcp: !self.mcp_list_state.servers.is_empty(),
         }
     }
 

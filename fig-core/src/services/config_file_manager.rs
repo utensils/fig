@@ -104,10 +104,7 @@ impl ConfigFileManager {
             })?;
 
         // Write to a temp file then rename for atomic operation
-        let temp_path = parent.join(format!(
-            ".fig-tmp-{}",
-            std::process::id()
-        ));
+        let temp_path = parent.join(format!(".fig-tmp-{}", std::process::id()));
         fs::write(&temp_path, &content).map_err(|e| {
             let _ = fs::remove_file(&temp_path);
             ConfigFileError::WriteError {
@@ -236,9 +233,15 @@ impl ConfigFileManager {
             if !current.is_symlink() {
                 return Ok(current);
             }
-            current = fs::read_link(&current).map_err(|_| ConfigFileError::CircularSymlink {
+            let parent = current.parent().unwrap_or(Path::new(".")).to_path_buf();
+            let target = fs::read_link(&current).map_err(|_| ConfigFileError::CircularSymlink {
                 path: path.to_path_buf(),
             })?;
+            current = if target.is_relative() {
+                parent.join(&target)
+            } else {
+                target
+            };
         }
         Err(ConfigFileError::CircularSymlink {
             path: path.to_path_buf(),
@@ -423,5 +426,50 @@ mod tests {
         assert!(backup_name.starts_with("settings."));
         assert!(backup_name.ends_with(".json"));
         assert!(backup_name.contains('T'));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_symlink_resolution_relative() {
+        let tmp = TempDir::new().unwrap();
+        let subdir = tmp.path().join("subdir");
+        fs::create_dir(&subdir).unwrap();
+        let real_file = subdir.join("real.json");
+        fs::write(&real_file, "{}").unwrap();
+
+        // Create a symlink in tmp root pointing to a relative path
+        let link_path = tmp.path().join("link.json");
+        std::os::unix::fs::symlink("subdir/real.json", &link_path).unwrap();
+
+        let mgr = ConfigFileManager::with_home_dir(tmp.path().to_path_buf());
+        let resolved = mgr.resolve_symlink(&link_path, 10).unwrap();
+        assert!(resolved.ends_with("subdir/real.json"));
+        assert!(!resolved.is_symlink());
+    }
+
+    #[test]
+    fn test_write_atomic_no_temp_file_left() {
+        let tmp = TempDir::new().unwrap();
+        let file_path = tmp.path().join("settings.json");
+
+        let mgr = ConfigFileManager::with_home_dir(tmp.path().to_path_buf());
+        let settings = ClaudeSettings::default();
+        mgr.write(&settings, &file_path).unwrap();
+
+        // Verify the file was written
+        assert!(file_path.exists());
+
+        // Verify no temp files remain
+        let temp_files: Vec<_> = fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.file_name()
+                    .to_str()
+                    .unwrap_or("")
+                    .starts_with(".fig-tmp-")
+            })
+            .collect();
+        assert!(temp_files.is_empty(), "Temp file should be cleaned up");
     }
 }

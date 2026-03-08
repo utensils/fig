@@ -46,7 +46,7 @@ Settings merge from three tiers with clear precedence: **projectLocal > projectS
 - Use `#[test]` for sync tests, `#[tokio::test]` for async.
 - Run with `cargo test`.
 - Focus areas: model serialization round-tripping, service logic, validation.
-- Currently 162 tests across the workspace.
+- Currently 166 tests across the workspace.
 
 ## Common Pitfalls
 

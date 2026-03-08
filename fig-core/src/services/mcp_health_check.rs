@@ -309,4 +309,25 @@ mod tests {
         let result = check_health("test", &server).await;
         assert!(matches!(result.status, MCPHealthStatus::Failure { .. }));
     }
+
+    #[tokio::test]
+    async fn test_stdio_nonexistent_command() {
+        let server = MCPServer::stdio("fig_nonexistent_command_12345".into(), None, None);
+        let result = check_health("test", &server).await;
+        assert!(matches!(result.status, MCPHealthStatus::Failure { .. }));
+        if let MCPHealthStatus::Failure { error } = &result.status {
+            assert!(error.contains("Failed to spawn process"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_http_invalid_url() {
+        let server = MCPServer::http("http://127.0.0.1:1".into(), None);
+        let result = check_health("test", &server).await;
+        // Should fail or timeout, but not panic
+        assert!(matches!(
+            result.status,
+            MCPHealthStatus::Failure { .. } | MCPHealthStatus::Timeout
+        ));
+    }
 }
